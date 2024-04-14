@@ -1,0 +1,168 @@
+{
+    "name": "T8ShieldSupport",
+    "data": [
+        {
+            "type": "luafile",
+            "name": "ui/shield/FrontHelper",
+            "path": "FrontHelper.luac",
+            "hooks_post": [
+                "x64:4ed0bcba9d999e0f"
+            ]
+        },
+
+        {
+            "type": "luafile",
+            "name": "ui/shield/GameHelper",
+            "path": "GameHelper.luac",
+            "hooks_post": [
+                "x64:57d27ab8e2f7a9d0"
+            ]
+        },
+        
+        {
+            "type": "stringtable",
+            "name": "gamedata/shield/support_errors.csv",
+            "path": "SupportUtils\\SupportErrors.tsv",
+            "separator": "\t"
+        },
+        {
+            "type": "hashes",
+            "path": "SupportUtils\\SupportStrings.txt",
+            "format": "string",
+            "ignore_error": true
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "hash_65ac0bdfc731aeda",
+            "value": "Welcome to Shield Client, Connecting..."
+        },
+        
+        {
+            "type": "localizeentry",
+            "name": "shield/custombutton",
+            "value": "Custom Shield Button"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/launchgame",
+            "value": "Launch Game"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_all",
+            "value": "^2Unlock All"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/a_unlockall",
+            "value": "^3Unlock All Attachments"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/e_unlockall",
+            "value": "^2Unlock All Enabled"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/d_unlockall",
+            "value": "^2Unlock All Disabled"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/serverbrowser",
+            "value": "^2Server Browser"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/servers",
+            "value": "^4Servers"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/server1",
+            "value": "^3Public Server 1 (Hosted by BodNJenie)"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/server2",
+            "value": "^3Public Server 2 (Hosted by ????)"
+        }
+    ],
+
+
+    "cache": [
+        {
+            "type": "string",
+            "name": "shield/custombutton",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/launchgame",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/t_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_all",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/e_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/d_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/serverbrowser",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/servers",
+            "mode": [
+                "zm"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/server1",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/server2",
+            "mode": [
+                "zm"
+            ]
+        }
+    ]
+}
