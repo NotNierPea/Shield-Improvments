@@ -284,8 +284,9 @@ local CheckClient = 0
 -- TODO: use either dvars to save, or lua shield api.., and add sliders for level and shit.
 local UnlockAll = false
 local UnlockLoot = false
-local UnlockAttachments  = false
+local UnlockAttachments = false
 local UnlockCamos = false
+local UnlockCards = false
 
 --------------------------
 
@@ -378,6 +379,7 @@ CoD.OverlayUtility.Overlays.ShieldUnlockAllDisabledMessage = {
 	end
 }
 
+-- unused
 CoD.OverlayUtility.Overlays.ShieldInvalidRank = {
 	menuName = "SystemOverlay_Compact",
 	postCreateStep = function ( f155_arg0, f155_arg1 )
@@ -451,6 +453,18 @@ local function ShieldUnlockCamos_Toggle(Controller)
 	else
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock camos false")
+	end
+end
+
+local function ShieldUnlockCards_Toggle(Controller)
+	UnlockCards = not UnlockCards
+
+	if UnlockCards then
+		EnhPrintInfo(UnlockCards, "Unlock Cards")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock cards true")
+	else
+		EnhPrintInfo(UnlockCards, "Unlock Cards")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock cards false")
 	end
 end
 
@@ -3769,15 +3783,326 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	MainUnlockCamos.id = "MainUnlockCamos"
 	sizeMainUnlockCamos.id = "sizeMainUnlockCamos"
 
-	-- slider?
-	local CurrentText = CoD.Shield_EditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 400, 450 )
-	CurrentText:linkToElementModel( self, nil, false, function ( model )
-		CurrentText:setModel( model, f1_arg1 )
+	local MainUnlockCards = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 350, 650, 0.23, 0.23, 70, 120 )
+	MainUnlockCards.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockCards then
+		MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^2Enabled")
+		MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^2Enabled")
+	else
+		MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^1Disabled")
+		MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^1Disabled")
+	end
+
+	MainUnlockCards.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockCards:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockCards:setModel( model, f1_arg1 )
 	end )
-	self:addElement( CurrentText )
-	self.CurrentText = CurrentText
+	self:addElement( MainUnlockCards )
+	self.MainUnlockCards = MainUnlockCards
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockCards, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockCards_Toggle()
+
+		if UnlockCards then
+			MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^2Enabled")
+			MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^2Enabled")
+		else
+			MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^1Disabled")
+			MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
 	
-	CurrentText.id = "CurrentText"
+	local sizeMainUnlockCards = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 350, 650, 0.23, 0.23, 70, 120 )
+	sizeMainUnlockCards:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockCards:setAlpha( 0 )
+	sizeMainUnlockCards.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockCards.Tint:setAlpha( 0.25 )
+	sizeMainUnlockCards:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockCards:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockCards.ButtonName.GameModeText:setText("Unlock Calling Cards")
+	self:addElement( sizeMainUnlockCards )
+	self.sizeMainUnlockCards = sizeMainUnlockCards
+
+	MainUnlockCards.id = "MainUnlockCards"
+	sizeMainUnlockCards.id = "sizeMainUnlockCards"
+
+	-- Blackout
+	local Blackout_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400, 450 )
+	Blackout_RankEditBox:linkToElementModel( self, nil, false, function ( model )
+		Blackout_RankEditBox:setModel( model, f1_arg1 )
+	end )
+	Blackout_RankEditBox.TextBox:setLeftRight(0, 0, 20 + 140, 320 + 140)
+	Blackout_RankEditBox.RankHighlight:setText("^2Set Blackout Rank: ")
+	self:addElement( Blackout_RankEditBox )
+	self.Blackout_RankEditBox = Blackout_RankEditBox
+
+	local BlackoutRankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Blackout_Shield_Rank" )
+	if BlackoutRankModel:get() == nil then
+		BlackoutRankModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Blackout_RankEditBox, f1_arg0, f1_local1, BlackoutRankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local RankData = f331_arg0:get()
+			if RankData ~= nil and RankData ~= "" then
+				EnhPrintInfo("Blackout RankData", RankData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(RankData) or tonumber(RankData) > 1000 or tonumber(RankData) < 1 then
+					f331_arg0:set("^1Invalid Rank!")
+					Blackout_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Rank Set!")
+					Blackout_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+
+	local Blackout_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 400, 750, 0.23, 0.23, 400, 450 )
+	Blackout_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
+		Blackout_PrestigeEditBox:setModel( model, f1_arg1 )
+	end )
+	Blackout_PrestigeEditBox.TextBox:setLeftRight(0, 0, 20 + 160, 320 + 160)
+	Blackout_PrestigeEditBox.RankHighlight:setText("^2Set Blackout Prestige: ")
+	self:addElement( Blackout_PrestigeEditBox )
+	self.Blackout_PrestigeEditBox = Blackout_PrestigeEditBox
+
+	local BlackoutPrestigeModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Blackout_Shield_Prestige" )
+	if BlackoutPrestigeModel:get() == nil then
+		BlackoutPrestigeModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Blackout_PrestigeEditBox, f1_arg0, f1_local1, BlackoutPrestigeModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local PrestigeData = f331_arg0:get()
+			if PrestigeData ~= nil and PrestigeData ~= "" then
+				EnhPrintInfo("Blackout PrestigeData", PrestigeData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(PrestigeData) or tonumber(PrestigeData) > 10 or tonumber(PrestigeData) < 1 then
+					f331_arg0:set("^1Invalid Prestige!")
+					Blackout_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Prestige Set!")
+					Blackout_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+	
+	Blackout_RankEditBox.id = "Blackout_RankEditBox"
+	Blackout_PrestigeEditBox.id = "Blackout_PrestigeEditBox"
+
+	-- Multiplayer
+	local Multiplayer_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400 + 100, 450 + 100 )
+	Multiplayer_RankEditBox:linkToElementModel( self, nil, false, function ( model )
+		Multiplayer_RankEditBox:setModel( model, f1_arg1 )
+	end )
+	Multiplayer_RankEditBox.TextBox:setLeftRight(0, 0, 20 + 155, 320 + 155)
+	Multiplayer_RankEditBox.RankHighlight:setText("^2Set Multiplayer Rank: ")
+	self:addElement( Multiplayer_RankEditBox )
+	self.Multiplayer_RankEditBox = Multiplayer_RankEditBox
+
+	local MultiplayerRankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Multiplayer_Shield_Rank" )
+	if MultiplayerRankModel:get() == nil then
+		MultiplayerRankModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Multiplayer_RankEditBox, f1_arg0, f1_local1, MultiplayerRankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local RankData = f331_arg0:get()
+			if RankData ~= nil and RankData ~= "" then
+				EnhPrintInfo("Multiplayer RankData", RankData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(RankData) or tonumber(RankData) > 1000 or tonumber(RankData) < 1 then
+					f331_arg0:set("^1Invalid Rank!")
+					Multiplayer_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Rank Set!")
+					Multiplayer_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+
+	local Multiplayer_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 400, 750, 0.23, 0.23, 400 + 100, 450 + 100 )
+	Multiplayer_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
+		Multiplayer_PrestigeEditBox:setModel( model, f1_arg1 )
+	end )
+	Multiplayer_PrestigeEditBox.TextBox:setLeftRight(0, 0, 20 + 175, 320 + 175)
+	Multiplayer_PrestigeEditBox.RankHighlight:setText("^2Set Multiplayer Prestige: ")
+	self:addElement( Multiplayer_PrestigeEditBox )
+	self.Multiplayer_PrestigeEditBox = Multiplayer_PrestigeEditBox
+
+	local MultiplayerPrestigeModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Multiplayer_Shield_Prestige" )
+	if MultiplayerPrestigeModel:get() == nil then
+		MultiplayerPrestigeModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Multiplayer_PrestigeEditBox, f1_arg0, f1_local1, MultiplayerPrestigeModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local PrestigeData = f331_arg0:get()
+			if PrestigeData ~= nil and PrestigeData ~= "" then
+				EnhPrintInfo("Multiplayer PrestigeData", PrestigeData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(PrestigeData) or tonumber(PrestigeData) > 10 or tonumber(PrestigeData) < 1 then
+					f331_arg0:set("^1Invalid Prestige!")
+					Multiplayer_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Prestige Set!")
+					Multiplayer_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+	
+	Multiplayer_RankEditBox.id = "Multiplayer_RankEditBox"
+	Multiplayer_PrestigeEditBox.id = "Multiplayer_PrestigeEditBox"
+
+	-- Zombies
+	local Zombies_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400 + 200, 450 + 200 )
+	Zombies_RankEditBox:linkToElementModel( self, nil, false, function ( model )
+		Zombies_RankEditBox:setModel( model, f1_arg1 )
+	end )
+	Zombies_RankEditBox.TextBox:setLeftRight(0, 0, 20 + 130, 320 + 130)
+	Zombies_RankEditBox.RankHighlight:setText("^2Set Zombies Rank: ")
+	self:addElement( Zombies_RankEditBox )
+	self.Zombies_RankEditBox = Zombies_RankEditBox
+
+	local ZombiesRankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Zombies_Shield_Rank" )
+	if ZombiesRankModel:get() == nil then
+		ZombiesRankModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Zombies_RankEditBox, f1_arg0, f1_local1, ZombiesRankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local RankData = f331_arg0:get()
+			if RankData ~= nil and RankData ~= "" then
+				EnhPrintInfo("Zombies RankData", RankData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(RankData) or tonumber(RankData) > 1000 or tonumber(RankData) < 1 then
+					f331_arg0:set("^1Invalid Rank!")
+					Zombies_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Rank Set!")
+					Zombies_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+
+	local Zombies_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 400, 750, 0.23, 0.23, 400 + 200, 450 + 200 )
+	Zombies_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
+		Zombies_PrestigeEditBox:setModel( model, f1_arg1 )
+	end )
+	Zombies_PrestigeEditBox.TextBox:setLeftRight(0, 0, 20 + 155, 320 + 155)
+	Zombies_PrestigeEditBox.RankHighlight:setText("^2Set Zombies Prestige: ")
+	self:addElement( Zombies_PrestigeEditBox )
+	self.Zombies_PrestigeEditBox = Zombies_PrestigeEditBox
+
+	local ZombiesPrestigeModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Zombies_Shield_Prestige" )
+	if ZombiesPrestigeModel:get() == nil then
+		ZombiesPrestigeModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Zombies_PrestigeEditBox, f1_arg0, f1_local1, ZombiesPrestigeModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local PrestigeData = f331_arg0:get()
+			if PrestigeData ~= nil and PrestigeData ~= "" then
+				EnhPrintInfo("Zombies PrestigeData", PrestigeData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(PrestigeData) or tonumber(PrestigeData) > 10 or tonumber(PrestigeData) < 1 then
+					f331_arg0:set("^1Invalid Prestige!")
+					Zombies_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Prestige Set!")
+					Zombies_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+	
+	Zombies_RankEditBox.id = "Zombies_RankEditBox"
+	Zombies_PrestigeEditBox.id = "Zombies_PrestigeEditBox"
 	
 	f1_local1:AddButtonCallbackFunction( self, f1_arg0, Enum[@"hash_3DD78803F918E9D"][@"hash_1805EFA15E9E7E5A"], nil, function ( element, menu, controller, model )
 		GoBack( self, controller )
@@ -3882,13 +4207,13 @@ CoD.ShieldUnlockOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_
 	return self
 end
 
-CoD.Shield_EditBox = InheritFrom( LUI.UIElement )
-CoD.Shield_EditBox.__defaultWidth = 340
-CoD.Shield_EditBox.__defaultHeight = 60
-CoD.Shield_EditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+CoD.Shield_RankEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_RankEditBox.__defaultWidth = 340
+CoD.Shield_RankEditBox.__defaultHeight = 60
+CoD.Shield_RankEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
 	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.Shield_EditBox )
-	self.id = "Shield_EditBox"
+	self:setClass( CoD.Shield_RankEditBox )
+	self.id = "Shield_RankEditBox"
 	self.soundSet = "default"
 	f1_arg0:addElementToPendingUpdateStateList( self )
 	
@@ -3938,37 +4263,13 @@ CoD.Shield_EditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 
 	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
 
-	local RankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Rank" )
-	if RankModel:get() == nil then
-		RankModel:set( "" )
-	end
-
-	CoD.PCUtility.SetupEditControlWithModel( self, f1_arg1, f1_arg0, RankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
-		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
-			local RankData = f331_arg0:get()
-			if RankData ~= nil and RankData ~= "" then
-				EnhPrintInfo(RankData)
-				if not isInteger(RankData) or tonumber(RankData) > 1000 then
-					f331_arg0:set("^1Invalid Rank!")
-					self:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-				else
-					-- set rank later (api)
-				end
-			end
-		else
-			f331_arg0:set("") -- reset it
-		end
-	end )
-
 	CoD.BaseUtility.SetUseStencil( self )
 	DisableModelStringReplacement( TextBox )
 
 	return self
 end
 
-CoD.Shield_EditBox.__resetProperties = function ( f3_arg0 )
+CoD.Shield_RankEditBox.__resetProperties = function ( f3_arg0 )
 	f3_arg0.Corner:completeAnimation()
 	f3_arg0.Frame:completeAnimation()
 	f3_arg0.Backing:completeAnimation()
@@ -3979,7 +4280,7 @@ CoD.Shield_EditBox.__resetProperties = function ( f3_arg0 )
 	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
 end
 
-CoD.Shield_EditBox.__clipsPerState = {
+CoD.Shield_RankEditBox.__clipsPerState = {
 	DefaultState = {
 		DefaultClip = function ( f4_arg0, f4_arg1 )
 			f4_arg0:__resetProperties()
@@ -4076,7 +4377,179 @@ CoD.Shield_EditBox.__clipsPerState = {
 	}
 }
 
-CoD.Shield_EditBox.__onClose = function ( f15_arg0 )
+CoD.Shield_RankEditBox.__onClose = function ( f15_arg0 )
+	f15_arg0.Frame:close()
+	f15_arg0.Corner:close()
+	f15_arg0.TextBox:close()
+end
+
+CoD.Shield_PrestigeEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_PrestigeEditBox.__defaultWidth = 340
+CoD.Shield_PrestigeEditBox.__defaultHeight = 60
+CoD.Shield_PrestigeEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.Shield_PrestigeEditBox )
+	self.id = "Shield_PrestigeEditBox"
+	self.soundSet = "default"
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
+	Backing:setRGB( 0, 0, 0 )
+	Backing:setAlpha( 0.5 )
+	self:addElement( Backing )
+	self.Backing = Backing
+	
+	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	Frame:setRGB( 0.78, 0.74, 0.67 )
+	Frame:setAlpha( 0.04 )
+	self:addElement( Frame )
+	self.Frame = Frame
+	
+	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Corner )
+	self.Corner = Corner
+	
+	local TextBox = LUI.UIText.new( 0, 0, 20 + 95, 320 + 95, 0.5, 0.5, -10.5, 10.5 )
+	TextBox:setRGB( 0.78, 0.74, 0.67 )
+	TextBox:setTTF( "notosans_regular" )
+	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( TextBox )
+	self.TextBox = TextBox
+
+	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
+	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
+	RankHighlight:setTTF( "notosans_regular" )
+	RankHighlight:setText("^2Set Prestige: ")
+	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( RankHighlight )
+	self.RankHighlight = RankHighlight
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	self.__editControlMaxChar = 2
+	self.__editControlIsInteger = 1
+	self.__editControlMin = 0
+	self.__editControlMax = 1000
+
+	CoD.BaseUtility.SetUseStencil( self )
+	DisableModelStringReplacement( TextBox )
+
+	return self
+end
+
+CoD.Shield_PrestigeEditBox.__resetProperties = function ( f3_arg0 )
+	f3_arg0.Corner:completeAnimation()
+	f3_arg0.Frame:completeAnimation()
+	f3_arg0.Backing:completeAnimation()
+	f3_arg0.TextBox:completeAnimation()
+	f3_arg0.Corner:setScale( 1, 1 )
+	f3_arg0.Frame:setAlpha( 0.04 )
+	f3_arg0.Backing:setAlpha( 0.5 )
+	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
+end
+
+CoD.Shield_PrestigeEditBox.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f4_arg0, f4_arg1 )
+			f4_arg0:__resetProperties()
+			f4_arg0:setupElementClipCounter( 0 )
+		end,
+		Focus = function ( f5_arg0, f5_arg1 )
+			f5_arg0:__resetProperties()
+			f5_arg0:setupElementClipCounter( 3 )
+			f5_arg0.Backing:completeAnimation()
+			f5_arg0.Backing:setAlpha( 0.8 )
+			f5_arg0.clipFinished( f5_arg0.Backing )
+			f5_arg0.Frame:completeAnimation()
+			f5_arg0.Frame:setAlpha( 0.6 )
+			f5_arg0.clipFinished( f5_arg0.Frame )
+			f5_arg0.Corner:completeAnimation()
+			f5_arg0.Corner:setScale( 0.98, 0.9 )
+			f5_arg0.clipFinished( f5_arg0.Corner )
+		end,
+		GainFocus = function ( f6_arg0, f6_arg1 )
+			f6_arg0:__resetProperties()
+			f6_arg0:setupElementClipCounter( 3 )
+			local f6_local0 = function ( f7_arg0 )
+				f6_arg0.Backing:beginAnimation( 200 )
+				f6_arg0.Backing:setAlpha( 0.8 )
+				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Backing:completeAnimation()
+			f6_arg0.Backing:setAlpha( 0.5 )
+			f6_local0( f6_arg0.Backing )
+			local f6_local1 = function ( f8_arg0 )
+				f6_arg0.Frame:beginAnimation( 200 )
+				f6_arg0.Frame:setAlpha( 0.6 )
+				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Frame:completeAnimation()
+			f6_arg0.Frame:setAlpha( 0.04 )
+			f6_local1( f6_arg0.Frame )
+			local f6_local2 = function ( f9_arg0 )
+				f6_arg0.Corner:beginAnimation( 200 )
+				f6_arg0.Corner:setScale( 0.98, 0.9 )
+				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Corner:completeAnimation()
+			f6_arg0.Corner:setScale( 1, 1 )
+			f6_local2( f6_arg0.Corner )
+		end,
+		LoseFocus = function ( f10_arg0, f10_arg1 )
+			f10_arg0:__resetProperties()
+			f10_arg0:setupElementClipCounter( 3 )
+			local f10_local0 = function ( f11_arg0 )
+				f10_arg0.Backing:beginAnimation( 200 )
+				f10_arg0.Backing:setAlpha( 0.5 )
+				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Backing:completeAnimation()
+			f10_arg0.Backing:setAlpha( 0.8 )
+			f10_local0( f10_arg0.Backing )
+			local f10_local1 = function ( f12_arg0 )
+				f10_arg0.Frame:beginAnimation( 200 )
+				f10_arg0.Frame:setAlpha( 0.04 )
+				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Frame:completeAnimation()
+			f10_arg0.Frame:setAlpha( 0.6 )
+			f10_local1( f10_arg0.Frame )
+			local f10_local2 = function ( f13_arg0 )
+				f10_arg0.Corner:beginAnimation( 200 )
+				f10_arg0.Corner:setScale( 1, 1 )
+				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Corner:completeAnimation()
+			f10_arg0.Corner:setScale( 0.98, 0.9 )
+			f10_local2( f10_arg0.Corner )
+		end,
+		InputFocus = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 1 )
+			f14_arg0.TextBox:completeAnimation()
+			f14_arg0.TextBox:setRGB( 1, 1, 1 )
+			f14_arg0.clipFinished( f14_arg0.TextBox )
+		end
+	}
+}
+
+CoD.Shield_PrestigeEditBox.__onClose = function ( f15_arg0 )
 	f15_arg0.Frame:close()
 	f15_arg0.Corner:close()
 	f15_arg0.TextBox:close()
