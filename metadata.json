@@ -56,7 +56,12 @@
         {
             "type": "localizeentry",
             "name": "shield/a_unlockall",
-            "value": "^3Unlock All Attachments"
+            "value": "^3Unlock All Options"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/f_unlockall",
+            "value": "^4Unlock All Options"
         },
         {
             "type": "localizeentry",
@@ -67,6 +72,11 @@
             "type": "localizeentry",
             "name": "shield/d_unlockall",
             "value": "^2Unlock All Disabled"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/toohighrank",
+            "value": "^1Invalid Rank!"
         },
         {
             "type": "localizeentry",
@@ -109,6 +119,13 @@
         },
         {
             "type": "string",
+            "name": "shield/unlock_all",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
             "name": "shield/t_unlockall",
             "mode": [
                 "zm"
@@ -116,7 +133,14 @@
         },
         {
             "type": "string",
-            "name": "shield/unlock_all",
+            "name": "shield/a_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/f_unlockall",
             "mode": [
                 "zm"
             ]
@@ -131,6 +155,13 @@
         {
             "type": "string",
             "name": "shield/d_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/toohighrank",
             "mode": [
                 "zm"
             ]
