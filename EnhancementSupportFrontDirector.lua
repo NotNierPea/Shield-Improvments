@@ -289,6 +289,7 @@ local UnlockCamos = false
 local UnlockCards = false
 local UnlockPurchases = false
 local UnlockClassSlots = false
+local UnlockSpecialOutfits = false
 
 --------------------------
 
@@ -495,6 +496,17 @@ local function ShieldUnlockClassSlots_Toggle(Controller)
 	end
 end
 
+local function ShieldUnlockSpecialOutfits_Toggle(Controller)
+	UnlockSpecialOutfits = not UnlockSpecialOutfits
+
+	if UnlockSpecialOutfits then
+		EnhPrintInfo(UnlockSpecialOutfits, "Unlock Outfits")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock outfits true")
+	else
+		EnhPrintInfo(UnlockSpecialOutfits, "Unlock Outfits")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock outfits false")
+	end
+end
 
 -- Override
 CoD.PCUtility.IsBGSEnabled = function ()
@@ -3504,7 +3516,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	local FooterContainerFrontendRight2 = CoD.Fo..., -48, 0 )
 	]]
 
-	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 127.5, 1196.5, 0.31, 0.31, -160.5, -120.5 )
+	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 127.5, 1496.5, 0.31, 0.31, -160.5, -120.5 )
 	HeaderPixelGridTiledBackingL:setAlpha( 0.15 )
 	HeaderPixelGridTiledBackingL:setImage( RegisterImage( @"hash_1311E811A3183347" ) )
 	HeaderPixelGridTiledBackingL:setMaterial( LUI.UIImage.GetCachedMaterial( @"hash_16CBE95C250C6D15" ) )
@@ -3513,6 +3525,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( HeaderPixelGridTiledBackingL )
 	self.HeaderPixelGridTiledBackingL = HeaderPixelGridTiledBackingL
 	
+	-- other header, not needed tbh
 	--[[
 	local HeaderPixelGridTiledBackingR = LUI.UIImage.new( 0.02, 0.02, 1211.5, 1727.5, 0.31, 0.31, -160.5, -120.5 )
 	HeaderPixelGridTiledBackingR:setAlpha( 0.15 )
@@ -3524,14 +3537,14 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self.HeaderPixelGridTiledBackingR = HeaderPixelGridTiledBackingR
 	]]
 	
-	local CornerPipR = LUI.UIImage.new( 0, 0, 1749.5, 1765.5, 0, 0, 830, 846 )
+	local CornerPipR = LUI.UIImage.new( 0, 0, 1749.5, 1765.5, 0, 0, 930, 946 )
 	CornerPipR:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
 	CornerPipR:setAlpha( 0.25 )
 	CornerPipR:setImage( RegisterImage( @"hash_28DC834094E7A02C" ) )
 	self:addElement( CornerPipR )
 	self.CornerPipR = CornerPipR
 	
-	local CornerPipL = LUI.UIImage.new( 0, 0, 155, 171, 0, 0, 830, 846 )
+	local CornerPipL = LUI.UIImage.new( 0, 0, 155, 171, 0, 0, 930, 946 )
 	CornerPipL:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
 	CornerPipL:setAlpha( 0.25 )
 	CornerPipL:setYRot( 180 )
@@ -3539,7 +3552,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( CornerPipL )
 	self.CornerPipL = CornerPipL
 	
-	local TabbedScoreboardFuiBox = CoD.TabbedScoreboardFuiBox.new( f1_local1, f1_arg0, 0, 0, 1645.5, 1757.5, 0, 0, 854, 870 )
+	local TabbedScoreboardFuiBox = CoD.TabbedScoreboardFuiBox.new( f1_local1, f1_arg0, 0, 0, 1645.5, 1757.5, 0, 0, 954, 970 )
 	self:addElement( TabbedScoreboardFuiBox )
 	self.TabbedScoreboardFuiBox = TabbedScoreboardFuiBox
 
@@ -3566,7 +3579,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	-- no im not fucking using datasources, too many errors to deal with, this easier tbh..
 	-- !!!
 
-	local MainUnlockAll = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 0, 50 )
+	local MainUnlockAll = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
 	MainUnlockAll.MiddleText:setTTF( "ttmussels_regular" )
 
 	if UnlockAll then
@@ -3611,7 +3624,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end, false )
 	
-	local sizeMainUnlockAll = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 0, 50 )
+	local sizeMainUnlockAll = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
 	sizeMainUnlockAll:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -3636,7 +3649,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	--self.__defaultFocus = baseButton
 
 	-- attachments
-	local MainUnlockAttach = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 350, 650, 0.23, 0.23, 0, 50 )
+	local MainUnlockAttach = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 0, 50 )
 	MainUnlockAttach.MiddleText:setTTF( "ttmussels_regular" )
 
 	if UnlockAttachments then
@@ -3681,7 +3694,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end, false )
 	
-	local sizeMainUnlockAttach = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 350, 650, 0.23, 0.23, 0, 50 )
+	local sizeMainUnlockAttach = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 0, 50 )
 	sizeMainUnlockAttach:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -3705,7 +3718,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	sizeMainUnlockAttach.id = "sizeMainUnlockAttach"
 
 	-- loot
-	local MainUnlockLoot = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 700, 1000, 0.23, 0.23, 0, 50 )
+	local MainUnlockLoot = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 0, 50 )
 	MainUnlockLoot.MiddleText:setTTF( "ttmussels_regular" )
 
 	if UnlockLoot then
@@ -3750,7 +3763,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end, false )
 	
-	local sizeMainUnlockLoot = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 700, 1000, 0.23, 0.23, 0, 50 )
+	local sizeMainUnlockLoot = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 0, 50 )
 	sizeMainUnlockLoot:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -3773,7 +3786,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	MainUnlockLoot.id = "MainUnlockLoot"
 	sizeMainUnlockLoot.id = "sizeMainUnlockLoot"
 
-	local MainUnlockCamos = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 70, 120 )
+	local MainUnlockCamos = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 70, 120 )
 	MainUnlockCamos.MiddleText:setTTF( "ttmussels_regular" )
 
 	if UnlockCamos then
@@ -3816,7 +3829,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end, false )
 	
-	local sizeMainUnlockCamos = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 70, 120 )
+	local sizeMainUnlockCamos = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 70, 120 )
 	sizeMainUnlockCamos:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -3839,7 +3852,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	MainUnlockCamos.id = "MainUnlockCamos"
 	sizeMainUnlockCamos.id = "sizeMainUnlockCamos"
 
-	local MainUnlockCards = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 350, 650, 0.23, 0.23, 70, 120 )
+	local MainUnlockCards = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 70, 120 )
 	MainUnlockCards.MiddleText:setTTF( "ttmussels_regular" )
 
 	if UnlockCards then
@@ -3882,7 +3895,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end, false )
 	
-	local sizeMainUnlockCards = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 350, 650, 0.23, 0.23, 70, 120 )
+	local sizeMainUnlockCards = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 70, 120 )
 	sizeMainUnlockCards:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -3905,7 +3918,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	MainUnlockCards.id = "MainUnlockCards"
 	sizeMainUnlockCards.id = "sizeMainUnlockCards"
 
-	local MainUnlockPurchases = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 700, 1000, 0.23, 0.23, 70, 120 )
+	local MainUnlockPurchases = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 70, 120 )
 	MainUnlockPurchases.MiddleText:setTTF( "ttmussels_regular" )
 
 	if UnlockPurchases then
@@ -3948,7 +3961,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end, false )
 	
-	local sizeMainUnlockPurchases = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 700, 1000, 0.23, 0.23, 70, 120 )
+	local sizeMainUnlockPurchases = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 70, 120 )
 	sizeMainUnlockPurchases:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -3971,7 +3984,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	MainUnlockPurchases.id = "MainUnlockPurchases"
 	sizeMainUnlockPurchases.id = "sizeMainUnlockPurchases"
 
-	local MainUnlockClassSlots = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 140, 190 )
+	local MainUnlockClassSlots = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 140, 190 )
 	MainUnlockClassSlots.MiddleText:setTTF( "ttmussels_regular" )
 
 	if UnlockClassSlots then
@@ -4014,7 +4027,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end, false )
 	
-	local sizeMainUnlockClassSlots = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 140, 190 )
+	local sizeMainUnlockClassSlots = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 140, 190 )
 	sizeMainUnlockClassSlots:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -4036,6 +4049,72 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 
 	MainUnlockClassSlots.id = "MainUnlockClassSlots"
 	sizeMainUnlockClassSlots.id = "sizeMainUnlockClassSlots"
+
+	local MainUnlockSpecialOutfits = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 900, 0.23, 0.23, 140, 190 )
+	MainUnlockSpecialOutfits.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockSpecialOutfits then
+		MainUnlockSpecialOutfits.MiddleText:setText("^3Unlock Specialists Outfits: ^2Enabled")
+		MainUnlockSpecialOutfits.MiddleTextFocus:setText("^3Unlock Specialists Outfits: ^2Enabled")
+	else
+		MainUnlockSpecialOutfits.MiddleText:setText("^3Unlock Specialists Outfits: ^1Disabled")
+		MainUnlockSpecialOutfits.MiddleTextFocus:setText("^3Unlock Specialists Outfits: ^1Disabled")
+	end
+
+	MainUnlockSpecialOutfits.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockSpecialOutfits:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockSpecialOutfits:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockSpecialOutfits )
+	self.MainUnlockSpecialOutfits = MainUnlockSpecialOutfits
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockSpecialOutfits, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockSpecialOutfits_Toggle()
+
+		if UnlockSpecialOutfits then
+			MainUnlockSpecialOutfits.MiddleText:setText("^3Unlock Specialists Outfits: ^2Enabled")
+			MainUnlockSpecialOutfits.MiddleTextFocus:setText("^3Unlock Specialists Outfits: ^2Enabled")
+		else
+			MainUnlockSpecialOutfits.MiddleText:setText("^3Unlock Specialists Outfits: ^1Disabled")
+			MainUnlockSpecialOutfits.MiddleTextFocus:setText("^3Unlock Specialists Outfits: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockSpecialOutfits = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 140, 190 )
+	sizeMainUnlockSpecialOutfits:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockSpecialOutfits:setAlpha( 0 )
+	sizeMainUnlockSpecialOutfits.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockSpecialOutfits.Tint:setAlpha( 0.25 )
+	sizeMainUnlockSpecialOutfits:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockSpecialOutfits:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockSpecialOutfits.ButtonName.GameModeText:setText("Unlock Specialists Outfits")
+	self:addElement( sizeMainUnlockSpecialOutfits )
+	self.sizeMainUnlockSpecialOutfits = sizeMainUnlockSpecialOutfits
+
+	MainUnlockSpecialOutfits.id = "MainUnlockSpecialOutfits"
+	sizeMainUnlockSpecialOutfits.id = "sizeMainUnlockSpecialOutfits"
 
 	-- Blackout
 	local Blackout_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400, 450 )
@@ -4079,7 +4158,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	end )
 
 
-	local Blackout_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 400, 750, 0.23, 0.23, 400, 450 )
+	local Blackout_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400, 450 )
 	Blackout_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
 		Blackout_PrestigeEditBox:setModel( model, f1_arg1 )
 	end )
@@ -4118,6 +4197,61 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 			f331_arg0:set("") -- reset it
 		end
 	end )
+
+	local BlackoutPrestigeMaster = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400, 450 )
+	
+	BlackoutPrestigeMaster.MiddleText:setTTF( "ttmussels_regular" )
+	BlackoutPrestigeMaster.MiddleText:setText("^2Prestige Master")
+
+	BlackoutPrestigeMaster.MiddleTextFocus:setText("^2Prestige Master")
+	BlackoutPrestigeMaster.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	BlackoutPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		BlackoutPrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	self:addElement( BlackoutPrestigeMaster )
+	self.BlackoutPrestigeMaster = BlackoutPrestigeMaster
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( BlackoutPrestigeMaster, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("BlackoutPrestigeMaster")
+		-- shield api later
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeBlackoutPrestigeMaster = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400, 450 )
+	sizeBlackoutPrestigeMaster:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeBlackoutPrestigeMaster:setAlpha( 0 )
+	sizeBlackoutPrestigeMaster.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeBlackoutPrestigeMaster.Tint:setAlpha( 0.25 )
+	sizeBlackoutPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		sizeBlackoutPrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	sizeBlackoutPrestigeMaster.ButtonName.GameModeText:setText("^2Prestige Master")
+	self:addElement( sizeBlackoutPrestigeMaster )
+	self.sizeBlackoutPrestigeMaster = sizeBlackoutPrestigeMaster
+
+	BlackoutPrestigeMaster.id = "BlackoutPrestigeMaster"
+	sizeBlackoutPrestigeMaster.id = "sizeBlackoutPrestigeMaster"
 	
 	Blackout_RankEditBox.id = "Blackout_RankEditBox"
 	Blackout_PrestigeEditBox.id = "Blackout_PrestigeEditBox"
@@ -4164,7 +4298,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	end )
 
 
-	local Multiplayer_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 400, 750, 0.23, 0.23, 400 + 100, 450 + 100 )
+	local Multiplayer_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400 + 100, 450 + 100 )
 	Multiplayer_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
 		Multiplayer_PrestigeEditBox:setModel( model, f1_arg1 )
 	end )
@@ -4203,6 +4337,61 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 			f331_arg0:set("") -- reset it
 		end
 	end )
+
+	local MultiplayePrestigeMaster = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 100, 450 + 100 )
+	
+	MultiplayePrestigeMaster.MiddleText:setTTF( "ttmussels_regular" )
+	MultiplayePrestigeMaster.MiddleText:setText("^2Prestige Master")
+
+	MultiplayePrestigeMaster.MiddleTextFocus:setText("^2Prestige Master")
+	MultiplayePrestigeMaster.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	MultiplayePrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		MultiplayePrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MultiplayePrestigeMaster )
+	self.MultiplayePrestigeMaster = MultiplayePrestigeMaster
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MultiplayePrestigeMaster, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("MultiplayePrestigeMaster")
+		-- shield api later
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMultiplayePrestigeMaster = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 100, 450 + 100 )
+	sizeMultiplayePrestigeMaster:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMultiplayePrestigeMaster:setAlpha( 0 )
+	sizeMultiplayePrestigeMaster.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMultiplayePrestigeMaster.Tint:setAlpha( 0.25 )
+	sizeMultiplayePrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		sizeMultiplayePrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	sizeMultiplayePrestigeMaster.ButtonName.GameModeText:setText("^2Prestige Master")
+	self:addElement( sizeMultiplayePrestigeMaster )
+	self.sizeMultiplayePrestigeMaster = sizeMultiplayePrestigeMaster
+
+	MultiplayePrestigeMaster.id = "MultiplayePrestigeMaster"
+	sizeMultiplayePrestigeMaster.id = "sizeMultiplayePrestigeMaster"
 	
 	Multiplayer_RankEditBox.id = "Multiplayer_RankEditBox"
 	Multiplayer_PrestigeEditBox.id = "Multiplayer_PrestigeEditBox"
@@ -4249,7 +4438,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	end )
 
 
-	local Zombies_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 400, 750, 0.23, 0.23, 400 + 200, 450 + 200 )
+	local Zombies_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400 + 200, 450 + 200 )
 	Zombies_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
 		Zombies_PrestigeEditBox:setModel( model, f1_arg1 )
 	end )
@@ -4288,6 +4477,61 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 			f331_arg0:set("") -- reset it
 		end
 	end )
+
+	local ZombiesPrestigeMaster = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 200, 450 + 200 )
+	
+	ZombiesPrestigeMaster.MiddleText:setTTF( "ttmussels_regular" )
+	ZombiesPrestigeMaster.MiddleText:setText("^2Prestige Master")
+
+	ZombiesPrestigeMaster.MiddleTextFocus:setText("^2Prestige Master")
+	ZombiesPrestigeMaster.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	ZombiesPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		ZombiesPrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	self:addElement( ZombiesPrestigeMaster )
+	self.ZombiesPrestigeMaster = ZombiesPrestigeMaster
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( ZombiesPrestigeMaster, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("ZombiesPrestigeMaster")
+		-- shield api later
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeZombiesPrestigeMaster = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 200, 450 + 200 )
+	sizeZombiesPrestigeMaster:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeZombiesPrestigeMaster:setAlpha( 0 )
+	sizeZombiesPrestigeMaster.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeZombiesPrestigeMaster.Tint:setAlpha( 0.25 )
+	sizeZombiesPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		sizeZombiesPrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	sizeZombiesPrestigeMaster.ButtonName.GameModeText:setText("^2Prestige Master")
+	self:addElement( sizeZombiesPrestigeMaster )
+	self.sizeZombiesPrestigeMaster = sizeZombiesPrestigeMaster
+
+	ZombiesPrestigeMaster.id = "ZombiesPrestigeMaster"
+	sizeZombiesPrestigeMaster.id = "sizeZombiesPrestigeMaster"
 	
 	Zombies_RankEditBox.id = "Zombies_RankEditBox"
 	Zombies_PrestigeEditBox.id = "Zombies_PrestigeEditBox"
