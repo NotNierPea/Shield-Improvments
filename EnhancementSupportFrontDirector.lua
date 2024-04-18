@@ -287,6 +287,8 @@ local UnlockLoot = false
 local UnlockAttachments = false
 local UnlockCamos = false
 local UnlockCards = false
+local UnlockPurchases = false
+local UnlockClassSlots = false
 
 --------------------------
 
@@ -468,6 +470,32 @@ local function ShieldUnlockCards_Toggle(Controller)
 	end
 end
 
+local function ShieldPurchases_Toggle(Controller)
+	UnlockPurchases = not UnlockPurchases
+
+	if UnlockPurchases then
+		EnhPrintInfo(UnlockPurchases, "Unlock Purchases")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock purchases true")
+	else
+		EnhPrintInfo(UnlockPurchases, "Unlock Purchases")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock purchases false")
+	end
+end
+
+
+local function ShieldUnlockClassSlots_Toggle(Controller)
+	UnlockClassSlots = not UnlockClassSlots
+
+	if UnlockClassSlots then
+		EnhPrintInfo(UnlockClassSlots, "Unlock Class Slots")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock classslots true")
+	else
+		EnhPrintInfo(UnlockClassSlots, "Unlock Class Slots")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock classslots false")
+	end
+end
+
+
 -- Override
 CoD.PCUtility.IsBGSEnabled = function ()
 	return true
@@ -535,6 +563,34 @@ CoD.CACUtility.IsProgressionWithWarzoneEnabled = function ( f219_arg0 )
 	--EnhPrintInfo("Returned True", "IsProgressionWithWarzoneEnabled")
 	return true
 end
+
+--[[
+CoD.CACUtility.IsCACItemLocked = function ( f340_arg0, f340_arg1, f340_arg2 )
+	local f340_local0 = CoD.BaseUtility.GetMenuSessionMode( f340_arg0 )
+	if CoD.CraftUtility.Paintjobs.IsEditor( f340_arg0 ) then
+		return false
+	elseif not CoD.CACUtility.IsProgressionEnabled( f340_local0 ) then
+		return false
+	else
+		local f340_local1 = f340_arg1:getModel()
+		if f340_local1 and f340_local1.globalItemIndex then
+			local cond_engine_item = Engine[@"isitemlocked"]( f340_arg2, f340_local1.globalItemIndex:get(), f340_local0 )
+			EnhPrintInfo("engine isitemlocked", cond_engine_item)
+			return cond_engine_item
+		else
+			return false
+		end
+	end
+end
+]]
+
+-- CoD.CACUtility.IsCACItemLocked = function ( f340_arg0, f340_arg1, f340_arg2 )
+
+--CoD.CACUtility.IsItemRefLocked = function ( f339_arg0, f339_arg1, f339_arg2 )
+
+--CoD.CACUtility.IsFeatureItemLocked = function ( f345_arg0, f345_arg1, f345_arg2 )
+
+--CoD.CACUtility.IsSignatureWeaponLockedByProgression = function ( f342_arg0, f342_arg1, f342_arg2 )
 
 -- Data Sources
 -- Buttons in Extra Main
@@ -3848,6 +3904,138 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 
 	MainUnlockCards.id = "MainUnlockCards"
 	sizeMainUnlockCards.id = "sizeMainUnlockCards"
+
+	local MainUnlockPurchases = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 700, 1000, 0.23, 0.23, 70, 120 )
+	MainUnlockPurchases.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockPurchases then
+		MainUnlockPurchases.MiddleText:setText("^3Unlock Purchases: ^2Enabled")
+		MainUnlockPurchases.MiddleTextFocus:setText("^3Unlock Purchases: ^2Enabled")
+	else
+		MainUnlockPurchases.MiddleText:setText("^3Unlock Purchases: ^1Disabled")
+		MainUnlockPurchases.MiddleTextFocus:setText("^3Unlock Purchases: ^1Disabled")
+	end
+
+	MainUnlockPurchases.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockPurchases:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockPurchases:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockPurchases )
+	self.MainUnlockPurchases = MainUnlockPurchases
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockPurchases, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldPurchases_Toggle()
+
+		if UnlockPurchases then
+			MainUnlockPurchases.MiddleText:setText("^3Unlock Purchases: ^2Enabled")
+			MainUnlockPurchases.MiddleTextFocus:setText("^3Unlock Purchases: ^2Enabled")
+		else
+			MainUnlockPurchases.MiddleText:setText("^3Unlock Purchases: ^1Disabled")
+			MainUnlockPurchases.MiddleTextFocus:setText("^3Unlock Purchases: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockPurchases = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 700, 1000, 0.23, 0.23, 70, 120 )
+	sizeMainUnlockPurchases:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockPurchases:setAlpha( 0 )
+	sizeMainUnlockPurchases.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockPurchases.Tint:setAlpha( 0.25 )
+	sizeMainUnlockPurchases:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockPurchases:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockPurchases.ButtonName.GameModeText:setText("Unlock Purchases")
+	self:addElement( sizeMainUnlockPurchases )
+	self.sizeMainUnlockPurchases = sizeMainUnlockPurchases
+
+	MainUnlockPurchases.id = "MainUnlockPurchases"
+	sizeMainUnlockPurchases.id = "sizeMainUnlockPurchases"
+
+	local MainUnlockClassSlots = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 140, 190 )
+	MainUnlockClassSlots.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockClassSlots then
+		MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^2Enabled")
+		MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^2Enabled")
+	else
+		MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^1Disabled")
+		MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^1Disabled")
+	end
+
+	MainUnlockClassSlots.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockClassSlots:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockClassSlots:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockClassSlots )
+	self.MainUnlockClassSlots = MainUnlockClassSlots
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockClassSlots, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockClassSlots_Toggle()
+
+		if UnlockClassSlots then
+			MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^2Enabled")
+			MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^2Enabled")
+		else
+			MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^1Disabled")
+			MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockClassSlots = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 300, 0.23, 0.23, 140, 190 )
+	sizeMainUnlockClassSlots:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockClassSlots:setAlpha( 0 )
+	sizeMainUnlockClassSlots.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockClassSlots.Tint:setAlpha( 0.25 )
+	sizeMainUnlockClassSlots:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockClassSlots:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockClassSlots.ButtonName.GameModeText:setText("Unlock Class Slots")
+	self:addElement( sizeMainUnlockClassSlots )
+	self.sizeMainUnlockClassSlots = sizeMainUnlockClassSlots
+
+	MainUnlockClassSlots.id = "MainUnlockClassSlots"
+	sizeMainUnlockClassSlots.id = "sizeMainUnlockClassSlots"
 
 	-- Blackout
 	local Blackout_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400, 450 )
