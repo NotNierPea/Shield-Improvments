@@ -7139,7 +7139,7 @@ CoD.DirectorZMLobbySettingList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_ar
 	f1_arg0:addElementToPendingUpdateStateList( self )
 
 	-- Dvars for Matchmaking..
-	Dvar[@"party_minplayers"]:set(30)
+	Dvar[@"party_minplayers"]:set(1)
 	Dvar[@"hash_68827F6EDED32B08"]:set( true )
 	Dvar[@"lobbytimerstartinterval"]:set(100)
 	Dvar[@"lobbycptimerstartinterval"]:set(100)
