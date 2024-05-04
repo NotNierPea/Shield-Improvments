@@ -1,2 +1,2 @@
-# shield-fixes
-shield lua fixes for bo4 client, project-bo4
+# Shield Improvments
+Shield LUA/GSC/CSC Fixes for BO4 Client, Known as Project-BO4
