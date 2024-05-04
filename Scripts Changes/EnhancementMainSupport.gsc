@@ -10,14 +10,14 @@ autoexec InitSystem()
     if(util::is_frontend_map())
      return;
 
+    compiler::detour();
+
     system::register("SupportGSC", &Init, &PostInit, undefined);
 }
 
 Init()
 {
     ShieldLog("^1Support GSC Loaded!");
-    
-    compiler::detour();
 
     if(sessionmodeismultiplayergame())
      thread MPChanges();
