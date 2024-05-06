@@ -765,7 +765,11 @@ CoD.OptionsUtility.OnUnlockDataChange = function ( f137_arg0, f137_arg1, f137_ar
 	local f137_local2 = f137_arg1.value
 	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
 
-	if f137_local1 ~= nil and f137_local2 == f137_local1 then
+	if f137_local1 == nil then
+		Engine[@"setdvar"]( dvar_name, f137_local2 )
+	end
+	
+	if f137_local2 == f137_local1 then
 		return 
 	else
 		Engine[@"setdvar"]( dvar_name, f137_local2 )
