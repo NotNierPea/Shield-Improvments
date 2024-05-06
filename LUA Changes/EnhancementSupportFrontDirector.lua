@@ -259,6 +259,9 @@ require( "x64:2736f83e92990ede" )
 require( "ui/uieditor/widgets/startmenu/options/startmenuoptionsmaincorners" )
 require( "ui/uieditor/widgets/startmenu/options/startmenuoptionsmainframe" )
 
+require( "ui/uieditor/widgets/common/commoncenteredpopup" )
+require( "x64:fe9df26e257edb3" )
+
 ------------------------------
 
 require( "x64:3a79adf0dbc1a1b6" )
@@ -282,14 +285,14 @@ local CurrentIconRank = ""
 local CheckClient = 0
 
 -- TODO: use either dvars to save, or lua shield api.., and add sliders for level and shit.
-local UnlockAll = false
-local UnlockLoot = false
-local UnlockAttachments = false
-local UnlockCamos = false
-local UnlockCards = false
-local UnlockItems = false
-local UnlockClassSlots = false
-local UnlockBlackMarket = false
+local UnlockAll = Engine[@"getdvarint"]("shield_unlock_all")
+local UnlockLoot = Engine[@"getdvarint"]("shield_unlock_loot")
+local UnlockAttachments = Engine[@"getdvarint"]("shield_unlock_attch")
+local UnlockCamos = Engine[@"getdvarint"]("shield_unlock_camos")
+local UnlockCards = Engine[@"getdvarint"]("")
+local UnlockItems = Engine[@"getdvarint"]("shield_unlock_items")
+local UnlockClassSlots = Engine[@"getdvarint"]("shield_unlock_classslots")
+local UnlockBlackMarket = Engine[@"getdvarint"]("")
 
 --------------------------
 
@@ -327,7 +330,7 @@ end
 
 -------------------
 
--- Wanted Stuff here
+-- Wanted Stuff and Utils for Stats..
 
 local RankUtils = {}
 
@@ -366,9 +369,9 @@ RankUtils.SetRank = function(level)
 	-- local currentPrestige = CoD.PrestigeUtility.GetCurrentPLevel(controller, Engine.CurrentSessionMode())
 	-- local currentRank = CoD.BlackMarketUtility.GetCurrentRank(controller) + 1
 
-	local prestige = 1
+	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "PLEVEL")
 
-	local isPrestigeMaster = prestige ~= nil and tonumber(prestige) == 11
+	local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
 	local maxXP = RankUtils.GetLevelXP(tonumber(level))
 
 	if not isPrestigeMaster then
@@ -405,6 +408,8 @@ RankUtils.SetPrestige = function(prestige)
 
 	-- local currentPrestige = CoD.PrestigeUtility.GetCurrentPLevel(controller, Engine.CurrentSessionMode())
 	if tonumber(prestige) == 11 then
+		-- prestige master here..
+
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(10))
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "PrestigeStatsMaster " .. tostring(Engine[@"CurrentSessionMode"]()))
 	else
@@ -426,6 +431,29 @@ RankUtils.SetPrestige = function(prestige)
 	end
 
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats " .. tostring(Engine[@"CurrentSessionMode"]()))
+end
+
+CoD.OverlayUtility.AddSystemOverlay( "ShieldPrestigeActivate", {
+	menuName = "SystemOverlay_Full",
+	frameWidget = "CoD.systemOverlay_Prestige",
+	title = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/prestige" ),
+	subtitle = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_0" ), -- not needed
+	prestigeLayout = CoD.PrestigeUtility.PrestigeOverlayLayouts.RequestProcessing,
+	categoryType = CoD.OverlayUtility.OverlayTypes.Unlock,
+	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack
+} )
+
+CoD.PrestigeUtility.EnterPrestigeAction = function ( f13_arg0, f13_arg1, f13_arg2 )
+	local PrestigeCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "PLEVEL" )
+
+	if PrestigeCurrent then
+		RankUtils.SetRank(0)
+		RankUtils.SetPrestige(PrestigeCurrent + 1)
+
+		OpenSystemOverlay(f13_arg0, f13_arg0, f13_arg1, "ShieldPrestigeActivate", nil)
+	else
+		OpenSystemOverlay(f13_arg0, f13_arg0, f13_arg1, "RequestProcessingFailedOverlay", nil)
+	end
 end
 
 -------------------
@@ -486,39 +514,10 @@ CoD.OverlayUtility.Overlays.ShieldUnlockAllDisabledMessage = {
 	end
 }
 
--- unused
-CoD.OverlayUtility.Overlays.ShieldInvalidRank = {
-	menuName = "SystemOverlay_Compact",
-	postCreateStep = function ( f155_arg0, f155_arg1 )
-		f155_arg0.anyControllerAllowed = true
-	end,
-	title = @"menu/notice",
-	description = @"shield/toohighrank",
-	categoryType = CoD.OverlayUtility.OverlayTypes.Connection,
-	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack,
-	listDatasource = function ( f156_arg0 )
-		DataSources.ShieldInvalidRankList = DataSourceHelpers.ListSetup( "ShieldInvalidRankList", function ( f157_arg0 )
-			return {
-				{
-					models = {
-						displayText = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/ok" )
-					},
-					properties = {
-						action = function ( f158_arg0, f158_arg1, f158_arg2, f158_arg3, f158_arg4 )
-							GoBack( f158_arg4, f158_arg2 )
-						end
-					}
-				}
-			}
-		end, true, nil )
-		return "ShieldInvalidRankList"
-	end
-}
-
 local function ShieldUnlockAll_Toggle(Controller)
-	UnlockAll = not UnlockAll
+	UnlockAll = Engine[@"getdvarint"]("shield_unlock_all")
 
-	if UnlockAll then
+	if UnlockAll == 1 then
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all true")
 	else
@@ -528,9 +527,9 @@ local function ShieldUnlockAll_Toggle(Controller)
 end
 
 local function ShieldUnlockAttachments_Toggle(Controller)
-	UnlockAttachments = not UnlockAttachments
+	UnlockAttachments = Engine[@"getdvarint"]("shield_unlock_attch")
 
-	if UnlockAttachments then
+	if UnlockAttachments == 1 then
 		EnhPrintInfo(UnlockAttachments, "Unlock Attachments")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock attachments true")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock attachmentslot true")
@@ -542,9 +541,9 @@ local function ShieldUnlockAttachments_Toggle(Controller)
 end
 
 local function ShieldUnlockLoot_Toggle(Controller)
-	UnlockLoot = not UnlockLoot
+	UnlockLoot = Engine[@"getdvarint"]("shield_unlock_loot")
 
-	if UnlockLoot then
+	if UnlockLoot == 1 then
 		EnhPrintInfo(UnlockLoot, "Unlock Loot All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock loot true")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock zm_loot true")
@@ -556,9 +555,9 @@ local function ShieldUnlockLoot_Toggle(Controller)
 end
 
 local function ShieldUnlockCamos_Toggle(Controller)
-	UnlockCamos = not UnlockCamos
+	UnlockCamos = Engine[@"getdvarint"]("shield_unlock_camos")
 
-	if UnlockCamos then
+	if UnlockCamos == 1 then
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions true")
 	else
@@ -568,9 +567,9 @@ local function ShieldUnlockCamos_Toggle(Controller)
 end
 
 local function ShieldUnlockCards_Toggle(Controller)
-	UnlockCards = not UnlockCards
+	UnlockCards = Engine[@"getdvarint"]("placeholder")
 
-	if UnlockCards then
+	if UnlockCards == 1 then
 		EnhPrintInfo(UnlockCards, "Unlock Cards")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock cards true")
 	else
@@ -580,9 +579,9 @@ local function ShieldUnlockCards_Toggle(Controller)
 end
 
 local function ShieldItems_Toggle(Controller)
-	UnlockItems = not UnlockItems
+	UnlockItems = Engine[@"getdvarint"]("shield_unlock_items")
 
-	if UnlockItems then
+	if UnlockItems == 1 then
 		EnhPrintInfo(UnlockItems, "Unlock Items")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock items true")
 	else
@@ -593,9 +592,9 @@ end
 
 
 local function ShieldUnlockClassSlots_Toggle(Controller)
-	UnlockClassSlots = not UnlockClassSlots
+	UnlockClassSlots = Engine[@"getdvarint"]("shield_unlock_classslots")
 
-	if UnlockClassSlots then
+	if UnlockClassSlots == 1 then
 		EnhPrintInfo(UnlockClassSlots, "Unlock Class Slots")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock classes true")
 	else
@@ -605,9 +604,9 @@ local function ShieldUnlockClassSlots_Toggle(Controller)
 end
 
 local function ShieldUnlockBlackMarket_Toggle(Controller)
-	UnlockBlackMarket = not UnlockBlackMarket
+	UnlockBlackMarket = Engine[@"getdvarint"]("placeholder")
 
-	if UnlockBlackMarket then
+	if UnlockBlackMarket == 1 then
 		EnhPrintInfo(UnlockBlackMarket, "Unlock Black Market")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock market true")
 	else
@@ -726,6 +725,84 @@ CoD.CACUtility.IsProgressionWithWarzoneEnabled = function ( f219_arg0 )
 	--EnhPrintInfo("Returned True", "IsProgressionWithWarzoneEnabled")
 	return true
 end
+
+CoD.LobbyUtility.OpenBotSettings = function ( f105_arg0, f105_arg1 )
+	CoD.LobbyUtility.SetLeaderActivity( f105_arg1, CoD.LobbyUtility.LeaderActivity.SETTING_UP_BOTS )
+	LUI.OverrideFunction_CallOriginalFirst( OpenOverlay( f105_arg0, "Shield_CustomGames_BotSettingsPopup", f105_arg1 ), "close", function ()
+		CoD.LobbyUtility.ResetLeaderActivity( f105_arg1 )
+	end )
+end
+
+CoD.OptionsUtility.OnBotHardModeChange = function ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+	local dvar_name = f137_arg3
+	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
+	local f137_local2 = f137_arg1.value
+	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
+	if f137_local2 == f137_local1 then
+		return 
+	else
+		Engine[@"setdvar"]( dvar_name, f137_local2 )
+	end
+
+	local DvarInt = Engine[@"getdvarint"]( dvar_name )
+
+	if DvarInt == 1 then
+		EnhPrintInfo("Setting Bots to Hard Mode..")
+		Dvar[@"bot_maxAllies"]:set(9)
+		Dvar[@"bot_maxAxis"]:set(9)
+		Dvar[@"bot_maxFree"]:set(10)
+	else
+		EnhPrintInfo("Setting Bots to Normal Mode..")
+		Dvar[@"bot_maxAllies"]:set(0)
+		Dvar[@"bot_maxAxis"]:set(0)
+		Dvar[@"bot_maxFree"]:set(0)
+	end
+end
+
+CoD.OptionsUtility.OnUnlockDataChange = function ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+	local dvar_name = f137_arg3
+	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
+	local f137_local2 = f137_arg1.value
+	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
+
+	if f137_local1 ~= nil and f137_local2 == f137_local1 then
+		return 
+	else
+		Engine[@"setdvar"]( dvar_name, f137_local2 )
+	end
+	
+	if dvar_name == "shield_unlock_all" then
+		ShieldUnlockAll_Toggle()
+	elseif dvar_name == "shield_unlock_attch" then
+		ShieldUnlockAttachments_Toggle()
+	elseif dvar_name == "shield_unlock_loot" then
+		ShieldUnlockLoot_Toggle()
+	elseif dvar_name == "shield_unlock_camos" then
+		ShieldUnlockCamos_Toggle()
+	elseif dvar_name == "shield_unlock_items" then
+		ShieldItems_Toggle()
+	elseif dvar_name == "shield_unlock_classslots" then
+		ShieldUnlockClassSlots_Toggle()
+	end
+end
+
+------------------
+
+--[[
+	CoD.DirectorUtility.ShowDirectorPublic = function ( f124_arg0 )
+		return true
+	end
+
+	CoD.DirectorUtility.ShowDirectorCustom = function ( f125_arg0, f125_arg1 )
+		return false
+	end
+
+	CoD.DirectorUtility.ShowDirectorPrivate = function ( f126_arg0, f126_arg1 )
+		return false
+	end
+]]
+
+------------------
 
 --[[
 CoD.CACUtility.IsCACItemLocked = function ( f340_arg0, f340_arg1, f340_arg2 )
@@ -950,39 +1027,6 @@ DataSources.DirectorExtraHomeButtonsCustom = ListHelper_SetupDataSource( "Direct
 	return f85_local0
 end )
 
-DataSources.ShieldUnlockData = ListHelper_SetupDataSource( "ShieldUnlockData", function ( f85_arg0, f85_arg1 )
-	return {
-		{
-			models = {
-				subtitle = @"shield/unlock_all",
-				showOnLeft = false,
-				small = true,
-				locked = false
-			},
-			properties = {
-				action = ShieldUnlockAll_Toggle,
-				actionParam = f85_arg0
-			}
-		}
-
-		--[[
-		{
-			models = {
-				subtitle = @"shield/a_unlockall",
-				showOnLeft = false,
-				small = true,
-				locked = false
-			},
-			properties = {
-				action = ShieldUnlockAttachments_Toggle,
-				actionParam = f85_arg0
-			}
-		}
-		]]
-	}
-
-end)
-
 -- Shield's Server Data
 DataSources.ShieldListServers = DataSourceHelpers.ListSetup( "ShieldListServers", function ( f3_arg0, f3_arg1 )
 	local InfoServers = {
@@ -1166,6 +1210,139 @@ DataSources.ChatClientEntriesList = {
 		return f651_arg1.chatEntries[f651_arg1.CountEntries - f651_arg2 + 1].model
 	end
 }
+
+-- Bot Settings
+DataSources.ShieldBotSettings = DataSourceHelpers.ListSetup( "ShieldBotSettings", function ( f138_arg0 )
+	local f138_local0 = {}
+	table.insert( f138_local0, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"hash_40A95F72AAF581A9", @"hash_4CBD385CD19E9EFC", "BotOptions_Difficulty", "bot_difficulty", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_2C59B321D25B5BDC" ),
+			value = 0
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_248B9B4B38EF1C6B" ),
+			value = 1,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_7849A68439C5A3AD" ),
+			value = 2
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_28CB70A94994D5BD" ),
+			value = 3
+		}
+	}, nil, CoD.OptionsUtility.OnBotSettingsChange ) )
+
+	table.insert( f138_local0, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/bothard", @"shield/bothard_desc", "BotOptions_HardMode", "bot_hardmode", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, CoD.OptionsUtility.OnBotHardModeChange ) )
+	return f138_local0
+end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
+	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
+	if f139_arg1.updateSubscription then
+		f139_arg1:removeSubscription( f139_arg1.updateSubscription )
+	end
+	f139_arg1.updateSubscription = f139_arg1:subscribeToModel( f139_local0, function ()
+		f139_arg1:updateDataSource()
+	end, false )
+end )
+
+-- Unlock Settings (ShieldUnlockData)
+DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", function ( f138_arg0 )
+	local Settings = {}
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_all", @"shield/unlock_all_desc", "shield_unlock_all", "shield_unlock_all", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ), -- "disabled", its hashed bruh
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_attch", @"shield/unlock_attch_desc", "shield_unlock_attch", "shield_unlock_attch", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_loot", @"shield/unlock_loot_desc", "shield_unlock_loot", "shield_unlock_loot", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_camos", @"shield/unlock_camos_desc", "shield_unlock_camos", "shield_unlock_camos", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_items", @"shield/unlock_items_desc", "shield_unlock_items", "shield_unlock_items", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlockclassslots", @"shield/unlockclassslots_desc", "shield_unlock_classslots", "shield_unlock_classslots", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+
+	return Settings
+
+end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
+	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
+	if f139_arg1.updateSubscription then
+		f139_arg1:removeSubscription( f139_arg1.updateSubscription )
+	end
+	f139_arg1.updateSubscription = f139_arg1:subscribeToModel( f139_local0, function ()
+		f139_arg1:updateDataSource()
+	end, false )
+end )
 
 ---------------------------
 
@@ -1687,7 +1864,7 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	self.backing = backing
 	
 	local BackgroundImage = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
-	BackgroundImage:setAlpha( 0 )
+	BackgroundImage:setAlpha( 0.85 )
 	BackgroundImage:setImage( RegisterImage( @"hash_64BF88A437F4C579" ) )
 	self:addElement( BackgroundImage )
 	self.BackgroundImage = BackgroundImage
@@ -1746,9 +1923,8 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	
 	LogoBO4 = LUI.UIFixedAspectRatioImage.new( 0.5, 0.5, -945, -641, 0.5, 0.5, -525, -373 )
 	LogoBO4:setAlpha( 0 )
-	LogoBO4:setScale( 2.8, 2.8 )
+	LogoBO4:setScale( 0.8, 0.8 )
 	LogoBO4:setImage( RegisterImage( @"hash_3A921D8110F2D3BD" ) )
-	LogoBO4:setRGB(1, 0, 1)
 	self:addElement( LogoBO4 )
 	self.LogoBO4 = LogoBO4
 	
@@ -1769,22 +1945,22 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	ButtonListLeft:linkToElementModel( ButtonListLeft, "locked", true, function ( model, f5_arg1 )
 		CoD.Menu.UpdateButtonShownState( f5_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end )
-	local ButtonsUnlocks = ButtonListLeft
+	local ButtonFeatured = ButtonListLeft
 	local ButtonListRight = ButtonListLeft.subscribeToModel
 	local ButtonModes = Engine[@"hash_78DF2E5447F384B9"]()
-	ButtonListRight( ButtonsUnlocks, ButtonModes["lobbyRoot.lobbyNav"], function ( f6_arg0, f6_arg1 )
+	ButtonListRight( ButtonFeatured, ButtonModes["lobbyRoot.lobbyNav"], function ( f6_arg0, f6_arg1 )
 		CoD.Menu.UpdateButtonShownState( f6_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end, false )
-	ButtonsUnlocks = ButtonListLeft
+	ButtonFeatured = ButtonListLeft
 	ButtonListRight = ButtonListLeft.subscribeToModel
 	ButtonModes = Engine[@"hash_78DF2E5447F384B9"]()
-	ButtonListRight( ButtonsUnlocks, ButtonModes["lobbyRoot.gameClient.update"], function ( f7_arg0, f7_arg1 )
+	ButtonListRight( ButtonFeatured, ButtonModes["lobbyRoot.gameClient.update"], function ( f7_arg0, f7_arg1 )
 		CoD.Menu.UpdateButtonShownState( f7_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end, false )
-	ButtonsUnlocks = ButtonListLeft
+	ButtonFeatured = ButtonListLeft
 	ButtonListRight = ButtonListLeft.subscribeToModel
 	ButtonModes = Engine[@"hash_78DF2E5447F384B9"]()
-	ButtonListRight( ButtonsUnlocks, ButtonModes["lobbyRoot.privateClient.update"], function ( f8_arg0, f8_arg1 )
+	ButtonListRight( ButtonFeatured, ButtonModes["lobbyRoot.privateClient.update"], function ( f8_arg0, f8_arg1 )
 		CoD.Menu.UpdateButtonShownState( f8_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end, false )
 	ButtonListLeft:linkToElementModel( ButtonListLeft, "showForAllClients", true, function ( model, f9_arg1 )
@@ -1846,21 +2022,21 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 		CoD.Menu.UpdateButtonShownState( f15_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end )
 	ButtonModes = ButtonListRight
-	ButtonsUnlocks = ButtonListRight.subscribeToModel
+	ButtonFeatured = ButtonListRight.subscribeToModel
 	local SafeAreaContainer = Engine[@"hash_78DF2E5447F384B9"]()
-	ButtonsUnlocks( ButtonModes, SafeAreaContainer["lobbyRoot.lobbyNav"], function ( f16_arg0, f16_arg1 )
+	ButtonFeatured( ButtonModes, SafeAreaContainer["lobbyRoot.lobbyNav"], function ( f16_arg0, f16_arg1 )
 		CoD.Menu.UpdateButtonShownState( f16_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end, false )
 	ButtonModes = ButtonListRight
-	ButtonsUnlocks = ButtonListRight.subscribeToModel
+	ButtonFeatured = ButtonListRight.subscribeToModel
 	SafeAreaContainer = Engine[@"hash_78DF2E5447F384B9"]()
-	ButtonsUnlocks( ButtonModes, SafeAreaContainer["lobbyRoot.gameClient.update"], function ( f17_arg0, f17_arg1 )
+	ButtonFeatured( ButtonModes, SafeAreaContainer["lobbyRoot.gameClient.update"], function ( f17_arg0, f17_arg1 )
 		CoD.Menu.UpdateButtonShownState( f17_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end, false )
 	ButtonModes = ButtonListRight
-	ButtonsUnlocks = ButtonListRight.subscribeToModel
+	ButtonFeatured = ButtonListRight.subscribeToModel
 	SafeAreaContainer = Engine[@"hash_78DF2E5447F384B9"]()
-	ButtonsUnlocks( ButtonModes, SafeAreaContainer["lobbyRoot.privateClient.update"], function ( f18_arg0, f18_arg1 )
+	ButtonFeatured( ButtonModes, SafeAreaContainer["lobbyRoot.privateClient.update"], function ( f18_arg0, f18_arg1 )
 		CoD.Menu.UpdateButtonShownState( f18_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
 	end, false )
 	ButtonListRight:linkToElementModel( ButtonListRight, "showForAllClients", true, function ( model, f19_arg1 )
@@ -1872,14 +2048,14 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 		return f20_local0
 	end )
 	ButtonListRight:registerEventHandler( "gain_focus", function ( element, event )
-		local loc_elemhighlight = nil
+		local f21_local0 = nil
 		if element.gainFocus then
-			loc_elemhighlight = element:gainFocus( event )
+			f21_local0 = element:gainFocus( event )
 		elseif element.super.gainFocus then
-			loc_elemhighlight = element.super:gainFocus( event )
+			f21_local0 = element.super:gainFocus( event )
 		end
 		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
-		return loc_elemhighlight
+		return f21_local0
 	end )
 	f1_arg0:AddButtonCallbackFunction( ButtonListRight, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
 		if not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "locked" ) and CoD.DirectorUtility.ShowForAllClients( element, controller ) then
@@ -1899,63 +2075,8 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	end, false )
 	self:addElement( ButtonListRight )
 	self.ButtonListRight = ButtonListRight
-
-	ButtonsUnlocks = LUI.UIList.new( f1_arg0, f1_arg1, 15, 0, nil, false, false, false, false )
-	ButtonsUnlocks:setLeftRight( 0.0625, 0.0625, 0, 100 )
-	ButtonsUnlocks:setTopBottom( 0.735, 0.735, 0, 400 )
-	ButtonsUnlocks:setWidgetType( CoD.DirectorPreGameButtonLeftJustified )
-	ButtonsUnlocks:setHorizontalCount( 4 )
-	ButtonsUnlocks:setSpacing( 15 )
-
-	ButtonsUnlocks:setAlpha(0)
-
-	ButtonsUnlocks:setDataSource( "ShieldUnlockData" )
-	ButtonsUnlocks:linkToElementModel( ButtonsUnlocks, "locked", true, function ( model, f15_arg1 )
-		CoD.Menu.UpdateButtonShownState( f15_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
-	end )
-	ButtonsUnlocks:linkToElementModel( ButtonsUnlocks, "showForAllClients", true, function ( model, f19_arg1 )
-		CoD.Menu.UpdateButtonShownState( f19_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
-	end )
-	ButtonsUnlocks:registerEventHandler( "list_item_gain_focus", function ( element, event )
-		local f20_local0 = nil
-		CoD.DirectorUtility.UpdateDescriptionTextFromSelectMenu( f1_arg1, element )
-		return f20_local0
-	end )
-	ButtonsUnlocks:registerEventHandler( "gain_focus", function ( element, event )
-		local f21_local0 = nil
-		if element.gainFocus then
-			f21_local0 = element:gainFocus( event )
-		elseif element.super.gainFocus then
-			f21_local0 = element.super:gainFocus( event )
-		end
-		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
-		return f21_local0
-	end )
-	f1_arg0:AddButtonCallbackFunction( ButtonsUnlocks, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
-		if not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "locked" ) and CoD.DirectorUtility.ShowForAllClients( element, controller ) then
-			PlaySoundAlias( "uin_toggle_generic" )
-			if not UnlockAll then
-				CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllEnabledMessage")
-			else
-				CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllDisabledMessage")
-			end
-			ProcessListAction(self, element, controller, menu)
-			return true
-		else
-			
-		end
-	end, function ( element, menu, controller )
-		if not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "locked" ) and CoD.DirectorUtility.ShowForAllClients( element, controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
-			return true
-		else
-			return false
-		end
-	end, false )
-	self:addElement( ButtonsUnlocks )
-	self.ButtonsUnlocks = ButtonsUnlocks
 	
-	local ButtonFeatured = LUI.UIList.new( f1_arg0, f1_arg1, 25, 0, nil, false, false, false, false )
+	ButtonFeatured = LUI.UIList.new( f1_arg0, f1_arg1, 25, 0, nil, false, false, false, false )
 	ButtonFeatured:setLeftRight( 0.5, 0.5, -475, 475 )
 	ButtonFeatured:setTopBottom( 0, 0, 265, 659 )
 	ButtonFeatured:setWidgetType( CoD.DirectorSelectButton )
@@ -2365,7 +2486,6 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	end
 	ButtonListLeft.id = "ButtonListLeft"
 	ButtonListRight.id = "ButtonListRight"
-	--ButtonsUnlocks.id = "ButtonsUnlocks"
 	ButtonFeatured.id = "ButtonFeatured"
 	ButtonModes.id = "ButtonModes"
 	SafeAreaContainer.id = "SafeAreaContainer"
@@ -2400,10 +2520,6 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 		CoD.PCUtility.SetAsRedirectItem( f1_local24 )
 		CoD.BaseUtility.SetCustomNavDirection( CoD.BaseUtility.NavigationDirection.up, f1_local24, self.Loadouts )
 	end
-
-	--EnhPrintInfo("Called", "Director Select")
-	LoadShitAgainInit()
-
 	return self
 end
 
@@ -2414,7 +2530,6 @@ CoD.directorSelect.__resetProperties = function ( f68_arg0 )
 	f68_arg0.ButtonModes:completeAnimation()
 	f68_arg0.FramingCornerBrackets:completeAnimation()
 	f68_arg0.ButtonListRight:completeAnimation()
-	f68_arg0.ButtonsUnlocks:completeAnimation()
 	f68_arg0.ButtonListLeft:completeAnimation()
 	f68_arg0.DotLineTop:completeAnimation()
 	f68_arg0.DotLineBottom:completeAnimation()
@@ -2446,8 +2561,6 @@ CoD.directorSelect.__resetProperties = function ( f68_arg0 )
 	f68_arg0.FramingCornerBrackets:setTopBottom( 0, 0, 222, 796 )
 	f68_arg0.ButtonListRight:setLeftRight( 0.5, 0.5, 500, 712 )
 	f68_arg0.ButtonListRight:setTopBottom( 0, 0, 265, 510 )
-	f68_arg0.ButtonsUnlocks:setLeftRight( 0.0625, 0.0625, 0, 100 )
-	f68_arg0.ButtonsUnlocks:setTopBottom( 0.735, 0.735, 0, 400 )
 	f68_arg0.ButtonListLeft:setLeftRight( 0.5, 0.5, -725, -513 )
 	f68_arg0.DotLineTop:setLeftRight( 0.5, 0.5, -474.5, 474.5 )
 	f68_arg0.DotLineBottom:setLeftRight( 0.5, 0.5, -474.5, 474.5 )
@@ -2499,10 +2612,6 @@ CoD.directorSelect.__clipsPerState = {
 			f71_arg0.ButtonListRight:setLeftRight( 0.5, 0.5, 674, 886 )
 			f71_arg0.ButtonListRight:setTopBottom( 0, 0, 265, 510 )
 			f71_arg0.clipFinished( f71_arg0.ButtonListRight )
-			f71_arg0.ButtonsUnlocks:completeAnimation()
-			f71_arg0.ButtonsUnlocks:setLeftRight( 0.0625, 0.0625, 0, 100 )
-			f71_arg0.ButtonsUnlocks:setTopBottom( 0.735, 0.735, 0, 400 )
-			f71_arg0.clipFinished( f71_arg0.ButtonsUnlocks )
 			f71_arg0.ButtonFeatured:completeAnimation()
 			f71_arg0.ButtonFeatured:setLeftRight( 0.5, 0.5, -637.5, 637.5 )
 			f71_arg0.ButtonFeatured:setAutoScaleContent( false )
@@ -2583,10 +2692,6 @@ CoD.directorSelect.__clipsPerState = {
 			f74_arg0.ButtonListRight:setLeftRight( 0.5, 0.5, 674, 886 )
 			f74_arg0.ButtonListRight:setTopBottom( 0, 0, 265, 510 )
 			f74_arg0.clipFinished( f74_arg0.ButtonListRight )
-			f74_arg0.ButtonsUnlocks:completeAnimation()
-			f74_arg0.ButtonsUnlocks:setLeftRight( 0.0625, 0.0625, 0, 100 )
-			f74_arg0.ButtonsUnlocks:setTopBottom( 0.735, 0.735, 0, 400 )
-			f74_arg0.clipFinished( f74_arg0.ButtonsUnlocks )
 			f74_arg0.ButtonFeatured:completeAnimation()
 			f74_arg0.ButtonFeatured:setLeftRight( 0.5, 0.5, -637.5, 637.5 )
 			f74_arg0.ButtonFeatured:setAutoScaleContent( false )
@@ -2635,7 +2740,6 @@ CoD.directorSelect.__onClose = function ( f76_arg0 )
 	f76_arg0.pckeyboardNavigationRedirector2:close()
 	f76_arg0.ButtonListLeft:close()
 	f76_arg0.ButtonListRight:close()
-	f76_arg0.ButtonsUnlocks:close()
 	f76_arg0.ButtonFeatured:close()
 	f76_arg0.ButtonModes:close()
 	f76_arg0.SafeAreaContainer:close()
@@ -2647,6 +2751,8 @@ CoD.directorSelect.__onClose = function ( f76_arg0 )
 	f76_arg0.IGREventButton:close()
 	f76_arg0.pckeyboardNavigationRedirector:close()
 end
+
+
 
 -- CurrentMainRank -> CoD.PlayerStatsUtility.GetRank
 CoD.ButtonFrame_Progress = InheritFrom( LUI.UIElement )
@@ -3982,7 +4088,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	local FooterContainerFrontendRight2 = CoD.Fo..., -48, 0 )
 	]]
 
-	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 127.5, 1496.5, 0.31, 0.31, -160.5, -120.5 )
+	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 50, 1796.5, 0.31, 0.31, -160.5, -120.5 )
 	HeaderPixelGridTiledBackingL:setAlpha( 0.15 )
 	HeaderPixelGridTiledBackingL:setImage( RegisterImage( @"hash_1311E811A3183347" ) )
 	HeaderPixelGridTiledBackingL:setMaterial( LUI.UIImage.GetCachedMaterial( @"hash_16CBE95C250C6D15" ) )
@@ -4043,8 +4149,49 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 
 	-- !!!
 	-- no im not fucking using datasources, too many errors to deal with, this easier tbh..
+	-- nevermind, found an easier way lol
 	-- !!!
 
+	-- datasources here
+	local UnlockSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+	UnlockSettingsList:setLeftRight( 0.305, 0.305, 10, 700 )
+	UnlockSettingsList:setTopBottom( 0.27, 0.27, 0, 50 )
+	--UnlockSettingsList:setScale(0.90, 0.90)
+	--UnlockSettingsList:setAutoScaleContent( true )
+	UnlockSettingsList:setVerticalCount(3) -- fix
+	UnlockSettingsList:setHorizontalCount(3)
+	UnlockSettingsList:setSpacing(30) -- spacing needed..
+	UnlockSettingsList:setWidgetType( CoD.CustomGames_SettingSliderNoCustom )
+	UnlockSettingsList:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	UnlockSettingsList:setDataSource( "ShieldUnlockData" )
+	self:addElement( UnlockSettingsList )
+	self.UnlockSettingsList = UnlockSettingsList
+
+	UnlockSettingsList.id = "UnlockSettingsList"
+
+	-- desc
+	local UnlockSettingDescription = LUI.UIText.new( 0.5, 0.5, -300, 250, 0.70, 0.70, 150, 180 )
+	UnlockSettingDescription:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	UnlockSettingDescription:setTTF("notosans_bold")
+	UnlockSettingDescription:setBackingType( 2 ) --[[ @ 0]]
+	UnlockSettingDescription:setBackingColor( 0.04, 0.81, 1 ) --[[ @ 0]]
+	UnlockSettingDescription:setBackingAlpha( 0.01 ) --[[ @ 0]]
+	UnlockSettingDescription:setBackingXPadding( 12 ) --[[ @ 0]]
+	UnlockSettingDescription:setBackingYPadding( 6 ) --[[ @ 0]]
+	UnlockSettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	UnlockSettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( UnlockSettingDescription )
+	self.UnlockSettingDescription = UnlockSettingDescription
+
+	-- link it, subtitles like
+	UnlockSettingDescription:linkToElementModel( UnlockSettingsList, "desc", true, function ( model )
+		local f7_local0 = model:get()
+		if f7_local0 ~= nil then
+			UnlockSettingDescription:setText( Engine[@"hash_4F9F1239CFD921FE"]( f7_local0 ) )
+		end
+	end )
+
+	--[[
 	local MainUnlockAll = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
 	MainUnlockAll.MiddleText:setTTF( "ttmussels_regular" )
 
@@ -4346,7 +4493,6 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self.MainUnlockCards = MainUnlockCards
 
 	-- add callback click
-	--[[
 	f1_local1:AddButtonCallbackFunction( MainUnlockCards, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
 		PlaySoundAlias( "uin_paint_image_flip_toggle" )
 		ShieldUnlockCards_Toggle()
@@ -4370,7 +4516,6 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 			return false
 		end
 	end, false )
-	]]
 	
 	local sizeMainUnlockCards = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 70, 120 )
 	sizeMainUnlockCards:mergeStateConditions( {
@@ -4555,7 +4700,6 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self.MainUnlockBlackMarket = MainUnlockBlackMarket
 
 	-- add callback click
-	--[[
 	f1_local1:AddButtonCallbackFunction( MainUnlockBlackMarket, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
 		PlaySoundAlias( "uin_paint_image_flip_toggle" )
 		ShieldUnlockBlackMarket_Toggle()
@@ -4579,7 +4723,6 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 			return false
 		end
 	end, false )
-	]]
 	
 	local sizeMainUnlockBlackMarket = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 950, 0.23, 0.23, 140, 190 )
 	sizeMainUnlockBlackMarket:mergeStateConditions( {
@@ -4604,8 +4747,10 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	MainUnlockBlackMarket.id = "MainUnlockBlackMarket"
 	sizeMainUnlockBlackMarket.id = "sizeMainUnlockBlackMarket"
 
+	]]
+
 	-- Rank Edit
-	local RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400, 450 )
+	local RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, -20, 350, 0.23, 0.23, 400, 450 )
 	RankEditBox:linkToElementModel( self, nil, false, function ( model )
 		RankEditBox:setModel( model, f1_arg1 )
 	end )
@@ -4622,11 +4767,28 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	CoD.PCUtility.SetupEditControlWithModel( RankEditBox, f1_arg0, f1_local1, RankEditBoxModel, function ( f331_arg0, f331_arg1, f331_arg2 )
 		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
 			local RankData = f331_arg0:get()
+			local RankLimit = 54
+			local sessionmode = Engine[@"CurrentSessionMode"]()
+
+			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+				RankLimit = 54
+			end
+			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+				RankLimit = 54
+			end
+			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+				RankLimit = 79
+			end
+
+			if CoD.PlayerStatsUtility.IsPrestigeMasterForMenu(Engine[@"currentsessionmode"](), f1_local1) then
+				RankLimit = 999
+			end
+
 			if RankData ~= nil and RankData ~= "" then
 				EnhPrintInfo("Gamemode RankData", RankData)
 				PlaySoundAlias( "uin_paint_image_flip_toggle" )
-
-				if not isInteger(RankData) or tonumber(RankData) > 54 or tonumber(RankData) < 1 then
+				
+				if not isInteger(RankData) or tonumber(RankData) > RankLimit or tonumber(RankData) < 1 then
 					f331_arg0:set("^1Invalid Rank!")
 					RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
 						f331_arg0:set("")
@@ -4647,7 +4809,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	end )
 
 
-	local PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400, 450 )
+	local PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380 - 5, 730, 0.23, 0.23, 400, 450 )
 	PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
 		PrestigeEditBox:setModel( model, f1_arg1 )
 	end )
@@ -10079,6 +10241,7 @@ CoD.DirectorCustomGameSetUpWZ.__clipsPerState = {
 		end
 	}
 }
+
 CoD.DirectorCustomGameSetUpWZ.__onClose = function ( f153_arg0 )
 	f153_arg0.DirectorGameSettingList:close()
 	f153_arg0.SelectionModeFocusBlocker:close()
@@ -11450,4 +11613,179 @@ CoD.directorPrivate.__onClose = function ( f33_arg0 )
 	f33_arg0.DirectorLobbyPoseMembersZM:close()
 	f33_arg0.ZMLoadoutPreviewInfo:close()
 	f33_arg0.DirectorZMLobbySettingList:close()
+end
+
+-- Custom Bots Settings..
+CoD.Shield_CustomGames_BotSettingsPopup = InheritFrom( CoD.Menu )
+LUI.createMenu.Shield_CustomGames_BotSettingsPopup = function ( f1_arg0, f1_arg1 )
+	local self = CoD.Menu.NewForUIEditor( "Shield_CustomGames_BotSettingsPopup", f1_arg0 )
+	local f1_local1 = self
+	self:setClass( CoD.Shield_CustomGames_BotSettingsPopup )
+	self.soundSet = "none"
+	self:setOwner( f1_arg0 )
+	self:setLeftRight( 0, 1, 0, 0 )
+	self:setTopBottom( 0, 1, 0, 0 )
+	self:playSound( "menu_open", f1_arg0 )
+	self.anyChildUsesUpdateState = true
+	f1_local1:addElementToPendingUpdateStateList( self )
+	
+	local CommomCenteredPopup = CoD.CommonCenteredPopup.new( f1_local1, f1_arg0, 0, 1, 0, 0, 0, 1, 0, 0 )
+	CommomCenteredPopup.TitleText:setText( LocalizeToUpperString( @"hash_65025AFE42DB30DC" ) )
+	CommomCenteredPopup.HeaderBackground:setAlpha( 0 )
+	CommomCenteredPopup.HeaderTopBar:setAlpha( 0 )
+	CommomCenteredPopup.HeaderBottomBar:setAlpha( 0 )
+	self:addElement( CommomCenteredPopup )
+	self.CommomCenteredPopup = CommomCenteredPopup
+	
+	local BotSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+	BotSettingsList:setLeftRight( 0.5, 0.5, -250, 250 )
+	BotSettingsList:setTopBottom( 0.5, 0.5, -380 + 30, -320 + 30 )
+	BotSettingsList:setAutoScaleContent( true )
+	BotSettingsList:setVerticalCount(3) -- fix
+	BotSettingsList:setHorizontalCount(1)
+	BotSettingsList:setWidgetType( CoD.CustomGames_SettingSliderNoCustom )
+	BotSettingsList:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	BotSettingsList:setDataSource( "ShieldBotSettings" )
+	self:addElement( BotSettingsList )
+	self.BotSettingsList = BotSettingsList
+	
+	local SettingDescription = LUI.UIText.new( 0.5, 0.5, -250, 250, 0.5, 0.5, -284 + 75, -263 + 75 )
+	SettingDescription:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	SettingDescription:setTTF( "dinnext_regular" )
+	SettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	SettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( SettingDescription )
+	self.SettingDescription = SettingDescription
+	
+	local PCSmallCloseButton = nil
+	
+	PCSmallCloseButton = CoD.PC_SmallCloseButton.new( f1_local1, f1_arg0, 0.5, 0.5, 308, 342, 0.5, 0.5, -438.5, -404.5 )
+	PCSmallCloseButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f2_local0 = nil
+		if element.gainFocus then
+			f2_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f2_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_local1, f1_arg0, Enum[@"luibutton"][@"lui_key_none"] )
+		return f2_local0
+	end )
+	f1_local1:AddButtonCallbackFunction( PCSmallCloseButton, f1_arg0, Enum[@"luibutton"][@"lui_key_none"], "MOUSE1", function ( element, menu, controller, model )
+		GoBack( self, controller )
+		return true
+	end, function ( element, menu, controller )
+		CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_none"], @"hash_0", nil, "MOUSE1" )
+		return false
+	end, false )
+	f1_local1:AddButtonCallbackFunction( PCSmallCloseButton, f1_arg0, Enum[@"luibutton"][@"lui_key_none"], "ui_confirm", function ( element, menu, controller, model )
+		GoBack( self, controller )
+		return true
+	end, function ( element, menu, controller )
+		CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_none"], @"hash_0", nil, "ui_confirm" )
+		return false
+	end, false )
+	self:addElement( PCSmallCloseButton )
+	self.PCSmallCloseButton = PCSmallCloseButton
+	
+	SettingDescription:linkToElementModel( BotSettingsList, "desc", true, function ( model )
+		local f7_local0 = model:get()
+		if f7_local0 ~= nil then
+			SettingDescription:setText( Engine[@"hash_4F9F1239CFD921FE"]( f7_local0 ) )
+		end
+	end )
+	self:mergeStateConditions( {
+		{
+			stateName = "KBM",
+			condition = function ( menu, element, event )
+				return IsMouseOrKeyboard( f1_arg0 )
+			end
+		}
+	} )
+	self:appendEventHandler( "input_source_changed", function ( f9_arg0, f9_arg1 )
+		f9_arg1.menu = f9_arg1.menu or f1_local1
+		f1_local1:updateElementState( self, f9_arg1 )
+	end )
+	local f1_local6 = self
+	local f1_local7 = self.subscribeToModel
+	local f1_local8 = Engine[@"getmodelforcontroller"]( f1_arg0 )
+	f1_local7( f1_local6, f1_local8.LastInput, function ( f10_arg0 )
+		f1_local1:updateElementState( self, {
+			name = "model_validation",
+			menu = f1_local1,
+			controller = f1_arg0,
+			modelValue = f10_arg0:get(),
+			modelName = "LastInput"
+		} )
+	end, false )
+	f1_local1:AddButtonCallbackFunction( self, f1_arg0, Enum[@"luibutton"][@"lui_key_xbb_pscircle"], nil, function ( element, menu, controller, model )
+		GoBack( self, controller )
+		ClearMenuSavedState( menu )
+		ForceNotifyGlobalModel( controller, "GametypeSettings.Update" )
+		return true
+	end, function ( element, menu, controller )
+		CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xbb_pscircle"], @"menu/back", nil, nil )
+		return true
+	end, false )
+	CommomCenteredPopup.buttons:setModel( self.buttonModel, f1_arg0 )
+	if CoD.isPC then
+		CommomCenteredPopup.id = "CommomCenteredPopup"
+	end
+	BotSettingsList.id = "BotSettingsList"
+	if CoD.isPC then
+		PCSmallCloseButton.id = "PCSmallCloseButton"
+	end
+	self:processEvent( {
+		name = "menu_loaded",
+		controller = f1_arg0
+	} )
+	self.__defaultFocus = BotSettingsList
+	if CoD.isPC and (IsKeyboard( f1_arg0 ) or self.ignoreCursor) then
+		self:restoreState( f1_arg0 )
+	end
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg0 )
+	end
+	
+	f1_local7 = self
+	MenuHidesFreeCursor( f1_local1, f1_arg0 )
+
+	EnhPrintInfo("Called", "Shield's Bot Settings Menu")
+
+	return self
+end
+
+CoD.Shield_CustomGames_BotSettingsPopup.__resetProperties = function ( f13_arg0 )
+	f13_arg0.BotSettingsList:completeAnimation()
+	f13_arg0.SettingDescription:completeAnimation()
+	f13_arg0.BotSettingsList:setLeftRight( 0.5, 0.5, -250, 250 )
+	f13_arg0.SettingDescription:setLeftRight( 0.5, 0.5, -250, 250 )
+end
+
+CoD.Shield_CustomGames_BotSettingsPopup.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 0 )
+		end
+	},
+	KBM = {
+		DefaultClip = function ( f15_arg0, f15_arg1 )
+			f15_arg0:__resetProperties()
+			f15_arg0:setupElementClipCounter( 2 )
+			f15_arg0.BotSettingsList:completeAnimation()
+			f15_arg0.BotSettingsList:setLeftRight( 0.5, 0.5, -290, 290 )
+			f15_arg0.clipFinished( f15_arg0.BotSettingsList )
+			f15_arg0.SettingDescription:completeAnimation()
+			f15_arg0.SettingDescription:setLeftRight( 0.5, 0.5, -290, 290 )
+			f15_arg0.clipFinished( f15_arg0.SettingDescription )
+		end
+	}
+}
+
+CoD.Shield_CustomGames_BotSettingsPopup.__onClose = function ( f16_arg0 )
+	f16_arg0.SettingDescription:close()
+	f16_arg0.CommomCenteredPopup:close()
+	f16_arg0.BotSettingsList:close()
+	f16_arg0.PCSmallCloseButton:close()
 end
