@@ -92,32 +92,77 @@
         {
             "type": "localizeentry",
             "name": "shield/unlock_all",
-            "value": "^2Unlock All"
+            "value": "Unlock All"
         },
         {
             "type": "localizeentry",
-            "name": "shield/a_unlockall",
-            "value": "^3Unlock All Options"
+            "name": "shield/unlock_all_desc",
+            "value": "Unlocks Everything in All Gamemodes"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_attch",
+            "value": "Unlock Attachments"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_attch_desc",
+            "value": "Unlocks All Weapon's Attachments"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_loot",
+            "value": "Unlock Loot"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_loot_desc",
+            "value": "Unlocks Loot and Sets Max Elixirs in Zombies"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_camos",
+            "value": "Unlock Camos"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_camos_desc",
+            "value": "Unlocks All Weapon's Camos"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_items",
+            "value": "Unlock Items"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_items_desc",
+            "value": "Unlocks All Weapons, and Some Other Stuff"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlockclassslots",
+            "value": "Unlock Class Slots"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlockclassslots_desc",
+            "value": "Unlocks The Extra Class Slots in Multiplayer (12 Class Slots in Total)"
         },
         {
             "type": "localizeentry",
             "name": "shield/f_unlockall",
-            "value": "^4Unlock All Options"
+            "value": "Unlock All Options"
         },
         {
             "type": "localizeentry",
             "name": "shield/e_unlockall",
-            "value": "^2Unlock All Enabled"
+            "value": "Unlock All Enabled"
         },
         {
             "type": "localizeentry",
             "name": "shield/d_unlockall",
-            "value": "^2Unlock All Disabled"
-        },
-        {
-            "type": "localizeentry",
-            "name": "shield/toohighrank",
-            "value": "^1Invalid Rank!"
+            "value": "Unlock All Disabled"
         },
         {
             "type": "localizeentry",
@@ -139,6 +184,23 @@
             "type": "localizeentry",
             "name": "shield/server2",
             "value": "^3Public Server 2 (Hosted by ????)"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/prestige",
+            "value": "Prestige Activated!"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/bothard",
+            "value": "Hard Mode"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/bothard_desc",
+            "value": "Adds an Extra Bots (18 in Total if with All Bots), and Sets the Extra Bots to a Very Hard Mode"
         }
     ],
 
@@ -148,77 +210,133 @@
             "type": "string",
             "name": "shield/custombutton",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/launchgame",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/unlock_all",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
-            "name": "shield/t_unlockall",
+            "name": "shield/unlock_all_desc",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
-            "name": "shield/a_unlockall",
+            "name": "shield/unlock_attch",
             "mode": [
-                "zm"
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_attch_desc",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_loot",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_loot_desc",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_camos",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_camos_desc",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_items",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_items_desc",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlockclassslots",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlockclassslots_desc",
+            "mode": [
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/f_unlockall",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/e_unlockall",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/d_unlockall",
             "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/toohighrank",
-            "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/serverbrowser",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/servers",
             "mode": [
-                "zm"
+                "all"
             ]
         },
 
@@ -226,14 +344,37 @@
             "type": "string",
             "name": "shield/server1",
             "mode": [
-                "zm"
+                "all"
             ]
         },
         {
             "type": "string",
             "name": "shield/server2",
             "mode": [
-                "zm"
+                "all"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/prestige",
+            "mode": [
+                "all"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/bothard",
+            "mode": [
+                "all"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/bothard_desc",
+            "mode": [
+                "all"
             ]
         }
     ]
