@@ -733,7 +733,7 @@ CoD.LobbyUtility.OpenBotSettings = function ( f105_arg0, f105_arg1 )
 	end )
 end
 
-CoD.OptionsUtility.OnBotHardModeChange = function ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+local function OnBotHardModeChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
 	local dvar_name = f137_arg3
 	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
 	local f137_local2 = f137_arg1.value
@@ -759,16 +759,12 @@ CoD.OptionsUtility.OnBotHardModeChange = function ( f137_arg0, f137_arg1, f137_a
 	end
 end
 
-CoD.OptionsUtility.OnUnlockDataChange = function ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
 	local dvar_name = f137_arg3
 	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
 	local f137_local2 = f137_arg1.value
 	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
 
-	if f137_local1 == nil then
-		Engine[@"setdvar"]( dvar_name, f137_local2 )
-	end
-	
 	if f137_local2 == f137_local1 then
 		return 
 	else
@@ -1248,7 +1244,7 @@ DataSources.ShieldBotSettings = DataSourceHelpers.ListSetup( "ShieldBotSettings"
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
 			value = 1
 		}
-	}, nil, CoD.OptionsUtility.OnBotHardModeChange ) )
+	}, nil, OnBotHardModeChange ) )
 	return f138_local0
 end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
 	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
@@ -1274,7 +1270,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
 			value = 1
 		}
-	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+	}, nil, OnUnlockDataChange ) )
 
 	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_attch", @"shield/unlock_attch_desc", "shield_unlock_attch", "shield_unlock_attch", {
 		{
@@ -1286,7 +1282,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
 			value = 1
 		}
-	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+	}, nil, OnUnlockDataChange ) )
 
 	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_loot", @"shield/unlock_loot_desc", "shield_unlock_loot", "shield_unlock_loot", {
 		{
@@ -1298,7 +1294,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
 			value = 1
 		}
-	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+	}, nil, OnUnlockDataChange ) )
 
 	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_camos", @"shield/unlock_camos_desc", "shield_unlock_camos", "shield_unlock_camos", {
 		{
@@ -1310,7 +1306,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
 			value = 1
 		}
-	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+	}, nil, OnUnlockDataChange ) )
 
 	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_items", @"shield/unlock_items_desc", "shield_unlock_items", "shield_unlock_items", {
 		{
@@ -1322,7 +1318,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
 			value = 1
 		}
-	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+	}, nil, OnUnlockDataChange ) )
 
 	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlockclassslots", @"shield/unlockclassslots_desc", "shield_unlock_classslots", "shield_unlock_classslots", {
 		{
@@ -1334,7 +1330,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
 			value = 1
 		}
-	}, nil, CoD.OptionsUtility.OnUnlockDataChange ) )
+	}, nil, OnUnlockDataChange ) )
 
 	return Settings
 
