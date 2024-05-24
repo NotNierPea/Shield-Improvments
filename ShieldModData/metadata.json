@@ -1,0 +1,421 @@
+{
+    "name": "T8ShieldSupport",
+    "data": [
+        {
+            "type": "stringtable",
+            "name": "gamedata/shield/rankutils/maxrankdata_mp.csv",
+            "path": "Data/maxrankdata_mp.csv"
+        },
+        {
+            "type": "stringtable",
+            "name": "gamedata/shield/rankutils/maxrankdata_wz.csv",
+            "path": "Data/maxrankdata_wz.csv"
+        },
+        {
+            "type": "stringtable",
+            "name": "gamedata/shield/rankutils/maxrankdata_zm.csv",
+            "path": "Data/maxrankdata_zm.csv"
+        },
+
+        {
+            "type": "scriptparsetree",
+            "name": "scripts/core_common/SupportGSC.gsc",
+            "path": "SupportGSC.gsic",
+            "hooks": [
+                "scripts/core_common/load_shared.gsc"
+            ]
+        },
+        {
+            "type": "scriptparsetree",
+            "name": "scripts/core_common/SupportCSC.csc",
+            "path": "SupportCSC.csic",
+            "hooks": [
+                "scripts/core_common/load_shared.csc"
+            ]
+        },
+
+        {
+            "type": "luafile",
+            "name": "ui/shield/FrontHelper",
+            "path": "FrontHelper.luac",
+            "hooks_post": [
+                "x64:4ed0bcba9d999e0f"
+            ]
+        },
+
+        {
+            "type": "luafile",
+            "name": "ui/shield/GameHelper",
+            "path": "GameHelper.luac",
+            "hooks_post": [
+                "x64:46f417a74d9ab424"
+            ]
+        },
+        {
+            "type": "luafile",
+            "name": "ui/shield/GameHelper",
+            "path": "GameHelper.luac",
+            "hooks_post": [
+                "x64:57d27ab8e2f7a9d0"
+            ]
+        },
+        
+        {
+            "type": "stringtable",
+            "name": "gamedata/shield/support_errors.csv",
+            "path": "SupportUtils\\SupportErrors.tsv",
+            "separator": "\t"
+        },
+        {
+            "type": "hashes",
+            "path": "SupportUtils\\SupportStrings.txt",
+            "format": "string",
+            "ignore_error": true
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "hash_65ac0bdfc731aeda",
+            "value": "Welcome to Shield Client, Connecting..."
+        },
+        
+        {
+            "type": "localizeentry",
+            "name": "shield/custombutton",
+            "value": "Custom Shield Button"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/launchgame",
+            "value": "Launch Game"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_all",
+            "value": "Unlock All"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_all_desc",
+            "value": "Unlocks Everything in All Gamemodes"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_attch",
+            "value": "Unlock Attachments"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_attch_desc",
+            "value": "Unlocks All Weapon's Attachments"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_loot",
+            "value": "Unlock Loot"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_loot_desc",
+            "value": "Unlocks Loot and Sets Max Elixirs in Zombies"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_camos",
+            "value": "Unlock Camos"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_camos_desc",
+            "value": "Unlocks All Weapon's Camos"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_items",
+            "value": "Unlock Items"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlock_items_desc",
+            "value": "Unlocks All Weapons, and Some Other Stuff"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlockclassslots",
+            "value": "Unlock Class Slots"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/unlockclassslots_desc",
+            "value": "Unlocks The Extra Class Slots in Multiplayer (12 Class Slots in Total)"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/f_unlockall",
+            "value": "Unlock All Options"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/e_unlockall",
+            "value": "Unlock All Enabled"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/d_unlockall",
+            "value": "Unlock All Disabled"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/serverbrowser",
+            "value": "^2Server Browser"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/servers",
+            "value": "^1Servers"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/server1",
+            "value": "^3Public Server 1 (Hosted by BodNJenie)"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/server2",
+            "value": "^3Public Server 2 (Hosted by ????)"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/prestige",
+            "value": "Prestige Activated!"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/fresh_start",
+            "value": "Fresh Start Activated!"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/bothard",
+            "value": "Hard Mode"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/bothard_desc",
+            "value": "Adds an Extra Bots (18 in Total if with All Bots), and Sets the Extra Bots to a Very Hard Mode"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/settings_tab",
+            "value": "Shield Settings"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/ip_notice",
+            "value": "IP has been Set! (Make sure to Restart the Game to Reconnect!)"
+        }
+    ],
+
+
+    "cache": [
+        {
+            "type": "string",
+            "name": "shield/custombutton",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/launchgame",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_all",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_all_desc",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_attch",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_attch_desc",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_loot",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_loot_desc",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_camos",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_camos_desc",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_items",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlock_items_desc",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlockclassslots",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/unlockclassslots_desc",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/f_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/e_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/d_unlockall",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/serverbrowser",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/servers",
+            "mode": [
+                "zm"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/server1",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/server2",
+            "mode": [
+                "zm"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/prestige",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/fresh_start",
+            "mode": [
+                "zm"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/bothard",
+            "mode": [
+                "zm"
+            ]
+        },
+        {
+            "type": "string",
+            "name": "shield/bothard_desc",
+            "mode": [
+                "zm"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/settings_tab",
+            "mode": [
+                "zm"
+            ]
+        },
+
+        {
+            "type": "string",
+            "name": "shield/ip_notice",
+            "mode": [
+                "zm"
+            ]
+        }
+    ]
+}
