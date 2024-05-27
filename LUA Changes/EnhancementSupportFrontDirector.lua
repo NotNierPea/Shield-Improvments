@@ -281,6 +281,10 @@ require( "x64:334096eb04183443" )
 --------------------------
 
 local function InitDvars()
+	-- reading c++ var
+	Engine[@"setdvar"]("shield_cold_var", 0)
+
+	-- unlocks dvars (used for unlock settings in shield's menu)
 	Engine[@"setdvar"]("shield_unlock_all", 0)
 	Engine[@"setdvar"]("shield_unlock_loot", 0)
 	Engine[@"setdvar"]("shield_unlock_attachments", 0)
@@ -294,8 +298,20 @@ local function InitDvars()
 	Engine[@"setdvar"]("shield_unlock_challenges", 0)
 	Engine[@"setdvar"]("shield_unlock_emblems", 0)
 	Engine[@"setdvar"]("shield_unlock_backgrounds", 0)
+
+	-- username
+	Engine[@"setdvar"]("shield_username", 0)
+
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_all unlock all bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_loot unlock loot bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_attachments unlock attachments bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_itemoptions unlock itemoptions bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_items unlock items bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_classes unlock classes bool")
+
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
 	
-	Engine[@"exec"](Engine[@"getprimarycontroller"](), "enable_unlock_hooks")
+	--Engine[@"exec"](Engine[@"getprimarycontroller"](), "enable_unlock_hooks")
 end
 
 --------------------------
@@ -912,6 +928,533 @@ local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, 
 		ShieldUnlockClassSlots_Toggle()
 	end
 end
+
+------------------
+
+CoD.Shield_NameEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_NameEditBox.__defaultWidth = 340
+CoD.Shield_NameEditBox.__defaultHeight = 60
+CoD.Shield_NameEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.Shield_NameEditBox )
+	self.id = "Shield_NameEditBox"
+	self.soundSet = "default"
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
+	Backing:setRGB( 0, 0, 0 )
+	Backing:setAlpha( 0.5 )
+	self:addElement( Backing )
+	self.Backing = Backing
+	
+	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	Frame:setRGB( 0.78, 0.74, 0.67 )
+	Frame:setAlpha( 0.04 )
+	self:addElement( Frame )
+	self.Frame = Frame
+	
+	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Corner )
+	self.Corner = Corner
+	
+	local TextBox = LUI.UIText.new( 0, 0, 20 + 70, 320 + 70, 0.5, 0.5, -10.5, 10.5 )
+	TextBox:setRGB( 0.78, 0.74, 0.67 )
+	TextBox:setTTF( "notosans_regular" )
+	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( TextBox )
+	self.TextBox = TextBox
+
+	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
+	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
+	RankHighlight:setTTF( "notosans_regular" )
+	RankHighlight:setText("^2Set Rank: ")
+	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( RankHighlight )
+	self.RankHighlight = RankHighlight
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	local f1_local5 = self
+	self.__editControlMaxChar = 16
+	--self.__editControlNumerical = 1
+	self.__editControlIsInteger = 0
+	self.__editControlMin = 0
+	self.__editControlMax = 1000
+
+	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
+
+	CoD.BaseUtility.SetUseStencil( self )
+	DisableModelStringReplacement( TextBox )
+
+	return self
+end
+
+CoD.Shield_NameEditBox.__resetProperties = function ( f3_arg0 )
+	f3_arg0.Corner:completeAnimation()
+	f3_arg0.Frame:completeAnimation()
+	f3_arg0.Backing:completeAnimation()
+	f3_arg0.TextBox:completeAnimation()
+	f3_arg0.Corner:setScale( 1, 1 )
+	f3_arg0.Frame:setAlpha( 0.04 )
+	f3_arg0.Backing:setAlpha( 0.5 )
+	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
+end
+
+CoD.Shield_NameEditBox.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f4_arg0, f4_arg1 )
+			f4_arg0:__resetProperties()
+			f4_arg0:setupElementClipCounter( 0 )
+		end,
+		Focus = function ( f5_arg0, f5_arg1 )
+			f5_arg0:__resetProperties()
+			f5_arg0:setupElementClipCounter( 3 )
+			f5_arg0.Backing:completeAnimation()
+			f5_arg0.Backing:setAlpha( 0.8 )
+			f5_arg0.clipFinished( f5_arg0.Backing )
+			f5_arg0.Frame:completeAnimation()
+			f5_arg0.Frame:setAlpha( 0.6 )
+			f5_arg0.clipFinished( f5_arg0.Frame )
+			f5_arg0.Corner:completeAnimation()
+			f5_arg0.Corner:setScale( 0.98, 0.9 )
+			f5_arg0.clipFinished( f5_arg0.Corner )
+		end,
+		GainFocus = function ( f6_arg0, f6_arg1 )
+			f6_arg0:__resetProperties()
+			f6_arg0:setupElementClipCounter( 3 )
+			local f6_local0 = function ( f7_arg0 )
+				f6_arg0.Backing:beginAnimation( 200 )
+				f6_arg0.Backing:setAlpha( 0.8 )
+				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Backing:completeAnimation()
+			f6_arg0.Backing:setAlpha( 0.5 )
+			f6_local0( f6_arg0.Backing )
+			local f6_local1 = function ( f8_arg0 )
+				f6_arg0.Frame:beginAnimation( 200 )
+				f6_arg0.Frame:setAlpha( 0.6 )
+				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Frame:completeAnimation()
+			f6_arg0.Frame:setAlpha( 0.04 )
+			f6_local1( f6_arg0.Frame )
+			local f6_local2 = function ( f9_arg0 )
+				f6_arg0.Corner:beginAnimation( 200 )
+				f6_arg0.Corner:setScale( 0.98, 0.9 )
+				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Corner:completeAnimation()
+			f6_arg0.Corner:setScale( 1, 1 )
+			f6_local2( f6_arg0.Corner )
+		end,
+		LoseFocus = function ( f10_arg0, f10_arg1 )
+			f10_arg0:__resetProperties()
+			f10_arg0:setupElementClipCounter( 3 )
+			local f10_local0 = function ( f11_arg0 )
+				f10_arg0.Backing:beginAnimation( 200 )
+				f10_arg0.Backing:setAlpha( 0.5 )
+				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Backing:completeAnimation()
+			f10_arg0.Backing:setAlpha( 0.8 )
+			f10_local0( f10_arg0.Backing )
+			local f10_local1 = function ( f12_arg0 )
+				f10_arg0.Frame:beginAnimation( 200 )
+				f10_arg0.Frame:setAlpha( 0.04 )
+				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Frame:completeAnimation()
+			f10_arg0.Frame:setAlpha( 0.6 )
+			f10_local1( f10_arg0.Frame )
+			local f10_local2 = function ( f13_arg0 )
+				f10_arg0.Corner:beginAnimation( 200 )
+				f10_arg0.Corner:setScale( 1, 1 )
+				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Corner:completeAnimation()
+			f10_arg0.Corner:setScale( 0.98, 0.9 )
+			f10_local2( f10_arg0.Corner )
+		end,
+		InputFocus = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 1 )
+			f14_arg0.TextBox:completeAnimation()
+			f14_arg0.TextBox:setRGB( 1, 1, 1 )
+			f14_arg0.clipFinished( f14_arg0.TextBox )
+		end
+	}
+}
+
+CoD.Shield_NameEditBox.__onClose = function ( f15_arg0 )
+	f15_arg0.Frame:close()
+	f15_arg0.Corner:close()
+	f15_arg0.TextBox:close()
+end
+
+CoD.Shield_RankEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_RankEditBox.__defaultWidth = 340
+CoD.Shield_RankEditBox.__defaultHeight = 60
+CoD.Shield_RankEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.Shield_RankEditBox )
+	self.id = "Shield_RankEditBox"
+	self.soundSet = "default"
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
+	Backing:setRGB( 0, 0, 0 )
+	Backing:setAlpha( 0.5 )
+	self:addElement( Backing )
+	self.Backing = Backing
+	
+	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	Frame:setRGB( 0.78, 0.74, 0.67 )
+	Frame:setAlpha( 0.04 )
+	self:addElement( Frame )
+	self.Frame = Frame
+	
+	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Corner )
+	self.Corner = Corner
+	
+	local TextBox = LUI.UIText.new( 0, 0, 20 + 70, 320 + 70, 0.5, 0.5, -10.5, 10.5 )
+	TextBox:setRGB( 0.78, 0.74, 0.67 )
+	TextBox:setTTF( "notosans_regular" )
+	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( TextBox )
+	self.TextBox = TextBox
+
+	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
+	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
+	RankHighlight:setTTF( "notosans_regular" )
+	RankHighlight:setText("^2Set Rank: ")
+	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( RankHighlight )
+	self.RankHighlight = RankHighlight
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	local f1_local5 = self
+	self.__editControlMaxChar = 4
+	--self.__editControlNumerical = 1
+	self.__editControlIsInteger = 1
+	self.__editControlMin = 0
+	self.__editControlMax = 1000
+
+	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
+
+	CoD.BaseUtility.SetUseStencil( self )
+	DisableModelStringReplacement( TextBox )
+
+	return self
+end
+
+CoD.Shield_RankEditBox.__resetProperties = function ( f3_arg0 )
+	f3_arg0.Corner:completeAnimation()
+	f3_arg0.Frame:completeAnimation()
+	f3_arg0.Backing:completeAnimation()
+	f3_arg0.TextBox:completeAnimation()
+	f3_arg0.Corner:setScale( 1, 1 )
+	f3_arg0.Frame:setAlpha( 0.04 )
+	f3_arg0.Backing:setAlpha( 0.5 )
+	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
+end
+
+CoD.Shield_RankEditBox.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f4_arg0, f4_arg1 )
+			f4_arg0:__resetProperties()
+			f4_arg0:setupElementClipCounter( 0 )
+		end,
+		Focus = function ( f5_arg0, f5_arg1 )
+			f5_arg0:__resetProperties()
+			f5_arg0:setupElementClipCounter( 3 )
+			f5_arg0.Backing:completeAnimation()
+			f5_arg0.Backing:setAlpha( 0.8 )
+			f5_arg0.clipFinished( f5_arg0.Backing )
+			f5_arg0.Frame:completeAnimation()
+			f5_arg0.Frame:setAlpha( 0.6 )
+			f5_arg0.clipFinished( f5_arg0.Frame )
+			f5_arg0.Corner:completeAnimation()
+			f5_arg0.Corner:setScale( 0.98, 0.9 )
+			f5_arg0.clipFinished( f5_arg0.Corner )
+		end,
+		GainFocus = function ( f6_arg0, f6_arg1 )
+			f6_arg0:__resetProperties()
+			f6_arg0:setupElementClipCounter( 3 )
+			local f6_local0 = function ( f7_arg0 )
+				f6_arg0.Backing:beginAnimation( 200 )
+				f6_arg0.Backing:setAlpha( 0.8 )
+				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Backing:completeAnimation()
+			f6_arg0.Backing:setAlpha( 0.5 )
+			f6_local0( f6_arg0.Backing )
+			local f6_local1 = function ( f8_arg0 )
+				f6_arg0.Frame:beginAnimation( 200 )
+				f6_arg0.Frame:setAlpha( 0.6 )
+				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Frame:completeAnimation()
+			f6_arg0.Frame:setAlpha( 0.04 )
+			f6_local1( f6_arg0.Frame )
+			local f6_local2 = function ( f9_arg0 )
+				f6_arg0.Corner:beginAnimation( 200 )
+				f6_arg0.Corner:setScale( 0.98, 0.9 )
+				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Corner:completeAnimation()
+			f6_arg0.Corner:setScale( 1, 1 )
+			f6_local2( f6_arg0.Corner )
+		end,
+		LoseFocus = function ( f10_arg0, f10_arg1 )
+			f10_arg0:__resetProperties()
+			f10_arg0:setupElementClipCounter( 3 )
+			local f10_local0 = function ( f11_arg0 )
+				f10_arg0.Backing:beginAnimation( 200 )
+				f10_arg0.Backing:setAlpha( 0.5 )
+				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Backing:completeAnimation()
+			f10_arg0.Backing:setAlpha( 0.8 )
+			f10_local0( f10_arg0.Backing )
+			local f10_local1 = function ( f12_arg0 )
+				f10_arg0.Frame:beginAnimation( 200 )
+				f10_arg0.Frame:setAlpha( 0.04 )
+				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Frame:completeAnimation()
+			f10_arg0.Frame:setAlpha( 0.6 )
+			f10_local1( f10_arg0.Frame )
+			local f10_local2 = function ( f13_arg0 )
+				f10_arg0.Corner:beginAnimation( 200 )
+				f10_arg0.Corner:setScale( 1, 1 )
+				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Corner:completeAnimation()
+			f10_arg0.Corner:setScale( 0.98, 0.9 )
+			f10_local2( f10_arg0.Corner )
+		end,
+		InputFocus = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 1 )
+			f14_arg0.TextBox:completeAnimation()
+			f14_arg0.TextBox:setRGB( 1, 1, 1 )
+			f14_arg0.clipFinished( f14_arg0.TextBox )
+		end
+	}
+}
+
+CoD.Shield_RankEditBox.__onClose = function ( f15_arg0 )
+	f15_arg0.Frame:close()
+	f15_arg0.Corner:close()
+	f15_arg0.TextBox:close()
+end
+
+CoD.Shield_PrestigeEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_PrestigeEditBox.__defaultWidth = 340
+CoD.Shield_PrestigeEditBox.__defaultHeight = 60
+CoD.Shield_PrestigeEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.Shield_PrestigeEditBox )
+	self.id = "Shield_PrestigeEditBox"
+	self.soundSet = "default"
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
+	Backing:setRGB( 0, 0, 0 )
+	Backing:setAlpha( 0.5 )
+	self:addElement( Backing )
+	self.Backing = Backing
+	
+	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	Frame:setRGB( 0.78, 0.74, 0.67 )
+	Frame:setAlpha( 0.04 )
+	self:addElement( Frame )
+	self.Frame = Frame
+	
+	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Corner )
+	self.Corner = Corner
+	
+	local TextBox = LUI.UIText.new( 0, 0, 20 + 95, 320 + 95, 0.5, 0.5, -10.5, 10.5 )
+	TextBox:setRGB( 0.78, 0.74, 0.67 )
+	TextBox:setTTF( "notosans_regular" )
+	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( TextBox )
+	self.TextBox = TextBox
+
+	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
+	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
+	RankHighlight:setTTF( "notosans_regular" )
+	RankHighlight:setText("^2Set Prestige: ")
+	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( RankHighlight )
+	self.RankHighlight = RankHighlight
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	self.__editControlMaxChar = 2
+	self.__editControlIsInteger = 1
+	self.__editControlMin = 0
+	self.__editControlMax = 1000
+
+	CoD.BaseUtility.SetUseStencil( self )
+	DisableModelStringReplacement( TextBox )
+
+	return self
+end
+
+CoD.Shield_PrestigeEditBox.__resetProperties = function ( f3_arg0 )
+	f3_arg0.Corner:completeAnimation()
+	f3_arg0.Frame:completeAnimation()
+	f3_arg0.Backing:completeAnimation()
+	f3_arg0.TextBox:completeAnimation()
+	f3_arg0.Corner:setScale( 1, 1 )
+	f3_arg0.Frame:setAlpha( 0.04 )
+	f3_arg0.Backing:setAlpha( 0.5 )
+	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
+end
+
+CoD.Shield_PrestigeEditBox.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f4_arg0, f4_arg1 )
+			f4_arg0:__resetProperties()
+			f4_arg0:setupElementClipCounter( 0 )
+		end,
+		Focus = function ( f5_arg0, f5_arg1 )
+			f5_arg0:__resetProperties()
+			f5_arg0:setupElementClipCounter( 3 )
+			f5_arg0.Backing:completeAnimation()
+			f5_arg0.Backing:setAlpha( 0.8 )
+			f5_arg0.clipFinished( f5_arg0.Backing )
+			f5_arg0.Frame:completeAnimation()
+			f5_arg0.Frame:setAlpha( 0.6 )
+			f5_arg0.clipFinished( f5_arg0.Frame )
+			f5_arg0.Corner:completeAnimation()
+			f5_arg0.Corner:setScale( 0.98, 0.9 )
+			f5_arg0.clipFinished( f5_arg0.Corner )
+		end,
+		GainFocus = function ( f6_arg0, f6_arg1 )
+			f6_arg0:__resetProperties()
+			f6_arg0:setupElementClipCounter( 3 )
+			local f6_local0 = function ( f7_arg0 )
+				f6_arg0.Backing:beginAnimation( 200 )
+				f6_arg0.Backing:setAlpha( 0.8 )
+				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Backing:completeAnimation()
+			f6_arg0.Backing:setAlpha( 0.5 )
+			f6_local0( f6_arg0.Backing )
+			local f6_local1 = function ( f8_arg0 )
+				f6_arg0.Frame:beginAnimation( 200 )
+				f6_arg0.Frame:setAlpha( 0.6 )
+				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Frame:completeAnimation()
+			f6_arg0.Frame:setAlpha( 0.04 )
+			f6_local1( f6_arg0.Frame )
+			local f6_local2 = function ( f9_arg0 )
+				f6_arg0.Corner:beginAnimation( 200 )
+				f6_arg0.Corner:setScale( 0.98, 0.9 )
+				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Corner:completeAnimation()
+			f6_arg0.Corner:setScale( 1, 1 )
+			f6_local2( f6_arg0.Corner )
+		end,
+		LoseFocus = function ( f10_arg0, f10_arg1 )
+			f10_arg0:__resetProperties()
+			f10_arg0:setupElementClipCounter( 3 )
+			local f10_local0 = function ( f11_arg0 )
+				f10_arg0.Backing:beginAnimation( 200 )
+				f10_arg0.Backing:setAlpha( 0.5 )
+				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Backing:completeAnimation()
+			f10_arg0.Backing:setAlpha( 0.8 )
+			f10_local0( f10_arg0.Backing )
+			local f10_local1 = function ( f12_arg0 )
+				f10_arg0.Frame:beginAnimation( 200 )
+				f10_arg0.Frame:setAlpha( 0.04 )
+				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Frame:completeAnimation()
+			f10_arg0.Frame:setAlpha( 0.6 )
+			f10_local1( f10_arg0.Frame )
+			local f10_local2 = function ( f13_arg0 )
+				f10_arg0.Corner:beginAnimation( 200 )
+				f10_arg0.Corner:setScale( 1, 1 )
+				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Corner:completeAnimation()
+			f10_arg0.Corner:setScale( 0.98, 0.9 )
+			f10_local2( f10_arg0.Corner )
+		end,
+		InputFocus = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 1 )
+			f14_arg0.TextBox:completeAnimation()
+			f14_arg0.TextBox:setRGB( 1, 1, 1 )
+			f14_arg0.clipFinished( f14_arg0.TextBox )
+		end
+	}
+}
+
+CoD.Shield_PrestigeEditBox.__onClose = function ( f15_arg0 )
+	f15_arg0.Frame:close()
+	f15_arg0.Corner:close()
+	f15_arg0.TextBox:close()
+end
+
 
 ------------------
 
@@ -1563,6 +2106,70 @@ CoD.DirectorQuitButtonContainer.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_a
 		FrontMain.StartLabel:setAlpha(0)
 		FrontMain.BGFill:setAlpha(0)
 		FrontMain.PCBnetStoreKeyart:setAlpha(0)
+		
+		-- Add IPV4 Edit for Disconnected Servers
+		local IPV4EditBox = CoD.Shield_NameEditBox.new( f1_arg0, f1_arg1, 0.10, 0.10, -20, 350, 0.625, 0.625, 100, 150 )
+		IPV4EditBox:linkToElementModel( f1_arg0, nil, false, function ( model )
+			IPV4EditBox:setModel( model, f1_arg0 )
+		end )
+		IPV4EditBox.TextBox:setLeftRight(0, 0, 20 + 160, 320 + 160)
+		IPV4EditBox.RankHighlight:setText("^2Set Custom Server IP: ")
+		FrontMain:addElement( IPV4EditBox )
+		FrontMain.IPV4EditBox = IPV4EditBox
+
+		local IPV4EditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg0 ), "Shield_IPV4" )
+		if IPV4EditBoxModel:get() == nil then
+			IPV4EditBoxModel:set("")
+		end
+
+		IPV4EditBox.__editControlMaxChar = 16
+		IPV4EditBox.__editControlIsInteger = 1
+		IPV4EditBox.__editControlMin = 0
+		IPV4EditBox.__editControlMax = 1000
+
+		CoD.PCUtility.SetupEditControlWithModel( IPV4EditBox, f1_arg1, f1_arg0, IPV4EditBoxModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+			if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+				local IPV4Data = f331_arg0:get()
+
+				EnhPrintInfo("IP", IPV4Data)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+				
+				if not IsIPAddress(IPV4Data) then
+					f331_arg0:set("^1Invalid IP!")
+					IPV4EditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3IP Set!")
+					IPV4EditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+					Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. IPV4Data .. " string")
+				end
+			else
+				f331_arg0:set("") -- reset it
+			end
+		end )
+
+		IPV4EditBox.id = "IPV4EditBox"
+
+		-- desc for ip
+		local IPHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.725, 0.725, 100 - 25, 125 - 25 )
+		IPHint:setText("To Apply IP Change and Reconnect, Restart the Game!")
+		IPHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+		IPHint:setTTF("notosans_bold")
+		IPHint:setBackingType( 2 )
+		IPHint:setBackingColor( 0.04, 0.81, 1 )
+		IPHint:setBackingAlpha( 0.01 )
+		IPHint:setBackingXPadding( 12 )
+		IPHint:setBackingYPadding( 6 )
+		IPHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+		IPHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+		f1_arg0:addElement( IPHint )
+		f1_arg0.IPHint = IPHint
+
 	end
 
 	return self
@@ -4291,9 +4898,10 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self.NameEditBox = NameEditBox
 
 	local NameEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Name" )
-	if NameEditBoxModel:get() == nil then
-		NameEditBoxModel:set("")
-	end
+
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
+
+	NameEditBoxModel:set(Engine[@"getdvarstring"]("shield_username"))
 
 	CoD.PCUtility.SetupEditControlWithModel( NameEditBox, f1_arg0, f1_local1, NameEditBoxModel, function ( f331_arg0, f331_arg1, f331_arg2 )
 		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
@@ -4314,12 +4922,14 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 				end ) )
 
 				-- shield api here later..
-				Engine[@"exec"](Engine[@"getprimarycontroller"](), "name " .. NameData)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson identity name " .. NameData .. " string")
 			end
 		else
 			f331_arg0:set("") -- reset it
 		end
 	end )
+
+	self.NameEditBoxModel = NameEditBoxModel
 
 	-- desc for name
 	local NameHint = LUI.UIText.new( 0.10, 0.10, 0, 550, 0.20, 0.20, 100, 120 )
@@ -4583,6 +5193,10 @@ CoD.ShieldOptionsMenu.__onClose = function ( f8_arg0 )
 	f8_arg0.FooterContainerFrontendRight:close()
 	f8_arg0.TabbedScoreboardFuiBox:close()
 	f8_arg0.ShieldOptionsMenu_SafeAreaFront:close()
+
+	-- redo it, to avoid old username bug
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
+	f8_arg0.NameEditBoxModel:set(Engine[@"getdvarstring"]("shield_username"))
 end
 
 CoD.ShieldOptionsMenu_SafeAreaFront = InheritFrom( LUI.UIElement )
@@ -4644,530 +5258,6 @@ CoD.ShieldOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_arg2, 
 	end
 	
 	return self
-end
-
-CoD.Shield_NameEditBox = InheritFrom( LUI.UIElement )
-CoD.Shield_NameEditBox.__defaultWidth = 340
-CoD.Shield_NameEditBox.__defaultHeight = 60
-CoD.Shield_NameEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.Shield_NameEditBox )
-	self.id = "Shield_NameEditBox"
-	self.soundSet = "default"
-	f1_arg0:addElementToPendingUpdateStateList( self )
-	
-	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
-	Backing:setRGB( 0, 0, 0 )
-	Backing:setAlpha( 0.5 )
-	self:addElement( Backing )
-	self.Backing = Backing
-	
-	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	Frame:setRGB( 0.78, 0.74, 0.67 )
-	Frame:setAlpha( 0.04 )
-	self:addElement( Frame )
-	self.Frame = Frame
-	
-	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	self:addElement( Corner )
-	self.Corner = Corner
-	
-	local TextBox = LUI.UIText.new( 0, 0, 20 + 70, 320 + 70, 0.5, 0.5, -10.5, 10.5 )
-	TextBox:setRGB( 0.78, 0.74, 0.67 )
-	TextBox:setTTF( "notosans_regular" )
-	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( TextBox )
-	self.TextBox = TextBox
-
-	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
-	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
-	RankHighlight:setTTF( "notosans_regular" )
-	RankHighlight:setText("^2Set Rank: ")
-	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( RankHighlight )
-	self.RankHighlight = RankHighlight
-	
-	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
-	
-	if PostLoadFunc then
-		PostLoadFunc( self, f1_arg1, f1_arg0 )
-	end
-	
-	local f1_local5 = self
-	self.__editControlMaxChar = 16
-	--self.__editControlNumerical = 1
-	self.__editControlIsInteger = 0
-	self.__editControlMin = 0
-	self.__editControlMax = 1000
-
-	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
-
-	CoD.BaseUtility.SetUseStencil( self )
-	DisableModelStringReplacement( TextBox )
-
-	return self
-end
-
-CoD.Shield_NameEditBox.__resetProperties = function ( f3_arg0 )
-	f3_arg0.Corner:completeAnimation()
-	f3_arg0.Frame:completeAnimation()
-	f3_arg0.Backing:completeAnimation()
-	f3_arg0.TextBox:completeAnimation()
-	f3_arg0.Corner:setScale( 1, 1 )
-	f3_arg0.Frame:setAlpha( 0.04 )
-	f3_arg0.Backing:setAlpha( 0.5 )
-	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
-end
-
-CoD.Shield_NameEditBox.__clipsPerState = {
-	DefaultState = {
-		DefaultClip = function ( f4_arg0, f4_arg1 )
-			f4_arg0:__resetProperties()
-			f4_arg0:setupElementClipCounter( 0 )
-		end,
-		Focus = function ( f5_arg0, f5_arg1 )
-			f5_arg0:__resetProperties()
-			f5_arg0:setupElementClipCounter( 3 )
-			f5_arg0.Backing:completeAnimation()
-			f5_arg0.Backing:setAlpha( 0.8 )
-			f5_arg0.clipFinished( f5_arg0.Backing )
-			f5_arg0.Frame:completeAnimation()
-			f5_arg0.Frame:setAlpha( 0.6 )
-			f5_arg0.clipFinished( f5_arg0.Frame )
-			f5_arg0.Corner:completeAnimation()
-			f5_arg0.Corner:setScale( 0.98, 0.9 )
-			f5_arg0.clipFinished( f5_arg0.Corner )
-		end,
-		GainFocus = function ( f6_arg0, f6_arg1 )
-			f6_arg0:__resetProperties()
-			f6_arg0:setupElementClipCounter( 3 )
-			local f6_local0 = function ( f7_arg0 )
-				f6_arg0.Backing:beginAnimation( 200 )
-				f6_arg0.Backing:setAlpha( 0.8 )
-				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Backing:completeAnimation()
-			f6_arg0.Backing:setAlpha( 0.5 )
-			f6_local0( f6_arg0.Backing )
-			local f6_local1 = function ( f8_arg0 )
-				f6_arg0.Frame:beginAnimation( 200 )
-				f6_arg0.Frame:setAlpha( 0.6 )
-				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Frame:completeAnimation()
-			f6_arg0.Frame:setAlpha( 0.04 )
-			f6_local1( f6_arg0.Frame )
-			local f6_local2 = function ( f9_arg0 )
-				f6_arg0.Corner:beginAnimation( 200 )
-				f6_arg0.Corner:setScale( 0.98, 0.9 )
-				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Corner:completeAnimation()
-			f6_arg0.Corner:setScale( 1, 1 )
-			f6_local2( f6_arg0.Corner )
-		end,
-		LoseFocus = function ( f10_arg0, f10_arg1 )
-			f10_arg0:__resetProperties()
-			f10_arg0:setupElementClipCounter( 3 )
-			local f10_local0 = function ( f11_arg0 )
-				f10_arg0.Backing:beginAnimation( 200 )
-				f10_arg0.Backing:setAlpha( 0.5 )
-				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Backing:completeAnimation()
-			f10_arg0.Backing:setAlpha( 0.8 )
-			f10_local0( f10_arg0.Backing )
-			local f10_local1 = function ( f12_arg0 )
-				f10_arg0.Frame:beginAnimation( 200 )
-				f10_arg0.Frame:setAlpha( 0.04 )
-				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Frame:completeAnimation()
-			f10_arg0.Frame:setAlpha( 0.6 )
-			f10_local1( f10_arg0.Frame )
-			local f10_local2 = function ( f13_arg0 )
-				f10_arg0.Corner:beginAnimation( 200 )
-				f10_arg0.Corner:setScale( 1, 1 )
-				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Corner:completeAnimation()
-			f10_arg0.Corner:setScale( 0.98, 0.9 )
-			f10_local2( f10_arg0.Corner )
-		end,
-		InputFocus = function ( f14_arg0, f14_arg1 )
-			f14_arg0:__resetProperties()
-			f14_arg0:setupElementClipCounter( 1 )
-			f14_arg0.TextBox:completeAnimation()
-			f14_arg0.TextBox:setRGB( 1, 1, 1 )
-			f14_arg0.clipFinished( f14_arg0.TextBox )
-		end
-	}
-}
-
-CoD.Shield_NameEditBox.__onClose = function ( f15_arg0 )
-	f15_arg0.Frame:close()
-	f15_arg0.Corner:close()
-	f15_arg0.TextBox:close()
-end
-
-CoD.Shield_RankEditBox = InheritFrom( LUI.UIElement )
-CoD.Shield_RankEditBox.__defaultWidth = 340
-CoD.Shield_RankEditBox.__defaultHeight = 60
-CoD.Shield_RankEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.Shield_RankEditBox )
-	self.id = "Shield_RankEditBox"
-	self.soundSet = "default"
-	f1_arg0:addElementToPendingUpdateStateList( self )
-	
-	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
-	Backing:setRGB( 0, 0, 0 )
-	Backing:setAlpha( 0.5 )
-	self:addElement( Backing )
-	self.Backing = Backing
-	
-	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	Frame:setRGB( 0.78, 0.74, 0.67 )
-	Frame:setAlpha( 0.04 )
-	self:addElement( Frame )
-	self.Frame = Frame
-	
-	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	self:addElement( Corner )
-	self.Corner = Corner
-	
-	local TextBox = LUI.UIText.new( 0, 0, 20 + 70, 320 + 70, 0.5, 0.5, -10.5, 10.5 )
-	TextBox:setRGB( 0.78, 0.74, 0.67 )
-	TextBox:setTTF( "notosans_regular" )
-	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( TextBox )
-	self.TextBox = TextBox
-
-	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
-	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
-	RankHighlight:setTTF( "notosans_regular" )
-	RankHighlight:setText("^2Set Rank: ")
-	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( RankHighlight )
-	self.RankHighlight = RankHighlight
-	
-	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
-	
-	if PostLoadFunc then
-		PostLoadFunc( self, f1_arg1, f1_arg0 )
-	end
-	
-	local f1_local5 = self
-	self.__editControlMaxChar = 4
-	--self.__editControlNumerical = 1
-	self.__editControlIsInteger = 1
-	self.__editControlMin = 0
-	self.__editControlMax = 1000
-
-	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
-
-	CoD.BaseUtility.SetUseStencil( self )
-	DisableModelStringReplacement( TextBox )
-
-	return self
-end
-
-CoD.Shield_RankEditBox.__resetProperties = function ( f3_arg0 )
-	f3_arg0.Corner:completeAnimation()
-	f3_arg0.Frame:completeAnimation()
-	f3_arg0.Backing:completeAnimation()
-	f3_arg0.TextBox:completeAnimation()
-	f3_arg0.Corner:setScale( 1, 1 )
-	f3_arg0.Frame:setAlpha( 0.04 )
-	f3_arg0.Backing:setAlpha( 0.5 )
-	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
-end
-
-CoD.Shield_RankEditBox.__clipsPerState = {
-	DefaultState = {
-		DefaultClip = function ( f4_arg0, f4_arg1 )
-			f4_arg0:__resetProperties()
-			f4_arg0:setupElementClipCounter( 0 )
-		end,
-		Focus = function ( f5_arg0, f5_arg1 )
-			f5_arg0:__resetProperties()
-			f5_arg0:setupElementClipCounter( 3 )
-			f5_arg0.Backing:completeAnimation()
-			f5_arg0.Backing:setAlpha( 0.8 )
-			f5_arg0.clipFinished( f5_arg0.Backing )
-			f5_arg0.Frame:completeAnimation()
-			f5_arg0.Frame:setAlpha( 0.6 )
-			f5_arg0.clipFinished( f5_arg0.Frame )
-			f5_arg0.Corner:completeAnimation()
-			f5_arg0.Corner:setScale( 0.98, 0.9 )
-			f5_arg0.clipFinished( f5_arg0.Corner )
-		end,
-		GainFocus = function ( f6_arg0, f6_arg1 )
-			f6_arg0:__resetProperties()
-			f6_arg0:setupElementClipCounter( 3 )
-			local f6_local0 = function ( f7_arg0 )
-				f6_arg0.Backing:beginAnimation( 200 )
-				f6_arg0.Backing:setAlpha( 0.8 )
-				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Backing:completeAnimation()
-			f6_arg0.Backing:setAlpha( 0.5 )
-			f6_local0( f6_arg0.Backing )
-			local f6_local1 = function ( f8_arg0 )
-				f6_arg0.Frame:beginAnimation( 200 )
-				f6_arg0.Frame:setAlpha( 0.6 )
-				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Frame:completeAnimation()
-			f6_arg0.Frame:setAlpha( 0.04 )
-			f6_local1( f6_arg0.Frame )
-			local f6_local2 = function ( f9_arg0 )
-				f6_arg0.Corner:beginAnimation( 200 )
-				f6_arg0.Corner:setScale( 0.98, 0.9 )
-				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Corner:completeAnimation()
-			f6_arg0.Corner:setScale( 1, 1 )
-			f6_local2( f6_arg0.Corner )
-		end,
-		LoseFocus = function ( f10_arg0, f10_arg1 )
-			f10_arg0:__resetProperties()
-			f10_arg0:setupElementClipCounter( 3 )
-			local f10_local0 = function ( f11_arg0 )
-				f10_arg0.Backing:beginAnimation( 200 )
-				f10_arg0.Backing:setAlpha( 0.5 )
-				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Backing:completeAnimation()
-			f10_arg0.Backing:setAlpha( 0.8 )
-			f10_local0( f10_arg0.Backing )
-			local f10_local1 = function ( f12_arg0 )
-				f10_arg0.Frame:beginAnimation( 200 )
-				f10_arg0.Frame:setAlpha( 0.04 )
-				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Frame:completeAnimation()
-			f10_arg0.Frame:setAlpha( 0.6 )
-			f10_local1( f10_arg0.Frame )
-			local f10_local2 = function ( f13_arg0 )
-				f10_arg0.Corner:beginAnimation( 200 )
-				f10_arg0.Corner:setScale( 1, 1 )
-				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Corner:completeAnimation()
-			f10_arg0.Corner:setScale( 0.98, 0.9 )
-			f10_local2( f10_arg0.Corner )
-		end,
-		InputFocus = function ( f14_arg0, f14_arg1 )
-			f14_arg0:__resetProperties()
-			f14_arg0:setupElementClipCounter( 1 )
-			f14_arg0.TextBox:completeAnimation()
-			f14_arg0.TextBox:setRGB( 1, 1, 1 )
-			f14_arg0.clipFinished( f14_arg0.TextBox )
-		end
-	}
-}
-
-CoD.Shield_RankEditBox.__onClose = function ( f15_arg0 )
-	f15_arg0.Frame:close()
-	f15_arg0.Corner:close()
-	f15_arg0.TextBox:close()
-end
-
-CoD.Shield_PrestigeEditBox = InheritFrom( LUI.UIElement )
-CoD.Shield_PrestigeEditBox.__defaultWidth = 340
-CoD.Shield_PrestigeEditBox.__defaultHeight = 60
-CoD.Shield_PrestigeEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.Shield_PrestigeEditBox )
-	self.id = "Shield_PrestigeEditBox"
-	self.soundSet = "default"
-	f1_arg0:addElementToPendingUpdateStateList( self )
-	
-	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
-	Backing:setRGB( 0, 0, 0 )
-	Backing:setAlpha( 0.5 )
-	self:addElement( Backing )
-	self.Backing = Backing
-	
-	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	Frame:setRGB( 0.78, 0.74, 0.67 )
-	Frame:setAlpha( 0.04 )
-	self:addElement( Frame )
-	self.Frame = Frame
-	
-	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	self:addElement( Corner )
-	self.Corner = Corner
-	
-	local TextBox = LUI.UIText.new( 0, 0, 20 + 95, 320 + 95, 0.5, 0.5, -10.5, 10.5 )
-	TextBox:setRGB( 0.78, 0.74, 0.67 )
-	TextBox:setTTF( "notosans_regular" )
-	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( TextBox )
-	self.TextBox = TextBox
-
-	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
-	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
-	RankHighlight:setTTF( "notosans_regular" )
-	RankHighlight:setText("^2Set Prestige: ")
-	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( RankHighlight )
-	self.RankHighlight = RankHighlight
-	
-	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
-	
-	if PostLoadFunc then
-		PostLoadFunc( self, f1_arg1, f1_arg0 )
-	end
-	
-	self.__editControlMaxChar = 2
-	self.__editControlIsInteger = 1
-	self.__editControlMin = 0
-	self.__editControlMax = 1000
-
-	CoD.BaseUtility.SetUseStencil( self )
-	DisableModelStringReplacement( TextBox )
-
-	return self
-end
-
-CoD.Shield_PrestigeEditBox.__resetProperties = function ( f3_arg0 )
-	f3_arg0.Corner:completeAnimation()
-	f3_arg0.Frame:completeAnimation()
-	f3_arg0.Backing:completeAnimation()
-	f3_arg0.TextBox:completeAnimation()
-	f3_arg0.Corner:setScale( 1, 1 )
-	f3_arg0.Frame:setAlpha( 0.04 )
-	f3_arg0.Backing:setAlpha( 0.5 )
-	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
-end
-
-CoD.Shield_PrestigeEditBox.__clipsPerState = {
-	DefaultState = {
-		DefaultClip = function ( f4_arg0, f4_arg1 )
-			f4_arg0:__resetProperties()
-			f4_arg0:setupElementClipCounter( 0 )
-		end,
-		Focus = function ( f5_arg0, f5_arg1 )
-			f5_arg0:__resetProperties()
-			f5_arg0:setupElementClipCounter( 3 )
-			f5_arg0.Backing:completeAnimation()
-			f5_arg0.Backing:setAlpha( 0.8 )
-			f5_arg0.clipFinished( f5_arg0.Backing )
-			f5_arg0.Frame:completeAnimation()
-			f5_arg0.Frame:setAlpha( 0.6 )
-			f5_arg0.clipFinished( f5_arg0.Frame )
-			f5_arg0.Corner:completeAnimation()
-			f5_arg0.Corner:setScale( 0.98, 0.9 )
-			f5_arg0.clipFinished( f5_arg0.Corner )
-		end,
-		GainFocus = function ( f6_arg0, f6_arg1 )
-			f6_arg0:__resetProperties()
-			f6_arg0:setupElementClipCounter( 3 )
-			local f6_local0 = function ( f7_arg0 )
-				f6_arg0.Backing:beginAnimation( 200 )
-				f6_arg0.Backing:setAlpha( 0.8 )
-				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Backing:completeAnimation()
-			f6_arg0.Backing:setAlpha( 0.5 )
-			f6_local0( f6_arg0.Backing )
-			local f6_local1 = function ( f8_arg0 )
-				f6_arg0.Frame:beginAnimation( 200 )
-				f6_arg0.Frame:setAlpha( 0.6 )
-				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Frame:completeAnimation()
-			f6_arg0.Frame:setAlpha( 0.04 )
-			f6_local1( f6_arg0.Frame )
-			local f6_local2 = function ( f9_arg0 )
-				f6_arg0.Corner:beginAnimation( 200 )
-				f6_arg0.Corner:setScale( 0.98, 0.9 )
-				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Corner:completeAnimation()
-			f6_arg0.Corner:setScale( 1, 1 )
-			f6_local2( f6_arg0.Corner )
-		end,
-		LoseFocus = function ( f10_arg0, f10_arg1 )
-			f10_arg0:__resetProperties()
-			f10_arg0:setupElementClipCounter( 3 )
-			local f10_local0 = function ( f11_arg0 )
-				f10_arg0.Backing:beginAnimation( 200 )
-				f10_arg0.Backing:setAlpha( 0.5 )
-				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Backing:completeAnimation()
-			f10_arg0.Backing:setAlpha( 0.8 )
-			f10_local0( f10_arg0.Backing )
-			local f10_local1 = function ( f12_arg0 )
-				f10_arg0.Frame:beginAnimation( 200 )
-				f10_arg0.Frame:setAlpha( 0.04 )
-				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Frame:completeAnimation()
-			f10_arg0.Frame:setAlpha( 0.6 )
-			f10_local1( f10_arg0.Frame )
-			local f10_local2 = function ( f13_arg0 )
-				f10_arg0.Corner:beginAnimation( 200 )
-				f10_arg0.Corner:setScale( 1, 1 )
-				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Corner:completeAnimation()
-			f10_arg0.Corner:setScale( 0.98, 0.9 )
-			f10_local2( f10_arg0.Corner )
-		end,
-		InputFocus = function ( f14_arg0, f14_arg1 )
-			f14_arg0:__resetProperties()
-			f14_arg0:setupElementClipCounter( 1 )
-			f14_arg0.TextBox:completeAnimation()
-			f14_arg0.TextBox:setRGB( 1, 1, 1 )
-			f14_arg0.clipFinished( f14_arg0.TextBox )
-		end
-	}
-}
-
-CoD.Shield_PrestigeEditBox.__onClose = function ( f15_arg0 )
-	f15_arg0.Frame:close()
-	f15_arg0.Corner:close()
-	f15_arg0.TextBox:close()
 end
 
 -- Servers SetUp
@@ -5433,7 +5523,7 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 				end ) )
 
 				-- shield api here later..
-				Engine[@"exec"](Engine[@"getprimarycontroller"](), "ipv4 " .. IPV4Data)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. IPV4Data .. " string")
 			end
 		else
 			f331_arg0:set("") -- reset it
@@ -5544,7 +5634,7 @@ CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_
 		if IsGamepad( controller ) then
 			PlaySoundAlias("uin_toggle_generic")
 			EnhPrintInfo("Server Connect", element.CurrentServerIP)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "ipv4 " .. element.CurrentServerIP)
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. element.CurrentServerIP .. " string")
 			
 			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldIPNotice")
 			--JoinSystemLinkServer( self, element, controller )
@@ -5553,7 +5643,7 @@ CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_
 		elseif IsMouseOrKeyboard( controller ) then
 			PlaySoundAlias("uin_toggle_generic")
 			EnhPrintInfo("Server Connect", element.CurrentServerIP)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "ipv4 " .. element.CurrentServerIP)
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. element.CurrentServerIP .. " string")
 
 			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldIPNotice")
 			--JoinSystemLinkServer( self, element, controller )

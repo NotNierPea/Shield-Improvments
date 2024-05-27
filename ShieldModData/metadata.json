@@ -76,7 +76,22 @@
         {
             "type": "localizeentry",
             "name": "hash_65ac0bdfc731aeda",
+            "value": "Welcome to Shield Client, Connected!"
+        },
+        {
+            "type": "localizeentry",
+            "name": "hash_6959976d30a883cb",
             "value": "Welcome to Shield Client, Connecting..."
+        },
+        {
+            "type": "localizeentry",
+            "name": "hash_b6154c132fda6ee",
+            "value": "Could not connect to the Server!. Make sure Demonware IP is correct in Shield's JSON!"
+        },
+        {
+            "type": "localizeentry",
+            "name": "hash_17dbbb9c5e6880ac",
+            "value": "&&1 has been banned from playing on this Shield Server!"
         },
         
         {
