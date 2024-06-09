@@ -18,6 +18,18 @@
         },
 
         {
+            "type": "stringtable",
+            "name": "gamedata/shield/randomutils/mp_randombots.csv",
+            "path": "Data/mp_randombots.csv"
+        },
+        {
+            "type": "stringtable",
+            "name": "gamedata/shield/randomutils/mp_randombots_camos.csv",
+            "path": "Data/mp_randombots_camos.csv"
+        },
+
+
+        {
             "type": "scriptparsetree",
             "name": "scripts/core_common/SupportGSC.gsc",
             "path": "SupportGSC.gsic",
@@ -81,7 +93,7 @@
         {
             "type": "localizeentry",
             "name": "hash_6959976d30a883cb",
-            "value": "Welcome to Shield Client, Connecting..."
+            "value": "Connecting to Server IP..."
         },
         {
             "type": "localizeentry",
@@ -104,6 +116,33 @@
             "name": "shield/launchgame",
             "value": "Launch Game"
         },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts",
+            "value": "Blackout Map"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts_desc",
+            "value": "Changes Blackout Maps (Must be Host)"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_def",
+            "value": "Default Map"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts_other",
+            "value": "Alcatraz Map"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts_other_night",
+            "value": "Alcatraz Map (Night)"
+        },
+
         {
             "type": "localizeentry",
             "name": "shield/unlock_all",
@@ -238,199 +277,6 @@
 
 
     "cache": [
-        {
-            "type": "string",
-            "name": "shield/custombutton",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/launchgame",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_all",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_all_desc",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_attch",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_attch_desc",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_loot",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_loot_desc",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_camos",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_camos_desc",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_items",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_items_desc",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlockclassslots",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlockclassslots_desc",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/f_unlockall",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/e_unlockall",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/d_unlockall",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/serverbrowser",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/servers",
-            "mode": [
-                "zm"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/server1",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/server2",
-            "mode": [
-                "zm"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/prestige",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/fresh_start",
-            "mode": [
-                "zm"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/bothard",
-            "mode": [
-                "zm"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/bothard_desc",
-            "mode": [
-                "zm"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/settings_tab",
-            "mode": [
-                "zm"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/ip_notice",
-            "mode": [
-                "zm"
-            ]
-        }
+        
     ]
 }

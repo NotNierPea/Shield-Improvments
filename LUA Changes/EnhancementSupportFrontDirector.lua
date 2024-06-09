@@ -282,26 +282,9 @@ require( "x64:334096eb04183443" )
 
 local function InitDvars()
 	-- reading c++ var
-	Engine[@"setdvar"]("shield_cold_var", 0)
+	-- ??
 
 	-- unlocks dvars (used for unlock settings in shield's menu)
-	Engine[@"setdvar"]("shield_unlock_all", 0)
-	Engine[@"setdvar"]("shield_unlock_loot", 0)
-	Engine[@"setdvar"]("shield_unlock_attachments", 0)
-	Engine[@"setdvar"]("shield_unlock_itemoptions", 0)
-	Engine[@"setdvar"]("shield_unlock_items", 0)
-	Engine[@"setdvar"]("shield_unlock_classes", 0)
-
-	-- unused, to prevent cbuf crash
-	Engine[@"setdvar"]("shield_unlock_zm_loot", 0)
-	Engine[@"setdvar"]("shield_unlock_attachmentslot", 0)
-	Engine[@"setdvar"]("shield_unlock_challenges", 0)
-	Engine[@"setdvar"]("shield_unlock_emblems", 0)
-	Engine[@"setdvar"]("shield_unlock_backgrounds", 0)
-
-	-- username
-	Engine[@"setdvar"]("shield_username", 0)
-
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_all unlock all bool")
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_loot unlock loot bool")
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_attachments unlock attachments bool")
@@ -309,7 +292,11 @@ local function InitDvars()
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_items unlock items bool")
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_classes unlock classes bool")
 
+	-- username
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
+
+	-- other shit
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "set shield_wz_map 0")
 	
 	--Engine[@"exec"](Engine[@"getprimarycontroller"](), "enable_unlock_hooks")
 end
@@ -361,6 +348,14 @@ local function LaunchGameFunction(Controller)
 
 	Dvar[@"party_minplayers"]:set(1)
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "LobbyLaunchGame")
+end
+
+local function VM_ReloadMods()
+	-- shield command
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "reload_mods")
+
+	-- reload all vms
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "killserver")
 end
 
 local function isInteger(str)
@@ -902,16 +897,40 @@ local function OnBotHardModeChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3,
 	end
 end
 
-local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+local function OnExtraDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
 	local dvar_name = f137_arg3
-	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
-	local f137_local2 = f137_arg1.value
+	local dvar_val = Engine[@"getdvarint"]( dvar_name )
+	local current_val = f137_arg1.value
 	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
 
-	if f137_local2 == f137_local1 then
+	if current_val == dvar_val then
 		return 
 	else
-		Engine[@"setdvar"]( dvar_name, f137_local2 )
+		Engine[@"setdvar"]( dvar_name, current_val )
+	end
+
+	if current_val == 0 then -- none
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
+	elseif current_val == 1 then -- alt
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 1")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
+	else -- night
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 1")
+	end
+end
+
+local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+	local dvar_name = f137_arg3
+	local dvar_val = Engine[@"getdvarint"]( dvar_name )
+	local current_val = f137_arg1.value
+	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
+
+	if current_val == dvar_val then
+		return 
+	else
+		Engine[@"setdvar"]( dvar_name, current_val )
 	end
 	
 	if dvar_name == "shield_unlock_all" then
@@ -1697,8 +1716,276 @@ DataSources.DirectorExtraHomeButtonsCustom = ListHelper_SetupDataSource( "Direct
 	return f85_local0
 end )
 
--- Shield's Server Data
-DataSources.ShieldListServers = DataSourceHelpers.ListSetup( "ShieldListServers", function ( f3_arg0, f3_arg1 )
+-- Pregame Buttons (checks for enh main mod)
+if not DataSources.DirectorPregameButtonsCustom then
+	DataSources.DirectorPregameButtonsCustom = ListHelper_SetupDataSource( "DirectorPregameButtonsCustom", function ( f115_arg0, f115_arg1 )
+		local f115_local0 = {}
+		local f115_local1 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "lobbyRoot.lobbyMainMode" )
+		f115_local1 = f115_local1:get()
+		local f115_local2 = LuaUtils.GetEModeForLobbyMainMode( f115_local1 )
+		local f115_local3 = CoD.BreadcrumbUtility.GetStorageLoadoutBufferForPlayer( f115_arg0, f115_local2 )
+		local f115_local4 = function ( f116_arg0, f116_arg1 )
+			local f116_local0 = {}
+			local f116_local1 = f116_arg0.hintText
+			local f116_local2 = false
+			local f116_local3 = false
+			if not f116_local1 and f116_arg0.featureItemIndex then
+				f116_local1 = nil
+				if CoD.CACUtility.IsFeatureItemLocked( f115_arg0, f116_arg0.featureItemIndex, f115_local2 ) then
+					f116_local1 = CoD.GetUnlockStringForItemIndex( f115_arg0, f116_arg0.featureItemIndex, Enum[@"statindexoffset"][@"hash_13057ABF96AF8289"], f115_local2 )
+				end
+			end
+			if f116_arg0.newBreadcrumbFunc then
+				f116_local2 = f116_arg0.newBreadcrumbFunc( nil, f115_arg0, f115_local2 )
+			end
+			if f116_arg0.hasRestrictionsEquippedFunc then
+				f116_local3 = f116_arg0.hasRestrictionsEquippedFunc( f115_arg0 )
+			end
+			local f116_local4 = table.insert
+			local f116_local5 = f115_local0
+			local f116_local6 = {}
+			local f116_local7 = {
+				name = f116_arg0.name,
+				subtitle = f116_arg0.subtitle,
+				iconBackground = f116_arg0.iconBackground,
+				featureItemIndex = f116_arg0.featureItemIndex or -1,
+				showPregameButton = f116_arg0.showPregameButton,
+				hintText = f116_local1 or "",
+				hasBreadcrumb = f116_local2,
+				isRestricted = f116_local3,
+				trialLocked = f116_arg0.trialLocked or false
+			}
+			local f116_local8 = f116_arg0.breadcrumbModel
+			if not f116_local8 then
+				f116_local8 = Engine[@"getglobalmodel"]()
+			end
+			f116_local7.breadcrumbModel = f116_local8
+			f116_local6.models = f116_local7
+			f116_local6.properties = {
+				action = f116_arg1.action,
+				actionParam = f116_arg1.actionParam,
+				selectIndex = f116_arg1.selectIndex
+			}
+			f116_local4( f116_local5, f116_local6 )
+		end
+		
+		if f115_local1 == Enum[@"lobbymainmode"][@"lobby_mainmode_mp"] then
+			local f115_local5 = Engine[@"getglobalmodel"]()
+			f115_local5 = f115_local5["lobbyRoot.selectedGameType"]
+			local f115_local6 = true
+			if f115_arg1:getParent() then
+				local f115_local7 = f115_arg1:getParent()
+				if f115_local7._preGameType == "custom" and CoD.DirectorUtility.HideCustomizationGametypes[f115_local5:get()] then
+					f115_local6 = false
+				end
+			end
+			if f115_arg1:getParent() then
+				local f115_local7 = f115_arg1:getParent()
+				if f115_local7._preGameType == "public" then
+					f115_local7 = Engine[@"getglobalmodel"]()
+					f115_local7 = f115_local7["lobbyRoot.playlistId"]
+					if f115_local7 and f115_local7:get() then
+						local f115_local8 = IsLobbyNetworkModeLive()
+						if f115_local8 then
+							f115_local8 = Engine[@"getplaylistinfobyid"]( f115_local7:get() )
+						end
+						if f115_local8 and #f115_local8.rotationList > 0 then
+							f115_local6 = not CoD.DirectorUtility.HideCustomizationPlaylistGametypes[f115_local8.rotationList[1].gametype]
+						end
+					end
+				end
+			end
+			if not CoDShared.IsInTheaterLobby() then
+				if not IsLobbyNetworkModeLAN() and (not CoD.DirectorUtility.IsOfflineDemo() or Engine[@"hash_5CB675CA7856DA25"]()) then
+					f115_local4( {
+						name = @"menu/depot",
+						subtitle = @"menu/depot",
+						iconBackground = @"$blacktransparent",
+						showPregameButton = true,
+						breadcrumbModel = DataSources.DepotBreadcrumbs.getModel( f115_arg0 )
+					}, {
+						action = CoD.DirectorUtility.OpenDirectorPersonalizationMenu,
+						actionParam = {
+							_sessionMode = f115_local2,
+							_storageLoadoutBuffer = f115_local3,
+							_allowsQuickSelect = true
+						}
+					} )
+					f115_local4( {
+						name = @"hash_6FF94A9EB646C873",
+						subtitle = @"hash_6FF94A9EB646C873",
+						iconBackground = @"$blacktransparent",
+						showPregameButton = true,
+						breadcrumbModel = DataSources.CharacterBreadcrumbs.recreateCharacterBreadcrumbModelsIfNeeded( f115_arg0, f115_local2 )
+					}, {
+						action = CoD.DirectorUtility.OpenDirectorChangeCharacterMenu,
+						actionParam = {
+							_sessionMode = f115_local2,
+							_storageLoadoutBuffer = f115_local3,
+							_selectIndex = 1
+						}
+					} )
+				end
+				f115_local4( {
+					name = @"menu/change",
+					subtitle = @"hash_31A1B9A85C55950F",
+					iconBackground = @"$blacktransparent",
+					showPregameButton = f115_local6,
+					newBreadcrumbFunc = CoD.BreadcrumbUtility.IsAnyScorestreaksNew,
+					hasRestrictionsEquippedFunc = CoD.CACUtility.AnyEquippedScorestreaksBanned
+				}, {
+					action = CoD.DirectorUtility.DirectorOpenOverlayWithMenuSessionMode,
+					actionParam = {
+						menuName = "SupportSelection",
+						eMode = f115_local2
+					}
+				} )
+				f115_local4( {
+					name = @"menu/edit",
+					subtitle = @"hash_6C705394F8BCCCC9",
+					iconBackground = @"$blacktransparent",
+					featureItemIndex = CoD.CACUtility.GetFeatureCACItemIndex(),
+					showPregameButton = f115_local6,
+					newBreadcrumbFunc = CoD.BreadcrumbUtility.IsAnythingInCACNew,
+					hasRestrictionsEquippedFunc = CoD.CACUtility.AnyClassContainsRestrictedItems
+				}, {
+					action = CoD.DirectorUtility.OpenCACWithMenuSessionMode,
+					actionParam = {
+						eMode = f115_local2
+					},
+					selectIndex = true
+				} )
+			end
+		end
+		if f115_local1 == Enum[@"lobbymainmode"][@"lobby_mainmode_zm"] then
+			if not IsLobbyNetworkModeLAN() and (not CoD.DirectorUtility.IsOfflineDemo() or Engine[@"hash_5CB675CA7856DA25"]()) then
+				f115_local4( {
+					name = @"hash_249E353FB642CB3F",
+					subtitle = @"hash_249E353FB642CB3F",
+					iconBackground = @"$blacktransparent",
+					showPregameButton = true,
+					breadcrumbModel = DataSources.CharacterBreadcrumbs.recreateCharacterBreadcrumbModelsIfNeeded( f115_arg0, f115_local2 )
+				}, {
+					action = CoD.DirectorUtility.OpenDirectorChangeCharacterMenu,
+					actionParam = {
+						_sessionMode = f115_local2,
+						_storageLoadoutBuffer = f115_local3,
+						_selectIndex = 1
+					}
+				} )
+			end
+			f115_local4( {
+				name = @"menu/armory",
+				subtitle = @"menu/armory",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true
+			}, {
+				action = CoD.DirectorUtility.OpenArmoryMenu,
+				actionParam = {
+					_sessionMode = f115_local2,
+					_loadoutSlot = "armory"
+				}
+			} )
+			f115_local4( {
+				name = @"menu/edit",
+				subtitle = @"hash_43E876868767ECEB",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true
+			}, {
+				action = CoD.DirectorUtility.OpenCACWithMenuSessionMode,
+				actionParam = {
+					eMode = f115_local2
+				},
+				selectIndex = true
+			} )
+		end
+		if f115_local1 == Enum[@"lobbymainmode"][@"lobby_mainmode_wz"] then
+			if not IsLobbyNetworkModeLAN() and (not CoD.DirectorUtility.IsOfflineDemo() or Engine[@"hash_5CB675CA7856DA25"]()) then
+				f115_local4( {
+					name = @"menu/depot",
+					subtitle = @"menu/depot",
+					iconBackground = @"$blacktransparent",
+					showPregameButton = true,
+					breadcrumbModel = DataSources.DepotBreadcrumbs.getModel( f115_arg0 )
+				}, {
+					action = CoD.DirectorUtility.OpenDirectorPersonalizationMenu,
+					actionParam = {
+						_sessionMode = f115_local2,
+						_storageLoadoutBuffer = f115_local3,
+						_allowsQuickSelect = true
+					}
+				} )
+			end
+			f115_local4( {
+				name = @"hash_249E353FB642CB3F",
+				subtitle = @"hash_249E353FB642CB3F",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true,
+				breadcrumbModel = DataSources.CharacterBreadcrumbs.recreateCharacterBreadcrumbModelsIfNeeded( f115_arg0, f115_local2 )
+			}, {
+				action = CoD.DirectorUtility.OpenDirectorChangeCharacterMenu,
+				actionParam = {
+					_sessionMode = f115_local2,
+					_storageLoadoutBuffer = f115_local3
+				}
+			} )
+			f115_local4( {
+				name = @"menu/armory",
+				subtitle = @"menu/armory",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true,
+				trialLocked = IsGameTrial()
+			}, {
+				action = CoD.DirectorUtility.OpenWZPersonalizeWeaponMenu,
+				actionParam = {
+					_sessionMode = f115_local2,
+					_loadoutSlot = "wzpersonalize"
+				},
+				selectIndex = true
+			} )
+		end
+		local f115_local5 = CoD.DirectorUtility.CreateOfflineScreenState()
+		if f115_arg1.offlineScreenStateSubscription == nil then
+			f115_arg1.offlineScreenStateSubscription = f115_arg1:subscribeToModel( f115_local5, function ()
+				f115_arg1:updateDataSource()
+			end, false )
+		end
+		if not f115_arg1.occlusionChangeSubscription then
+			f115_arg1.occlusionChangeSubscription = true
+			f115_arg1.menu:appendEventHandler( "occlusion_change", function ( f118_arg0, f118_arg1 )
+				if not f118_arg1.occluded then
+					f115_arg1:updateDataSource()
+				end
+			end )
+		end
+		CoD.DirectorUtility.AddLobbyNavSubscriptionOnce( f115_arg1 )
+		return f115_local0
+	end )	
+end
+
+-- Disconnected State
+DataSources.ExtraButtonsDisconnectedState = ListHelper_SetupDataSource( "ExtraButtonsDisconnectedState", function ( f85_arg0, f85_arg1 )
+	local listdisconnectedbuttons = {}
+	table.insert( listdisconnectedbuttons, {
+		models = {
+			subtitle = @"shield/serverbrowser",
+			iconBackground = @"ui_icon_blackmarket_store_tile_focus_05",
+			iconBackgroundFocus = @"ui_icon_blackmarket_store_tile_focus_05",
+			showOnLeft = true,
+			small = false,
+			locked = false -- later support
+		},
+		properties = {
+			action = CoD.DirectorUtility.DirectorSelectOpenPopup,
+			actionParam = "ShieldLobbyServerBrowserOverlay"
+		}
+	} )
+
+	return listdisconnectedbuttons
+end )
+
+-- Shield's DW Server Data
+DataSources.ShieldDWServers = DataSourceHelpers.ListSetup( "ShieldDWServers", function ( f3_arg0, f3_arg1 )
 	local InfoServers = {
 		{
 			models = {
@@ -1717,6 +2004,24 @@ DataSources.ShieldListServers = DataSourceHelpers.ListSetup( "ShieldListServers"
 				HostedBy = "Synx",
 				ClientCount = "?",
 				ConnectionIP = "85.215.193.238"
+			},
+			properties = {
+				-- none yet
+			}
+		}
+	}
+	return InfoServers
+end, true )
+
+-- Shield's DW Game Server Data
+DataSources.ShieldDWGameServers = DataSourceHelpers.ListSetup( "ShieldDWGameServers", function ( f3_arg0, f3_arg1 )
+	local InfoServers = {
+		{
+			models = {
+				ServerName = "Server Name Test",
+				HostedBy = "Test User",
+				ClientCount = "Unknown",
+				ConnectionIP = "Test:1234"
 			},
 			properties = {
 				-- none yet
@@ -1930,7 +2235,39 @@ end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
 	end, false )
 end )
 
--- Unlock Settings (ShieldUnlockData)
+-- Optional Settings (Other)
+DataSources.OptionalSettingsData = DataSourceHelpers.ListSetup( "OptionalSettingsData", function ( f138_arg0 )
+	local Settings = {}
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/use_wz_alts", @"shield/use_wz_alts_desc", "shield_wz_map", "shield_wz_map", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_def" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_alts_other" ),
+			value = 1
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_alts_other_night" ),
+			value = 2
+		}
+	}, nil, OnExtraDataChange ) )
+
+	return Settings
+
+end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
+	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
+	if f139_arg1.updateSubscription then
+		f139_arg1:removeSubscription( f139_arg1.updateSubscription )
+	end
+	f139_arg1.updateSubscription = f139_arg1:subscribeToModel( f139_local0, function ()
+		f139_arg1:updateDataSource()
+	end, false )
+end )
+
+-- Unlock Settings (Shield Unlock Data)
 DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", function ( f138_arg0 )
 	local Settings = {}
 
@@ -2108,67 +2445,69 @@ CoD.DirectorQuitButtonContainer.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_a
 		FrontMain.PCBnetStoreKeyart:setAlpha(0)
 		
 		-- Add IPV4 Edit for Disconnected Servers
-		local IPV4EditBox = CoD.Shield_NameEditBox.new( f1_arg0, f1_arg1, 0.10, 0.10, -20, 350, 0.625, 0.625, 100, 150 )
-		IPV4EditBox:linkToElementModel( f1_arg0, nil, false, function ( model )
-			IPV4EditBox:setModel( model, f1_arg0 )
+		local ServerBrowserButton = LUI.UIList.new( f1_arg0, f1_arg1, 15, 0, nil, false, false, false, false )
+		ServerBrowserButton:setLeftRight( 0.473, 0.473, -725, -513 )
+		ServerBrowserButton:setTopBottom( 0, 0, 265 + 460, 510 + 460 )
+		ServerBrowserButton:setWidgetType( CoD.DirectorPreGameButtonLeftJustified )
+		ServerBrowserButton:setVerticalCount( 4 )
+		ServerBrowserButton:setSpacing( 15 )
+		ServerBrowserButton:setFilter( function ( f3_arg0 )
+			return f3_arg0.showOnLeft:get() == true
 		end )
-		IPV4EditBox.TextBox:setLeftRight(0, 0, 20 + 160, 320 + 160)
-		IPV4EditBox.RankHighlight:setText("^2Set Custom Server IP: ")
-		FrontMain:addElement( IPV4EditBox )
-		FrontMain.IPV4EditBox = IPV4EditBox
+		
+		ServerBrowserButton:setDataSource( "ExtraButtonsDisconnectedState" )
+		ServerBrowserButton:linkToElementModel( ServerBrowserButton, "trialLocked", true, function ( model, f4_arg1 )
+			CoD.Menu.UpdateButtonShownState( f4_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		end )
+		ServerBrowserButton:linkToElementModel( ServerBrowserButton, "locked", true, function ( model, f5_arg1 )
+			CoD.Menu.UpdateButtonShownState( f5_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		end )
 
-		local IPV4EditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg0 ), "Shield_IPV4" )
-		if IPV4EditBoxModel:get() == nil then
-			IPV4EditBoxModel:set("")
-		end
-
-		IPV4EditBox.__editControlMaxChar = 16
-		IPV4EditBox.__editControlIsInteger = 1
-		IPV4EditBox.__editControlMin = 0
-		IPV4EditBox.__editControlMax = 1000
-
-		CoD.PCUtility.SetupEditControlWithModel( IPV4EditBox, f1_arg1, f1_arg0, IPV4EditBoxModel, function ( f331_arg0, f331_arg1, f331_arg2 )
-			if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
-				local IPV4Data = f331_arg0:get()
-
-				EnhPrintInfo("IP", IPV4Data)
-				PlaySoundAlias( "uin_paint_image_flip_toggle" )
-				
-				if not IsIPAddress(IPV4Data) then
-					f331_arg0:set("^1Invalid IP!")
-					IPV4EditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-				else
-					f331_arg0:set("^3IP Set!")
-					IPV4EditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-
-					-- shield api here later..
-					Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. IPV4Data .. " string")
-				end
-			else
-				f331_arg0:set("") -- reset it
+		ServerBrowserButton:linkToElementModel( ServerBrowserButton, "showForAllClients", true, function ( model, f9_arg1 )
+			CoD.Menu.UpdateButtonShownState( f9_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		end )
+		ServerBrowserButton:registerEventHandler( "list_item_gain_focus", function ( element, event )
+			local f10_local0 = nil
+			CoD.DirectorUtility.UpdateDescriptionTextFromSelectMenu( f1_arg1, element )
+			return f10_local0
+		end )
+		ServerBrowserButton:registerEventHandler( "gain_focus", function ( element, event )
+			local f11_local0 = nil
+			if element.gainFocus then
+				f11_local0 = element:gainFocus( event )
+			elseif element.super.gainFocus then
+				f11_local0 = element.super:gainFocus( event )
 			end
+			CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+			return f11_local0
 		end )
+		f1_arg0:AddButtonCallbackFunction( ServerBrowserButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+			if CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) and AlwaysFalse() then
+				OpenOverlay( f1_arg0, "Store", controller )
+				PlaySoundAlias( "uin_toggle_generic" )
+				return true
+			elseif not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "locked" ) and not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) then
+				ProcessListAction( f1_arg0, element, controller, menu )
+				PlaySoundAlias( "uin_toggle_generic" )
+				return true
+			else
+				
+			end
+		end, function ( element, menu, controller )
+			if CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) and AlwaysFalse() then
+				CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_4191CDDA584B4408", nil, "ui_confirm" )
+				return true
+			elseif not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "locked" ) and not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) then
+				CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+				return true
+			else
+				return false
+			end
+		end, false )
+		f1_arg0:addElement( ServerBrowserButton )
+		f1_arg0.ServerBrowserButton = ServerBrowserButton
 
-		IPV4EditBox.id = "IPV4EditBox"
-
-		-- desc for ip
-		local IPHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.725, 0.725, 100 - 25, 125 - 25 )
-		IPHint:setText("To Apply IP Change and Reconnect, Restart the Game!")
-		IPHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
-		IPHint:setTTF("notosans_bold")
-		IPHint:setBackingType( 2 )
-		IPHint:setBackingColor( 0.04, 0.81, 1 )
-		IPHint:setBackingAlpha( 0.01 )
-		IPHint:setBackingXPadding( 12 )
-		IPHint:setBackingYPadding( 6 )
-		IPHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-		IPHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
-		f1_arg0:addElement( IPHint )
-		f1_arg0.IPHint = IPHint
+		ServerBrowserButton.id = "ServerBrowserButton"
 
 	end
 
@@ -2311,7 +2650,7 @@ CoD.DirectorCommonSafeAreaBottomAndLeft.new = function ( f1_arg0, f1_arg1, f1_ar
 	PreGameButtons.LobbyButtons:setFilter( function ( f5_arg0 )
 		return f5_arg0.showPregameButton:get() == true
 	end )
-	PreGameButtons.LobbyButtons:setDataSource( "DirectorPregameButtons" )
+	PreGameButtons.LobbyButtons:setDataSource( "DirectorPregameButtonsCustom" )
 	PreGameButtons.LobbyButtons:setHorizontalCount(4)
 	PreGameButtons.LobbyButtons:setVerticalCount(1)
 	PreGameButtons:registerEventHandler( "record_curr_focused_elem_id", function ( element, event )
@@ -4897,7 +5236,12 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( NameEditBox )
 	self.NameEditBox = NameEditBox
 
-	local NameEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Name" )
+	-- prevent element pool being fucked
+	local NameEditBoxModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Name" )
+
+	if NameEditBoxModel == nil then
+		NameEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Name" )
+	end
 
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
 
@@ -4913,16 +5257,19 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 			if not IsValidName(NameData) then
 				f331_arg0:set("^1Invalid Username!")
 				NameEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-					f331_arg0:set("")
+					-- reset old name
+				f331_arg0:set(Engine[@"getdvarstring"]("shield_username"))
 				end ) )
 			else
 				f331_arg0:set("^3Username Set!")
 				NameEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-					f331_arg0:set("")
+					-- reset new name
+				f331_arg0:set(NameData)
 				end ) )
 
 				-- shield api here later..
 				Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson identity name " .. NameData .. " string")
+				Engine[@"setdvar"]("shield_username", NameData)
 			end
 		else
 			f331_arg0:set("") -- reset it
@@ -4930,6 +5277,71 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	end )
 
 	self.NameEditBoxModel = NameEditBoxModel
+
+	local ReloadModsButton = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 310, 0.35, 0.35, 0, 50 )
+	
+	ReloadModsButton.MiddleText:setTTF( "ttmussels_regular" )
+	ReloadModsButton.MiddleText:setText("^3Reload Shield Mods")
+
+	ReloadModsButton.MiddleTextFocus:setText("^3Reload Shield Mods")
+	ReloadModsButton.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	ReloadModsButton:mergeStateConditions( {
+		{
+			stateName = "Locked",
+			condition = function ( menu, element, event )
+				return false
+			end
+		}
+	} )
+
+	ReloadModsButton:linkToElementModel( self, nil, false, function ( model )
+		ReloadModsButton:setModel( model, f1_arg1 )
+	end )
+	self:addElement( ReloadModsButton )
+	self.ReloadModsButton = ReloadModsButton
+
+	f1_local1:AddButtonCallbackFunction( ReloadModsButton, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("ReloadModsButton")
+		
+		-- reload with killserver
+		VM_ReloadMods()
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeReloadModsButton = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 310, 0.35, 0.35, 0, 50 )
+	sizeReloadModsButton:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeReloadModsButton:setAlpha( 0 )
+	sizeReloadModsButton.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeReloadModsButton.Tint:setAlpha( 0.25 )
+	sizeReloadModsButton:linkToElementModel( self, nil, false, function ( model )
+		sizeReloadModsButton:setModel( model, f1_arg1 )
+	end )
+	sizeReloadModsButton.ButtonName.GameModeText:setText("^3Reload Mods")
+	self:addElement( sizeReloadModsButton )
+	self.sizeReloadModsButton = sizeReloadModsButton
+
+	ReloadModsButton.id = "ReloadModsButton"
+	sizeReloadModsButton.id = "sizeReloadModsButton"
 
 	-- desc for name
 	local NameHint = LUI.UIText.new( 0.10, 0.10, 0, 550, 0.20, 0.20, 100, 120 )
@@ -4946,8 +5358,41 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( NameHint )
 	self.NameHint = NameHint
 
+	-- datasources for other shit here
+	local OptionalSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+	OptionalSettingsList:setRGB(0, 1, 1)
+	OptionalSettingsList:setLeftRight( 0.26, 0.26, 10, 700 )
+	OptionalSettingsList:setTopBottom( 0.2225, 0.2225, 0, 50 )
+	--OptionalSettingsList:setScale(0.90, 0.90)
+	--OptionalSettingsList:setAutoScaleContent( true )
+	OptionalSettingsList:setVerticalCount(3) -- fix
+	OptionalSettingsList:setHorizontalCount(3)
+	OptionalSettingsList:setSpacing(30) -- spacing needed..
+	OptionalSettingsList:setWidgetType( CoD.CustomGames_SettingSliderNoCustom )
+	OptionalSettingsList:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	OptionalSettingsList:setDataSource( "OptionalSettingsData" )
+	self:addElement( OptionalSettingsList )
+	self.OptionalSettingsList = OptionalSettingsList
+
+	OptionalSettingsList.id = "OptionalSettingsList"
+
+	local MapHint = LUI.UIText.new( 0.35, 0.35, 0, 550, 0.20, 0.20, 100, 120 )
+	MapHint:setText("Changes Blackout Maps (Must be Host!)")
+	MapHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	MapHint:setTTF("notosans_bold")
+	MapHint:setBackingType( 2 )
+	MapHint:setBackingColor( 0.04, 0.81, 1 )
+	MapHint:setBackingAlpha( 0.01 )
+	MapHint:setBackingXPadding( 12 )
+	MapHint:setBackingYPadding( 6 )
+	MapHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	MapHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( MapHint )
+	self.MapHint = MapHint
+
 	-- datasources for unlocks here
 	local UnlockSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+	UnlockSettingsList:setRGB(0, 1, 1)
 	UnlockSettingsList:setLeftRight( 0.305, 0.305, 10, 700 )
 	UnlockSettingsList:setTopBottom( 0.57, 0.57, 0, 50 )
 	--UnlockSettingsList:setScale(0.90, 0.90)
@@ -4995,7 +5440,12 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( RankEditBox )
 	self.RankEditBox = RankEditBox
 
-	local RankEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Rank" )
+	local RankEditBoxModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Rank" )
+
+	if RankEditBoxModel == nil then
+		RankEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Rank" )
+	end
+
 	if RankEditBoxModel:get() == nil then
 		RankEditBoxModel:set( "" )
 	end
@@ -5054,7 +5504,12 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( PrestigeEditBox )
 	self.PrestigeEditBox = PrestigeEditBox
 
-	local PrestigeEditModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Prestige" )
+	local PrestigeEditModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Prestige" )
+
+	if PrestigeEditModel == nil then
+		PrestigeEditModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Prestige" )
+	end
+
 	if PrestigeEditModel:get() == nil then
 		PrestigeEditModel:set( "" )
 	end
@@ -5189,14 +5644,29 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 end
 
 CoD.ShieldOptionsMenu.__onClose = function ( f8_arg0 )
+	-- adding on close to everything in lua menu i make is important
+	-- its mostly because to avoid element pool being fucked
+
 	f8_arg0.Background:close()
 	f8_arg0.FooterContainerFrontendRight:close()
 	f8_arg0.TabbedScoreboardFuiBox:close()
 	f8_arg0.ShieldOptionsMenu_SafeAreaFront:close()
-
-	-- redo it, to avoid old username bug
-	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
-	f8_arg0.NameEditBoxModel:set(Engine[@"getdvarstring"]("shield_username"))
+	f8_arg0.sizePrestigeMasterButton:close()
+	f8_arg0.PrestigeMasterButton:close()
+	f8_arg0.PrestigeEditBox:close()
+	f8_arg0.RankEditBox:close()
+	f8_arg0.UnlockSettingDescription:close()
+	f8_arg0.UnlockSettingsList:close()
+	f8_arg0.OptionalSettingsList:close()
+	f8_arg0.NameHint:close()
+	f8_arg0.MapHint:close()
+	f8_arg0.CornerPipL:close()
+	f8_arg0.HeaderPixelGridTiledBackingL:close()
+	f8_arg0.HeaderPixelGridTiledBackingR:close()
+	f8_arg0.CornerPipR:close()
+	f8_arg0.NameEditBox:close()
+	f8_arg0.ReloadModsButton:close()
+	f8_arg0.sizeReloadModsButton:close()
 end
 
 CoD.ShieldOptionsMenu_SafeAreaFront = InheritFrom( LUI.UIElement )
@@ -5260,6 +5730,13 @@ CoD.ShieldOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_arg2, 
 	return self
 end
 
+CoD.ShieldOptionsMenu_SafeAreaFront.__onClose = function ( f8_arg0 )
+	f8_arg0.HeaderStripe:close()
+	f8_arg0.ShieldSettingsTabs:close()
+	f8_arg0.CommonHeader:close()
+	f8_arg0.TabBacking:close()
+end
+
 -- Servers SetUp
 -- LAN Servers
 CoD.ShieldLobbyServerBrowserOverlay = InheritFrom( CoD.Menu )
@@ -5306,9 +5783,13 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	self.FooterContainerFrontendRight2 = FooterContainerFrontendRight2
 	]]
 	
-	local LANServerBrowserDetails = CoD.ShieldServerRowList.new( f1_local1, f1_arg0, 0.5, 0.5, -800, 800, 0.5, 0.5, -310, 300 )
-	self:addElement( LANServerBrowserDetails )
-	self.LANServerBrowserDetails = LANServerBrowserDetails
+	local ShieldDWServerDetails = CoD.ShieldDWServerRowList.new( f1_local1, f1_arg0, 0.5, 0.5, -800, 800, 0.5, 0.5, -310, 300 )
+	self:addElement( ShieldDWServerDetails )
+	self.ShieldDWServerDetails = ShieldDWServerDetails
+
+	local ShieldDWGameServerDetails = CoD.ShieldDWGameServerRowList.new( f1_local1, f1_arg0, 0.5, 0.5, -800, 800, 0.8, 0.8, -310, 300 )
+	self:addElement( ShieldDWGameServerDetails )
+	self.ShieldDWGameServerDetails = ShieldDWGameServerDetails
 	
 	local HeaderBackingL = LUI.UIImage.new( 0, 0, 160, 1229, 0, 0, 176, 216 )
 	HeaderBackingL:setRGB( 0, 0, 0 )
@@ -5323,7 +5804,40 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	self:addElement( HeaderBackingR )
 	self.HeaderBackingR = HeaderBackingR
 	]]
+
+	-- desc for dw
+	local DWHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.02, 0.02, 100, 140 )
+	DWHint:setText("Demonware Servers")
+	DWHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	DWHint:setTTF("notosans_bold")
+	DWHint:setRGB(1, 1, 0)
+	DWHint:setBackingType( 2 )
+	DWHint:setBackingColor( 0.04, 0.81, 1 )
+	DWHint:setBackingAlpha( 0.01 )
+	DWHint:setBackingXPadding( 12 )
+	DWHint:setBackingYPadding( 6 )
+	DWHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	DWHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( DWHint )
+	self.DWHint = DWHint
+
+	-- desc for in-game servers
+	local GameServersHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.32, 0.32, 100, 140 )
+	GameServersHint:setText("Demonware Lobbies")
+	GameServersHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	GameServersHint:setTTF("notosans_bold")
+	GameServersHint:setRGB(1, 1, 0)
+	GameServersHint:setBackingType( 2 )
+	GameServersHint:setBackingColor( 0.04, 0.81, 1 )
+	GameServersHint:setBackingAlpha( 0.01 )
+	GameServersHint:setBackingXPadding( 12 )
+	GameServersHint:setBackingYPadding( 6 )
+	GameServersHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	GameServersHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( GameServersHint )
+	self.GameServersHint = GameServersHint
 	
+	-- descs for dw servers
 	local ServerNameText = LUI.UIText.new( 0.5, 0.5, -783, -583, 0.5, 0.5, -353.5, -334.5 )
 	ServerNameText:setRGB( 0.59, 0.59, 0.59 )
 	ServerNameText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
@@ -5375,6 +5889,74 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	DetailsTextBox:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
 	self:addElement( DetailsTextBox )
 	self.DetailsTextBox = DetailsTextBox
+
+	-- descs for dw game servers
+	local LobbyNameText = LUI.UIText.new( 0.5, 0.5, -783, -583, 0.8, 0.8, -353.5, -334.5 )
+	LobbyNameText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyNameText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyNameText:setText("Lobby Name")
+	LobbyNameText:setTTF( "ttmussels_regular" )
+	LobbyNameText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyNameText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyNameText )
+	self.LobbyNameText = LobbyNameText
+	
+	local LobbyPlayerCountText = LUI.UIText.new( 0.65, 0.65, -359, -188, 0.8, 0.8, -353, -334 )
+	LobbyPlayerCountText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyPlayerCountText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyPlayerCountText:setText("Lobby Players")
+	LobbyPlayerCountText:setTTF( "ttmussels_regular" )
+	LobbyPlayerCountText:setLetterSpacing( 1 )
+	LobbyPlayerCountText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyPlayerCountText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyPlayerCountText )
+	self.LobbyPlayerCountText = LobbyPlayerCountText
+	
+	local LobbyIPText = LUI.UIText.new( 0.5, 0.5, -300, -31, 0.8, 0.8, -353.5, -334.5 )
+	LobbyIPText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyIPText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyIPText:setText("Lobby IP")
+	LobbyIPText:setTTF( "ttmussels_regular" )
+	LobbyIPText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyIPText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyIPText )
+	self.LobbyIPText = LobbyIPText
+	
+	local LobbyHostedByText = LUI.UIText.new( 0.5, 0.5, -550, -1583, 0.8, 0.8, -353.5, -334.5 )
+	LobbyHostedByText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyHostedByText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyHostedByText:setTTF( "ttmussels_regular" )
+	LobbyHostedByText:setText("Lobby Hosted By")
+	LobbyHostedByText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyHostedByText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyHostedByText )
+	self.LobbyHostedByText = LobbyHostedByText
+	
+	local LobbyDetailsTextBox = LUI.UIText.new( 0.5, 0.5, 294, 514, 0.8, 0.8, -353.5, -334.5 )
+	LobbyDetailsTextBox:setRGB( 0.59, 0.59, 0.59 )
+	LobbyDetailsTextBox:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyDetailsTextBox:setText("") -- not needed really..
+	LobbyDetailsTextBox:setTTF( "ttmussels_regular" )
+	LobbyDetailsTextBox:setAlpha(0)
+	LobbyDetailsTextBox:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyDetailsTextBox:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyDetailsTextBox )
+	self.LobbyDetailsTextBox = LobbyDetailsTextBox
+
+	local LobbyHeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 127.5, 1196.5, 0.61, 0.61, -160.5, -120.5 )
+	LobbyHeaderPixelGridTiledBackingL:setAlpha( 0.15 )
+	LobbyHeaderPixelGridTiledBackingL:setImage( RegisterImage( @"hash_1311E811A3183347" ) )
+	LobbyHeaderPixelGridTiledBackingL:setMaterial( LUI.UIImage.GetCachedMaterial( @"hash_16CBE95C250C6D15" ) )
+	LobbyHeaderPixelGridTiledBackingL:setShaderVector( 0, 0, 0, 0, 0 )
+	LobbyHeaderPixelGridTiledBackingL:setupNineSliceShader( 128, 128 )
+	self:addElement( LobbyHeaderPixelGridTiledBackingL )
+	self.LobbyHeaderPixelGridTiledBackingL = LobbyHeaderPixelGridTiledBackingL
+
+	local LobbyHeaderBackingL = LUI.UIImage.new( 0, 0, 160, 1229, 0.3, 0.3, 176, 216 )
+	LobbyHeaderBackingL:setRGB( 0, 0, 0 )
+	LobbyHeaderBackingL:setAlpha( 0.5 )
+	self:addElement( LobbyHeaderBackingL )
+	self.LobbyHeaderBackingL = LobbyHeaderBackingL
 	
 	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 127.5, 1196.5, 0.31, 0.31, -160.5, -120.5 )
 	HeaderPixelGridTiledBackingL:setAlpha( 0.15 )
@@ -5494,7 +6076,12 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	self:addElement( IPV4EditBox )
 	self.IPV4EditBox = IPV4EditBox
 
-	local IPV4EditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_IPV4" )
+	local IPV4EditBoxModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_IPV4" )
+
+	if IPV4EditBoxModel == nil then
+		IPV4EditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_IPV4" )
+	end
+
 	if IPV4EditBoxModel:get() == nil then
 		IPV4EditBoxModel:set("")
 	end
@@ -5545,7 +6132,9 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	self:addElement( IPHint )
 	self.IPHint = IPHint
 
-	LANServerBrowserDetails.id = "LANServerBrowserDetails"
+	ShieldDWServerDetails.id = "ShieldDWServerDetails"
+	ShieldDWGameServerDetails.id = "ShieldDWGameServerDetails"
+
 	SafeAreaContainerLobbyServerBrwoserOverlay.id = "SafeAreaContainerLobbyServerBrwoserOverlay"
 	IPV4EditBox.id = "IPV4EditBox"
 
@@ -5573,20 +6162,41 @@ CoD.ShieldLobbyServerBrowserOverlay.__onClose = function ( f8_arg0 )
 	f8_arg0.Background:close()
 	f8_arg0.FooterContainerFrontendRight:close()
 	--f8_arg0.FooterContainerFrontendRight2:close()
-	f8_arg0.LANServerBrowserDetails:close()
+	f8_arg0.ShieldDWServerDetails:close()
+	f8_arg0.ShieldDWGameServerDetails:close()
 	f8_arg0.TabbedScoreboardFuiBox:close()
 	f8_arg0.SafeAreaContainerLobbyServerBrwoserOverlay:close()
 	--f8_arg0.ShieldServerListButtonList:close()
+	f8_arg0.IPHint:close()
+	f8_arg0.IPV4EditBox:close()
+	f8_arg0.CornerPipL:close()
+	f8_arg0.CornerPipR:close()
+	f8_arg0.HeaderPixelGridTiledBackingL:close()
+	f8_arg0.DetailsTextBox:close()
+	f8_arg0.HostedByText:close()
+	f8_arg0.ServerIPText:close()
+	f8_arg0.PlayerCountText:close()
+	f8_arg0.ServerNameText:close()
+	f8_arg0.HeaderBackingL:close()
+	f8_arg0.DWHint:close()
+	f8_arg0.GameServersHint:close()
+	f8_arg0.LobbyNameText:close()
+	f8_arg0.LobbyPlayerCountText:close()
+	f8_arg0.LobbyIPText:close()
+	f8_arg0.LobbyHostedByText:close()
+	f8_arg0.LobbyDetailsTextBox:close()
+	f8_arg0.LobbyHeaderPixelGridTiledBackingL:close()
+	f8_arg0.LobbyHeaderBackingL:close()
 end
 
--- Shield's Server Lists
-CoD.ShieldServerRowList = InheritFrom( LUI.UIElement )
-CoD.ShieldServerRowList.__defaultWidth = 1600
-CoD.ShieldServerRowList.__defaultHeight = 620
-CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+-- Shield's DW Server Lists
+CoD.ShieldDWServerRowList = InheritFrom( LUI.UIElement )
+CoD.ShieldDWServerRowList.__defaultWidth = 1600
+CoD.ShieldDWServerRowList.__defaultHeight = 620
+CoD.ShieldDWServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
 	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.ShieldServerRowList )
-	self.id = "ShieldServerRowList"
+	self:setClass( CoD.ShieldDWServerRowList )
+	self.id = "ShieldDWServerRowList"
 	self.soundSet = "default"
 	self.onlyChildrenFocusable = true
 	self.anyChildUsesUpdateState = true
@@ -5599,7 +6209,7 @@ CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_
 	Servers:setSpacing( 7 )
 	Servers:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
 	Servers:setVerticalCounter( CoD.verticalCounter )
-	Servers:setDataSource( "ShieldListServers" ) -- Data Source
+	Servers:setDataSource( "ShieldDWServers" ) -- Data Source
 	Servers:appendEventHandler( "input_source_changed", function ( f2_arg0, f2_arg1 )
 		f2_arg1.menu = f2_arg1.menu or f1_arg0
 		CoD.Menu.UpdateButtonShownState( f2_arg0, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
@@ -5688,7 +6298,117 @@ CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_
 	return self
 end
 
-CoD.ShieldServerRowList.__onClose = function ( f9_arg0 )
+CoD.ShieldDWServerRowList.__onClose = function ( f9_arg0 )
+	--f9_arg0.LANServerBrowserDetails:close()
+	f9_arg0.Servers:close()
+end
+
+-- Shield's In-game DW Server Lists
+CoD.ShieldDWGameServerRowList = InheritFrom( LUI.UIElement )
+CoD.ShieldDWGameServerRowList.__defaultWidth = 1600
+CoD.ShieldDWGameServerRowList.__defaultHeight = 620
+CoD.ShieldDWGameServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.ShieldDWGameServerRowList )
+	self.id = "ShieldDWGameServerRowList"
+	self.soundSet = "default"
+	self.onlyChildrenFocusable = true
+	self.anyChildUsesUpdateState = true
+	
+	local Servers = LUI.UIList.new( f1_arg0, f1_arg1, 7, 0, nil, false, false, false, false )
+	Servers:setLeftRight( 0, 0, 0, 1070 )
+	Servers:setTopBottom( 0, 0, 0, 609 )
+	Servers:setWidgetType( CoD.ShieldServerRow )
+	Servers:setVerticalCount( 14 )
+	Servers:setSpacing( 7 )
+	Servers:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	Servers:setVerticalCounter( CoD.verticalCounter )
+	Servers:setDataSource( "ShieldDWGameServers" ) -- Data Source
+	Servers:appendEventHandler( "input_source_changed", function ( f2_arg0, f2_arg1 )
+		f2_arg1.menu = f2_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f2_arg0, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
+	end )
+
+	--local f1_local2 = Servers
+	--local LANServerBrowserDetails = Servers.subscribeToModel
+	--local f1_local4 = Engine[@"getmodelforcontroller"]( f1_arg1 )
+	--LANServerBrowserDetails( f1_local2, f1_local4.LastInput, function ( f3_arg0, f3_arg1 )
+	--	CoD.Menu.UpdateButtonShownState( f3_arg1, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
+	--end, false )
+
+	Servers:registerEventHandler( "list_item_gain_focus", function ( element, event )
+		local f4_local0 = nil
+		LobbyLANServerPlayerListRefresh( self, element, f1_arg1 )
+		return f4_local0
+	end )
+
+	Servers:registerEventHandler( "gain_focus", function ( element, event )
+		local f5_local0 = nil
+		if element.gainFocus then
+			f5_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f5_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
+		return f5_local0
+	end )
+
+	-- element is the current datasource being clicked..
+	f1_arg0:AddButtonCallbackFunction( Servers, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		if IsGamepad( controller ) then
+			PlaySoundAlias("uin_toggle_generic")
+			EnhPrintInfo("Server Game Connect", element.CurrentServerIP)
+			
+			--JoinSystemLinkServer( self, element, controller )
+			--GoBack( self, controller )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			PlaySoundAlias("uin_toggle_generic")
+			EnhPrintInfo("Server Game Connect", element.CurrentServerIP)
+
+			--JoinSystemLinkServer( self, element, controller )
+			--GoBack( self, controller )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+
+	self:addElement( Servers )
+	self.Servers = Servers
+	
+	--[[
+	LANServerBrowserDetails = CoD.LANServerBrowserDetails.new( f1_arg0, f1_arg1, 0, 0, 1085, 1600, 0, 0, 0, 610 )
+	self:addElement( LANServerBrowserDetails )
+	self.LANServerBrowserDetails = LANServerBrowserDetails
+	
+	LANServerBrowserDetails:linkToElementModel( Servers, nil, false, function ( model )
+		LANServerBrowserDetails:setModel( model, f1_arg1 )
+	end )
+	]]
+	
+	Servers.id = "Servers"
+	--LANServerBrowserDetails.id = "LANServerBrowserDetails"
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	return self
+end
+
+CoD.ShieldDWGameServerRowList.__onClose = function ( f9_arg0 )
 	--f9_arg0.LANServerBrowserDetails:close()
 	f9_arg0.Servers:close()
 end
@@ -5860,6 +6580,7 @@ CoD.ShieldServerRow.__onClose = function ( f10_arg0 )
 	f10_arg0.ServerIP:close()
 	f10_arg0.ClientCount:close()
 	f10_arg0.ServerName:close()
+	f10_arg0.BlackBar:close()
 end
 
 -- Shield's Servers List (unused)

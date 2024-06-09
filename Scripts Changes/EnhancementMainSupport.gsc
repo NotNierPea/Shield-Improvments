@@ -2,6 +2,8 @@
 #include scripts\core_common\clientfield_shared;
 #include scripts\core_common\util_shared;
 #include scripts\core_common\flag_shared;
+#include scripts\core_common\array_shared.gsc;
+#include scripts\core_common\callbacks_shared.gsc;
 
 #namespace SupportGSC;
 
@@ -32,7 +34,20 @@ PostInit()
 
 MPChanges()
 {
-    // later
+    callback::on_spawned(&MpBotOnSpawned);
+}
+
+MpBotOnSpawned()
+{
+    self endon(#"disconnect", #"spawned_player");
+    level endon(#"end_game", #"game_ended");
+
+    if(!IsBot(self))
+     return;
+
+    // bot funcs here
+    self thread SetRandomSkin();
+    self thread SetRandomCamos();
 }
 
 detour bot<scripts\mp_common\bots\mp_bot.gsc>::init()
