@@ -84,6 +84,12 @@
             "format": "string",
             "ignore_error": true
         },
+        {
+            "type": "hashes",
+            "path": "SupportUtils\\SupportHashes.txt",
+            "format": "serious_compiler",
+            "ignore_error": true
+        },
 
         {
             "type": "localizeentry",

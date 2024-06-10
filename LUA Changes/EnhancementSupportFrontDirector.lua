@@ -2016,18 +2016,21 @@ end, true )
 -- Shield's DW Game Server Data
 DataSources.ShieldDWGameServers = DataSourceHelpers.ListSetup( "ShieldDWGameServers", function ( f3_arg0, f3_arg1 )
 	local InfoServers = {
-		{
-			models = {
-				ServerName = "Server Name Test",
-				HostedBy = "Test User",
-				ClientCount = "Unknown",
-				ConnectionIP = "Test:1234"
-			},
-			properties = {
-				-- none yet
+		--[[
+			{
+				models = {
+					ServerName = "Server Name Test",
+					HostedBy = "Test User",
+					ClientCount = "Unknown",
+					ConnectionIP = "Test:1234"
+				},
+				properties = {
+					-- none yet
+				}
 			}
-		}
+		]]
 	}
+
 	return InfoServers
 end, true )
 
@@ -5553,7 +5556,7 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 		{
 			stateName = "Locked",
 			condition = function ( menu, element, event )
-				return false
+				return AlwaysTrue()
 			end
 		}
 	} )
@@ -5592,7 +5595,7 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 		{
 			stateName = "Disabled",
 			condition = function ( menu, element, event )
-				return AlwaysFalse()
+				return AlwaysTrue()
 			end
 		}
 	} )
@@ -5823,7 +5826,7 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 
 	-- desc for in-game servers
 	local GameServersHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.32, 0.32, 100, 140 )
-	GameServersHint:setText("Demonware Lobbies")
+	GameServersHint:setText("Demonware Lobbies (Coming Soon!)")
 	GameServersHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
 	GameServersHint:setTTF("notosans_bold")
 	GameServersHint:setRGB(1, 1, 0)

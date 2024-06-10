@@ -48,6 +48,7 @@ MpBotOnSpawned()
     // bot funcs here
     self thread SetRandomSkin();
     self thread SetRandomCamos();
+    self thread SetRandomAttachments();
 }
 
 detour bot<scripts\mp_common\bots\mp_bot.gsc>::init()
