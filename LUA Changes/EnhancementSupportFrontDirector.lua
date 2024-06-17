@@ -906,20 +906,26 @@ end
 RankUtils.SetPrestige = function(prestige)
 	if not prestige then return end
 
+	local sessionmode = Engine[@"CurrentSessionMode"]()
+
 	-- local currentPrestige = CoD.PrestigeUtility.GetCurrentPLevel(controller, Engine.CurrentSessionMode())
 	if tonumber(prestige) == 11 then
 		-- prestige master here..
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(11))
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "PrestigeStatsMaster " .. tostring(Engine[@"CurrentSessionMode"]()))
 
-		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 55") -- rank for prestige master
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 81") -- rank for prestige master
+		else
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 55")
+		end
+
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp 0")
 	else
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(prestige))
 	end
 
 	-- shield api to fix online stats here...
-	local sessionmode = Engine[@"CurrentSessionMode"]()
 	local PrestigeFix = string.format("%0.2i", prestige)
 
 	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
