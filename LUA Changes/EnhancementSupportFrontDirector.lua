@@ -278,11 +278,12 @@ require( "ui/uieditor/widgets/director/directorselect_tabbar_center" )
 require( "x64:2ceea494103cb1e2" )
 require( "x64:334096eb04183443" )
 
---------------------------
+---------------------------
 
 local function InitDvars()
 	-- reading c++ var
-	-- ??
+	-- readjson
+	-- writejson
 
 	-- unlocks dvars (used for unlock settings in shield's menu)
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_all unlock all bool")
@@ -296,12 +297,16 @@ local function InitDvars()
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
 
 	-- other shit
-	Engine[@"exec"](Engine[@"getprimarycontroller"](), "set shield_wz_map 0")
-	
-	--Engine[@"exec"](Engine[@"getprimarycontroller"](), "enable_unlock_hooks")
+	if Engine[@"getdvarint"]("shield_wz_map") > 0 then
+		-- don't reset it
+	else
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set shield_wz_map 0")
+	end
+
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_ui_color lua ui_color uint64_t 0")
 end
 
---------------------------
+---------------------------
 
 InitDvars()
 
@@ -320,7 +325,7 @@ local UnlockItems = Engine[@"getdvarint"]("shield_unlock_items")
 local UnlockClassSlots = Engine[@"getdvarint"]("shield_unlock_classes")
 local UnlockBlackMarket = Engine[@"getdvarint"]("")
 
---------------------------
+---------------------------
 
 -- Utils
 local function EnhPrintInfo(PrintInfo, DebugName)
@@ -381,7 +386,426 @@ local function IsValidName(str)
 	return string.find(str, "^[%-%.%w_]+$") ~= nil
 end
 
--------------------
+local function ShieldCreateOutfits(f40_arg0, f40_arg1, f40_arg2, f40_arg3, f40_arg4, f40_arg5)
+	local f40_local0 = "ThemeOutfit" .. f40_arg3
+	DataSources[f40_local0] = DataSourceHelpers.ListSetup( f40_local0, function ( f41_arg0, f41_arg1 )
+		local f41_local0 = {}
+		for f41_local15, f41_local16 in ipairs( f40_arg4.presets ) do
+			if f41_local16.isValid then
+				local f41_local4 = CoD.BlackMarketTableUtility.LootInfoLookup( f41_arg0, f41_local16.lootId )
+				f41_local4.owned = true
+				local f41_local5 = f41_local16.entitlement
+				if f41_local5 then
+					f41_local5 = f41_local16.entitlement ~= @"hash_0"
+				end
+				local f41_local6 = ""
+				local f41_local7 = true
+				for f41_local8 = 0, Enum[@"characteritemtype"][@"character_item_type_count"] - 1, 1 do
+					local f41_local11 = nil
+					if f41_local8 == Enum[@"characteritemtype"][@"hash_141B42F0A58AC50F"] then
+						f41_local11 = f41_local16.arms
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_37AD40A4111A72FE"] then
+						f41_local11 = f41_local16.head
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_4FF8573E011622F4"] then
+						f41_local11 = f41_local16.headgear
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_283CBB806B732B11"] then
+						f41_local11 = f41_local16.legs
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_4922FE5C41D9EE8B"] then
+						f41_local11 = f41_local16.palette
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_19DDCEC39BA98B97"] then
+						f41_local11 = f41_local16.torso
+					end
+					if f41_local11 and f41_local7 then
+						f41_local7 = f41_local11 == CoD.PlayerRoleUtility.EquippedOutfitItems[f41_arg0][@"outfits"][f40_arg3][f41_local8]
+					end
+					f41_local6 = f41_local6 .. (f41_local11 or 0) .. ";"
+				end
+				local f41_local8 = f41_local4.unlockInfo
+				if not f41_local8 then
+					f41_local8 = ""
+				end
+				local f41_local9 = ""
+				if f41_local4.isLoot and f41_local4.available and f41_local4.disableWhenAvailable and not f41_local4.owned then
+					f41_local9 = f41_local8
+					f41_local8 = ""
+				end
+				local f41_local10 = table.insert
+				local f41_local12 = f41_local0
+				local f41_local11 = {}
+				local f41_local13 = {
+					displayName = Engine[@"hash_4F9F1239CFD921FE"]( f41_local16.displayName ),
+					icon = f41_local16.icon,
+					outfitIndex = f40_arg3,
+					itemType = Enum[@"characteritemtype"][@"hash_4922FE5C41D9EE8B"],
+					itemIndex = f41_local16.palette,
+					lootId = f41_local16.lootId
+				}
+				local f41_local14 = CoD.BlackMarketUtility.LootIdRarities[f41_local4.rarity]
+				if not f41_local14 then
+					f41_local14 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+				end
+				f41_local13.rarity = f41_local14
+				f41_local13.category = @"menu/outfit"
+				f41_local13.unlockInfo = f41_local8
+				f41_local13.alertMessage = f41_local9
+				f41_local14 = f41_local4.available
+				if not f41_local14 then
+					f41_local14 = not f41_local4.isLoot
+				end
+				f41_local13.available = true
+				f41_local14 = f41_local4.owned
+				if not f41_local14 then
+					f41_local14 = not f41_local4.isLoot
+				end
+				f41_local13.owned = f41_local14
+				f41_local14 = f40_arg5
+				if not f41_local14 then
+					f41_local14 = f41_local4.available
+					if f41_local14 then
+						f41_local14 = f41_local4.disableWhenAvailable
+					end
+				end
+				f41_local13.disabled = false
+				f41_local13.skipDefaultTitle = f41_local4.isNotDefault
+				f41_local14 = f41_local4.hideRarity
+				if not f41_local14 then
+					f41_local14 = f41_local5 or false
+				end
+				f41_local13.hideRarity = f41_local14
+				f41_local13.presets = f41_local6
+				f41_local13.arms = f41_local16.arms
+				f41_local13.head = f41_local16.head
+				f41_local13.headgear = f41_local16.headgear
+				f41_local13.legs = f41_local16.legs
+				f41_local13.palette = f41_local16.palette
+				f41_local13.torso = f41_local16.torso
+				f41_local13.presetIndex = f41_local15 - 1
+				f41_local13.checkEquippedOutfit = true
+				f41_local11.models = f41_local13
+				f41_local11.properties = {
+					selectIndex = f41_local7,
+					entitlement = f41_local16.entitlement,
+					accessoryCount = 0,
+					lootData = f41_local4
+				}
+				f41_local11.options = {}
+				f41_local10( f41_local12, f41_local11 )
+			end
+		end
+		local f41_local1 = {}
+		for f41_local5, f41_local6 in LUI.IterateTableBySortedKeys( f41_local0, function ( f42_arg0, f42_arg1 )
+			f42_arg0 = f41_local0[f42_arg0]
+			f42_arg1 = f41_local0[f42_arg1]
+			if f42_arg0.properties.owned ~= f42_arg1.properties.owned then
+				return f42_arg0.properties.owned
+			elseif f42_arg0.properties.available ~= f42_arg1.properties.available then
+				return f42_arg0.properties.available
+			else
+				return f42_arg0.models.itemIndex < f42_arg1.models.itemIndex
+			end
+		end, function ( f43_arg0, f43_arg1 )
+			if f43_arg1.properties.lootData.isLoot then
+				local f43_local0 = f43_arg1.properties.lootData.owned
+				if not f43_local0 then
+					f43_local0 = f43_arg1.properties.lootData.available
+					if f43_local0 then
+						f43_local0 = f43_arg1.properties.lootData.disableWhenAvailable
+					end
+				end
+				return f43_local0
+			else
+				local f43_local0
+				if f43_arg1.properties.entitlement ~= @"hash_0" then
+					f43_local0 = Engine[@"hasentitlement"]( f41_arg0, f43_arg1.properties.entitlement )
+				else
+					f43_local0 = true
+				end
+			end
+			return f43_local0
+		end ) do
+			table.insert( f41_local1, f41_local6 )
+		end
+		return f41_local1
+	end, true )
+	return f40_local0
+end
+
+-- First Game Boot Fixes (Hooks issues)
+local function ReloadOverrides()
+
+	EnhPrintInfo("Reload Overrides...")
+
+	-- Outfits Theme Unlocking, even some unused ones
+	DataSources.MPSpecialistThemes = DataSourceHelpers.ListSetup( "MPSpecialistThemes", function ( f56_arg0, f56_arg1 )
+		local f56_local0 = f56_arg1.menu:getModel()
+		local f56_local1 = f56_local0.characterIndex:get()
+		local f56_local2 = Engine[@"currentsessionmode"]()
+		local f56_local3 = {}
+		local f56_local4 = CoD.PlayerRoleUtility.GetCachedHeroCustomization( f56_local2, f56_local1 )
+		CoD.PlayerRoleUtility.EquippedOutfitItems[f56_arg0] = Engine[@"getequippedinfoforhero"]( f56_arg0, f56_local2, f56_local1 ) or {}
+		local f56_local5 = DataSources.MPOutfitCategories.getModel( f56_arg0 )
+		f56_local5 = f56_local5.selectedCategory
+		if not f56_arg1._selectedCategorySub then
+			f56_arg1._selectedCategorySub = f56_arg1:subscribeToModel( f56_local5, function ()
+				f56_arg1:updateDataSource()
+			end, false )
+		end
+		local f56_local6 = DataSources.MPSpecialistThemes.getCurrentCategoryHelper( f56_arg0, f56_local4, f56_local2, f56_local1 )
+		if f56_local6 then
+			local f56_local7 = {}
+			local f56_local8 = true
+			for f56_local16, f56_local17 in LUI.IterateTableBySortedKeys( f56_local4.outfits, f56_local6.sort, f56_local6.filter ) do
+				f56_local8 = true
+				if f56_local7[f56_local17.displayName] then
+					f56_local8 = false
+				end
+				if f56_local8 then
+					local f56_local12 = f56_local16 - 1
+					local f56_local13 = f56_local6.getBreadcrumbModel( f56_local12 )
+					local f56_local14 = f56_local6.lookupHighestRarity( f56_local16, f56_local17 )
+					local f56_local15 = f56_local6.isDisabled( f56_local17 )
+					table.insert( f56_local3, {
+						models = {
+							displayName = Engine[@"hash_4F9F1239CFD921FE"]( f56_local17.displayName ),
+							datasourceName = f56_local6.dataSourceFunction( f56_arg0, f56_local2, f56_local1, f56_local12, f56_local17, f56_local15 ),
+							decalDataSourceName = f56_local6.decalDataSourceFunction( f56_arg0, f56_local2, f56_local1, f56_local12, f56_local17 ),
+							decalCount = #f56_local17.decals,
+							outfitIndex = f56_local12,
+							category = @"hash_54106C155ACE8F96",
+							rarity = f56_local14,
+							available = true,
+							disabled = false,
+							hideRarity = f56_local14 == Enum[@"lootraritytype"][@"loot_rarity_type_count"],
+							unlockInfo = f56_local6.getUnlockInfo( f56_local17 ),
+							alertMessage = f56_local6.getAlertMessage( f56_local17 ),
+							breadcrumb = f56_local13
+						},
+						properties = {
+							selectIndex = f56_local12 == f56_local6.selectedIndex()
+						}
+					} )
+				end
+				f56_local7[f56_local17.displayName] = true
+			end
+		end
+		return f56_local3
+	end, true, {
+		getModel = function ( f58_arg0 )
+			local f58_local0 = Engine[@"getmodelforcontroller"]( f58_arg0 )
+			f58_local0 = f58_local0:create( "MPSpecialistThemes" )
+			if not f58_local0.update then
+				f58_local0:create( "update" )
+			end
+			return f58_local0
+		end,
+		getCurrentCategoryHelper = function ( f59_arg0, f59_arg1, f59_arg2, f59_arg3 )
+			local f59_local0 = DataSources.MPOutfitCategories.getModel( f59_arg0 )
+			local f59_local1 = DataSources.MPSpecialistThemes.getCategoryHelperFunctions[f59_local0.selectedCategory:get()]
+			return f59_local1 and f59_local1( f59_arg0, f59_arg1, f59_arg2, f59_arg3 )
+		end,
+		getCategoryHelperFunctions = {
+			[@"outfit"] = function ( f60_arg0, f60_arg1, f60_arg2, f60_arg3 )
+				local f60_local0 = function ( f61_arg0 )
+					if #f61_arg0.presets == 3 and (f61_arg0.presets[2].lootId == @"hash_40AC40E28D648CB3" or f61_arg0.presets[2].lootId == @"hash_6037D456548D22D4") then
+						for f61_local3, f61_local4 in ipairs( f61_arg0.presets ) do
+							f61_local4.isValid = false
+						end
+					end
+					for f61_local3, f61_local4 in ipairs( f61_arg0.presets ) do
+						if f61_local4.isValid and CoD.PlayerRoleUtility.IsPresetOwned( f60_arg0, f61_local4 ) then
+							return true
+						end
+					end
+					return false
+				end
+				
+				local f60_local1 = function ( f62_arg0 )
+					for f62_local4, f62_local5 in ipairs( f62_arg0.presets ) do
+						if f62_local5.isValid then
+							local f62_local3 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f62_local5.lootId )
+							return f62_local3.available and f62_local3.disableWhenAvailable
+						end
+					end
+					return false
+				end
+				
+				local f60_local2 = function ( f63_arg0, f63_arg1 )
+					local f63_local0 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+					for f63_local5, f63_local6 in ipairs( f63_arg1.presets ) do
+						local f63_local7 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f63_local6.lootId )
+						if f63_local7.isLoot then
+							local f63_local4 = CoD.BlackMarketUtility.LootIdRarities[f63_local7.rarity]
+							if not f63_local4 then
+								f63_local4 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+							end
+							if f63_local4 ~= Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+								if f63_local0 == Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+									f63_local0 = f63_local4
+								else
+									f63_local0 = math.max( f63_local0, f63_local4 )
+								end
+							end
+						end
+					end
+					return f63_local0
+				end
+				
+				return {
+					filter = function ( f64_arg0, f64_arg1 )
+						if not f64_arg1.isValid then
+							return false
+						end
+						local f64_local0 = f60_local0( f64_arg1 )
+						if not f64_local0 then
+							f64_local0 = f60_local1( f64_arg1 )
+						end
+						return f64_local0
+					end
+					,
+					sort = function ( f65_arg0, f65_arg1 )
+						local f65_local0 = f60_local0( f60_arg1.outfits[f65_arg0] )
+						if f65_local0 ~= f60_local0( f60_arg1.outfits[f65_arg1] ) then
+							return f65_local0
+						elseif f65_arg0 == 1 then
+							return false
+						elseif f65_arg1 == 1 then
+							return true
+						else
+							return f60_local2( f65_arg1, f60_arg1.outfits[f65_arg1] ) < f60_local2( f65_arg0, f60_arg1.outfits[f65_arg0] )
+						end
+					end
+					,
+					lookupHighestRarity = f60_local2,
+					selectedIndex = function ()
+						return CoD.PlayerRoleUtility.EquippedOutfitItems[f60_arg0][@"selectedoutfit"]
+					end
+					,
+					dataSourceFunction = ShieldCreateOutfits,
+					decalDataSourceFunction = CoD.PlayerRoleUtility.CreateDecalsForTheme,
+					getBreadcrumbModel = function ( f67_arg0 )
+						return DataSources.SpecialistOutfitBreadcrumbs.getBreadcrumbModelForThemePresetCategory( f60_arg0, f60_arg2, f60_arg3, f67_arg0 )
+					end
+					,
+					getUnlockInfo = function ( f68_arg0 )
+						if f60_local0( f68_arg0 ) then
+							for f68_local4, f68_local5 in ipairs( f68_arg0.presets ) do
+								if f68_local5.isValid then
+									local f68_local3 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f68_local5.lootId )
+									if f68_local3.available and f68_local3.disableWhenAvailable then
+										return f68_local3.unlockInfo or ""
+									end
+								end
+							end
+						end
+						return ""
+					end
+					,
+					getAlertMessage = function ( f69_arg0 )
+						if not f60_local0( f69_arg0 ) then
+							for f69_local4, f69_local5 in ipairs( f69_arg0.presets ) do
+								if f69_local5.isValid then
+									local f69_local3 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f69_local5.lootId )
+									if f69_local3.available and f69_local3.disableWhenAvailable then
+										return f69_local3.unlockInfo or ""
+									end
+								end
+							end
+						end
+						return ""
+					end
+					,
+					isDisabled = function ( f70_arg0 )
+						return not f60_local0( f70_arg0 )
+					end
+					
+				}
+			end,
+			[@"war_paint"] = function ( f71_arg0, f71_arg1, f71_arg2, f71_arg3 )
+				local f71_local0 = function ( f72_arg0, f72_arg1 )
+					local f72_local0 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+					for f72_local5, f72_local6 in ipairs( f72_arg1.warPaints ) do
+						local f72_local7 = CoD.PlayerRoleUtility.LookupLootForWarPaint( f71_arg0, f72_local6, f72_arg1.presets )
+						if f72_local7.isLoot then
+							local f72_local4 = CoD.BlackMarketUtility.LootIdRarities[f72_local7.rarity]
+							if not f72_local4 then
+								f72_local4 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+							end
+							if f72_local4 ~= Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+								if f72_local0 == Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+									f72_local0 = f72_local4
+								else
+									f72_local0 = math.max( f72_local0, f72_local4 )
+								end
+							end
+						end
+					end
+					return f72_local0
+				end
+				
+				local f71_local1 = function ( f73_arg0 )
+					local f73_local0 = false
+					for f73_local4, f73_local5 in ipairs( f73_arg0.warPaints ) do
+						if f73_local4 > 1 and CoD.PlayerRoleUtility.IsWarPaintOwned( f71_arg0, f73_local5, f73_arg0.presets ) then
+							f73_local0 = true
+							break
+						end
+					end
+					return f73_local0
+				end
+				
+				return {
+					filter = function ( f74_arg0, f74_arg1 )
+						if not f74_arg1.isValid then
+							return false
+						else
+							return f71_local1( f74_arg1 )
+						end
+					end
+					,
+					sort = function ( f75_arg0, f75_arg1 )
+						if f75_arg0 == 1 then
+							return false
+						elseif f75_arg1 == 1 then
+							return true
+						else
+							return f71_local0( f75_arg1, f71_arg1.outfits[f75_arg1] ) < f71_local0( f75_arg0, f71_arg1.outfits[f75_arg0] )
+						end
+					end
+					,
+					lookupHighestRarity = f71_local0,
+					selectedIndex = function ()
+						return CoD.PlayerRoleUtility.EquippedOutfitItems[f71_arg0][@"hash_4D9FCEAC8FF24CBD"]
+					end
+					,
+					dataSourceFunction = CoD.PlayerRoleUtility.CreateWarPaintsForTheme,
+					decalDataSourceFunction = function ()
+						return ""
+					end
+					,
+					getBreadcrumbModel = function ( f78_arg0 )
+						return DataSources.SpecialistOutfitBreadcrumbs.getBreadcrumbModelForThemeItemType( f71_arg0, f71_arg2, f71_arg3, f78_arg0, Enum[@"characteritemtype"][@"hash_48E3A65D78229DC1"] )
+					end
+					,
+					getUnlockInfo = function ( f79_arg0 )
+						return ""
+					end
+					,
+					getAlertMessage = function ( f80_arg0 )
+						return ""
+					end
+					,
+					isDisabled = function ( f81_arg0 )
+						return false
+					end
+					
+				}
+			end
+		}
+	} )
+
+end
+
+---------------------------
 
 -- Wanted Stuff and Utils for Stats..
 
@@ -390,16 +814,39 @@ local RankUtils = {}
 RankUtils.GetLevelXP = function(level)
 	local sessionmode = Engine[@"CurrentSessionMode"]()
 	local rankTable = ""
+	local rankMult
+	local rankTT
 	local XP = 0
 
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-		rankTable = "gamedata/shield/rankutils/maxrankdata_mp.csv"
-	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-		rankTable = "gamedata/shield/rankutils/maxrankdata_zm.csv"
-	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-		rankTable = "gamedata/shield/rankutils/maxrankdata_wz.csv"
+	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "plevel")
+
+	local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
+
+	if isPrestigeMaster == false then
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+			rankTable = "gamedata/shield/rankutils/maxrankdata_mp.csv"
+		end
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+			rankTable = "gamedata/shield/rankutils/maxrankdata_zm.csv"
+		end
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+			rankTable = "gamedata/shield/rankutils/maxrankdata_wz.csv"
+		end
+	else
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+			rankMult = 55600
+			rankTT = 55
+		end
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+			rankMult = 57600
+			rankTT = 55
+		end
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+			rankMult = 7500
+			rankTT = 81
+		end
+		local leveldiff = tonumber(level) - rankTT
+		return rankMult * leveldiff
 	end
 
 	if rankTable ~= "" then
@@ -422,12 +869,12 @@ RankUtils.SetRank = function(level)
 	-- local currentPrestige = CoD.PrestigeUtility.GetCurrentPLevel(controller, Engine.CurrentSessionMode())
 	-- local currentRank = CoD.BlackMarketUtility.GetCurrentRank(controller) + 1
 
-	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "PLEVEL")
+	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "plevel")
 
 	local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
 	local maxXP = RankUtils.GetLevelXP(tonumber(level))
 
-	if not isPrestigeMaster then
+	if isPrestigeMaster == false then
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rank " .. tonumber(level))
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp " .. maxXP)
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp " .. 0)	
@@ -441,16 +888,16 @@ RankUtils.SetRank = function(level)
 	local RankFix = string.format("%0.2i", level)
 
 	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp xp " .. maxXP)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp xp " .. maxXP)
 	end
 	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm xp " .. maxXP)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm xp " .. maxXP)
 	end
 	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz xp " .. maxXP)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz xp " .. maxXP)
 	end
 
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats " .. tostring(Engine[@"CurrentSessionMode"]()))
@@ -462,9 +909,11 @@ RankUtils.SetPrestige = function(prestige)
 	-- local currentPrestige = CoD.PrestigeUtility.GetCurrentPLevel(controller, Engine.CurrentSessionMode())
 	if tonumber(prestige) == 11 then
 		-- prestige master here..
-
-		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(10))
+		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(11))
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "PrestigeStatsMaster " .. tostring(Engine[@"CurrentSessionMode"]()))
+
+		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 55") -- rank for prestige master
+		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp 0")
 	else
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(prestige))
 	end
@@ -474,13 +923,13 @@ RankUtils.SetPrestige = function(prestige)
 	local PrestigeFix = string.format("%0.2i", prestige)
 
 	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
 	end
 	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
 	end
 	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
 	end
 
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats " .. tostring(Engine[@"CurrentSessionMode"]()))
@@ -504,8 +953,11 @@ CoD.OverlayUtility.AddSystemOverlay( "ShieldFreshStartActivate", {
 	prestigeLayout = CoD.PrestigeUtility.PrestigeOverlayLayouts.RequestProcessing,
 	categoryType = CoD.OverlayUtility.OverlayTypes.Unlock,
 	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack
-} ) --[[ @ 0]]
+} )
 
+CoD.PrestigeUtility.ShowFreshStart = function ( f51_arg0 )
+	return not IsPrestigeLevelAtZero( f51_arg0 )
+end
 
 CoD.PrestigeUtility.EnterPrestigeAction = function ( f13_arg0, f13_arg1, f13_arg2 )
 	local PrestigeCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "PLEVEL" )
@@ -536,8 +988,37 @@ CoD.PrestigeUtility.FreshStartAction = function ( f18_arg0, f18_arg1, f18_arg2 )
 	EnhPrintInfo("Fresh Restart Done")
 end
 
--------------------
-  
+---------------------------
+
+-- prestige master
+CoD.OverlayUtility.Overlays.PrestigeMasterActivated = {
+	menuName = "SystemOverlay_Compact",
+	postCreateStep = function ( f155_arg0, f155_arg1 )
+		f155_arg0.anyControllerAllowed = true
+	end,
+	title = @"menu/notice",
+	description = @"shield/prestige_master",
+	categoryType = CoD.OverlayUtility.OverlayTypes.Connection,
+	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack,
+	listDatasource = function ( f156_arg0 )
+		DataSources.PrestigeMasterActivated = DataSourceHelpers.ListSetup( "PrestigeMasterActivated", function ( f157_arg0 )
+			return {
+				{
+					models = {
+						displayText = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/ok" )
+					},
+					properties = {
+						action = function ( f158_arg0, f158_arg1, f158_arg2, f158_arg3, f158_arg4 )
+							GoBack( f158_arg4, f158_arg2 )
+						end
+					}
+				}
+			}
+		end, true, nil )
+		return "PrestigeMasterActivated"
+	end
+}
+
 -- unused for now..
 CoD.OverlayUtility.Overlays.ShieldUnlockAllEnabledMessage = {
 	menuName = "SystemOverlay_Compact",
@@ -624,7 +1105,7 @@ CoD.OverlayUtility.Overlays.ShieldIPNotice = {
 					},
 					properties = {
 						action = function ( f182_arg0, f182_arg1, f182_arg2, f182_arg3, f182_arg4 )
-							Engine[@"exec"]( f182_arg2, "quit" ) --[[ @ 0]]
+							Engine[@"exec"]( f182_arg2, "quit" )
 						end
 						
 					}
@@ -641,9 +1122,11 @@ local function ShieldUnlockAll_Toggle(Controller)
 	if UnlockAll == 1 then
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all true")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all false")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
@@ -675,15 +1158,17 @@ local function ShieldUnlockLoot_Toggle(Controller)
 	end
 end
 
-local function ShieldUnlockCamos_Toggle(Controller)
+local function ShieldUnlockCamosCards_Toggle(Controller)
 	UnlockCamos = Engine[@"getdvarint"]("shield_unlock_itemoptions")
 
 	if UnlockCamos == 1 then
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions true")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions false")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
@@ -736,6 +1221,10 @@ local function ShieldUnlockBlackMarket_Toggle(Controller)
 	end
 end
 
+local function ShieldShouldUnlockItem_Dvar()
+	return Engine[@"getdvarint"]("allitemsunlocked") == 1
+end
+
 local function RefreshShieldShit()
 
 	-- Dvars for Matchmaking..
@@ -751,32 +1240,38 @@ local function RefreshShieldShit()
 
 	EnhPrintInfo("Refresh Dvars..")
 
-	-- Refresh PLevels (Prestige) and Rank5
-	local RankCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "RANK" )
-	local PrestigeCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "PLEVEL" )
+	-- not needed anymore
+	
+	--[[
+		-- Refresh PLevels (Prestige) and Rank5
+		local RankCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "RANK" )
+		local PrestigeCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "PLEVEL" )
 
-	if RankCurrent and PrestigeCurrent then
-		local sessionmode = Engine[@"CurrentSessionMode"]()
-		local RankFix = string.format("%0.2i", RankCurrent) -- fix 01 issues
-		local PrestigeFix = string.format("%0.2i", PrestigeCurrent)
+		if RankCurrent and PrestigeCurrent then
+			local sessionmode = Engine[@"CurrentSessionMode"]()
+			local RankFix = string.format("%0.2i", RankCurrent) -- fix 01 issues
+			local PrestigeFix = string.format("%0.2i", PrestigeCurrent)
 
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
+			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
+			end
+
+			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
+			end
+
+			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
+			end
+
+			EnhPrintInfo(PrestigeCurrent .. " - " .. PrestigeFix .. " - " .. RankCurrent .. " - " .. RankFix, "Refresh Player Stats Data..")
 		end
+	]]
 
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
-		end
-
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
-		end
-
-		EnhPrintInfo(PrestigeCurrent .. " - " .. PrestigeFix .. " - " .. RankCurrent .. " - " .. RankFix, "Refresh Player Stats Data..")
-	end
+	ReloadOverrides()
 end
 
 -- Override
@@ -871,6 +1366,37 @@ CoD.PrestigeUtility.DisplayBetaRewardInventoryNotification = function ( f17_arg0
 	return false
 end
 
+-- fix wz prestige icons
+CoD.CustomizePrestigeIconUtility.GetCurrentWins = function ( f5_arg0, f5_arg1 )
+	-- useless, only for wz
+	return 999
+end
+
+CoD.CustomizePrestigeIconUtility.IsIconUnlockedByWins = function ( f3_arg0, f3_arg1 )
+	return true
+end
+
+CoD.CustomizePrestigeIconUtility.IsIconUnlockedByLevel = function ( f4_arg0, f4_arg1, f4_arg2, f4_arg3, f4_arg4 )
+
+	-- treyarch being retarded again (failed func for WZ)
+	--if f4_arg4 == Enum[@"emodes"][@"mode_warzone"] then
+	--	return f4_arg0 and f4_arg2 <= f4_arg1 + 1
+	--end
+
+	if Engine[@"CurrentSessionMode"]() == Enum[@"emodes"][@"mode_warzone"] then
+		return f4_arg0 and f4_arg2 <= f4_arg1
+	end
+	
+	local f4_local0 = f4_arg0
+	local f4_local1
+	if f4_arg2 > f4_arg1 + 1 and f4_arg3 ~= Enum[@"hash_79FC886F1051643D"][@"hash_6CBFFC10B9836971"] then
+		f4_local1 = false
+	else
+		f4_local1 = f4_local0 and true
+	end
+	return f4_local1
+end
+
 local function OnBotHardModeChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
 	local dvar_name = f137_arg3
 	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
@@ -909,15 +1435,23 @@ local function OnExtraDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f
 		Engine[@"setdvar"]( dvar_name, current_val )
 	end
 
-	if current_val == 0 then -- none
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
-	elseif current_val == 1 then -- alt
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 1")
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
-	else -- night
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 1")
+	local dvar_val_new = Engine[@"getdvarint"]( dvar_name )
+
+	if dvar_name == "shield_wz_map" then	
+		if current_val == 0 then -- none
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
+		elseif current_val == 1 then -- alt
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 1")
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
+		else -- night
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 1")
+		end
+	end
+
+	if dvar_name == "shield_ui_color" then	
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson lua ui_color " .. dvar_val_new .. " uint64_t")
 	end
 end
 
@@ -940,7 +1474,7 @@ local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, 
 	elseif dvar_name == "shield_unlock_loot" then
 		ShieldUnlockLoot_Toggle()
 	elseif dvar_name == "shield_unlock_itemoptions" then
-		ShieldUnlockCamos_Toggle()
+		ShieldUnlockCamosCards_Toggle()
 	elseif dvar_name == "shield_unlock_items" then
 		ShieldItems_Toggle()
 	elseif dvar_name == "shield_unlock_classes" then
@@ -948,7 +1482,578 @@ local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, 
 	end
 end
 
-------------------
+local function ShieldIsRoleUnlocked(f119_arg0, f119_arg1, f119_arg2)
+	local f119_local0 = Engine[@"getpositionrolebundleinfo"]( f119_arg1, f119_arg2 )
+	if not f119_local0 then
+		return false
+	elseif f119_local0[@"entitlement"] ~= nil then
+		return Engine[@"hasentitlement"]( f119_arg0, f119_local0[@"entitlement"] )
+	end
+	local f119_local1 = f119_local0[@"hash_7A01F4246639318C"]
+	if f119_local1 and CoDShared.IsIntDvarNonZero( f119_local1 ) then
+		return true
+	elseif f119_local0[@"unlockableitementry"] ~= nil then
+		local f119_local2 = Engine[@"hash_68FF94BB44442412"]( f119_local0[@"unlockableitementry"], f119_arg1 )
+		if f119_local2 > CoDShared.EmptyItemIndex and not Engine[@"isitemlocked"]( f119_arg0, f119_local2, f119_arg1 ) then
+			return true
+		elseif f119_local0[@"hash_41D6157DBA773DA3"] ~= nil and f119_local0[@"hash_41D6157DBA773DA3"] ~= @"hash_0" then
+			local f119_local3 = CoDShared.LootIndexInfoLookup( f119_local0[@"hash_41D6157DBA773DA3"] )
+			if f119_local3 then
+				return CoDShared.IsLootItemOwnedByName( f119_arg0, f119_local3.nameHash )
+			end
+		end
+	end
+	if f119_local0[@"hash_5D48E06E94FE4AFA"] == 1 then
+		return true
+	elseif ShieldShouldUnlockItem_Dvar() then
+		return true
+	elseif f119_arg1 == Enum[@"emodes"][@"mode_warzone"] and (not CoDShared.IsIntDvarNonZero( @"hash_4A5FD7D94CFC9DFD" ) or f119_local0[@"modecategory"] ~= Enum[@"emodes"][@"mode_multiplayer"]) then
+		if Engine[@"storagegetbuffer"]( f119_arg0, Enum[@"storagefiletype"][@"storage_wz_stats_online"] ) == nil then
+			return false
+		elseif Engine[@"storagegetbuffer"]( f119_arg0, Enum[@"storagefiletype"][@"storage_common_settings"] ) == nil then
+			return false
+		end
+		local f119_local4 = Engine[@"storagegetbuffer"]( f119_arg0, Enum[@"storagefiletype"][@"hash_1AB0E693244221BC"] )
+		if not f119_local4 then
+			return false
+		end
+		local f119_local5 = Engine[@"hash_682C5756563934AE"]( f119_arg1, f119_arg2 )
+		if f119_local5 and f119_local4[@"characters"][f119_local5] then
+			return f119_local4[@"characters"][f119_local5][@"unlocked"]:get() == 1
+		end
+		return false
+	end
+	return true
+end
+
+-- Reactives and Calling Card Fixes
+CoD.ChallengesUtility.GetCTChallengeTable = function ( f70_arg0 )
+	local f70_local0 = {}
+	for f70_local1 = 1, CoD.CTUtility.NumCTChallenges, 1 do
+		local f70_local4, f70_local5, f70_local6, f70_local7, f70_local8, f70_local9 = CoD.CTUtility.GetCTChallenge( f70_arg0, f70_local1 )
+		if not f70_local6 then
+			f70_local9 = 0
+		end
+		local f70_local10 = table.insert
+		local f70_local11 = f70_local0
+		local f70_local12 = {}
+		local f70_local13 = {
+			title = f70_local7,
+			description = f70_local8,
+			iconId = f70_local9,
+			icon = CoD.ChallengesUtility.GetBackgroundByID( f70_local9 ),
+			statPercent = ShieldShouldUnlockItem_Dvar() and 1 or f70_local4 / f70_local5,
+			statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f70_local4, f70_local5 )
+		}
+		local f70_local14
+		if not f70_local6 then
+			f70_local14 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f70_local14 = false
+		end
+		f70_local13.isLocked = f70_local14
+		f70_local12.models = f70_local13
+		f70_local10( f70_local11, f70_local12 )
+	end
+	return f70_local0
+end
+
+CoD.ChallengesUtility.AddDarkOpsChallengeCardsToList = function ( f68_arg0, f68_arg1, f68_arg2, f68_arg3 )
+	local f68_local0 = CoD.ChallengesUtility.GetChallengeTable( f68_arg0, f68_arg1, f68_arg2, "darkops", function ( f69_arg0, f69_arg1 )
+		return tonumber( f69_arg0.imageID ) < tonumber( f69_arg1.imageID )
+	end )
+	local f68_local1 = 0
+	local f68_local2 = 0
+	local f68_local3 = nil
+	for f68_local7, f68_local8 in ipairs( f68_local0 ) do
+		local f68_local9 = f68_local8.models
+		if f68_local8.properties.isMastery then
+			f68_local3 = f68_local8
+		end
+		table.insert( f68_arg3, f68_local8 )
+		f68_local2 = f68_local2 + 1
+		if not f68_local9.isLocked then
+			f68_local1 = f68_local1 + 1
+		end
+	end
+	if f68_local3 then
+		local f68_local4 = f68_local3.models
+		local f68_local5 = {}
+		local f68_local6 = {
+			title = f68_local4.title,
+			description = f68_local4.description,
+			iconId = f68_local4.iconId,
+			icon = f68_local4.icon,
+			percentComplete = f68_local1 / f68_local2,
+			statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f68_local1, f68_local2 )
+		}
+		if f68_local1 < f68_local2 then
+			local f68_local7 = not ShieldShouldUnlockItem_Dvar()
+		else
+			local f68_local7 = false
+		end
+		f68_local6.isLocked = f68_local7
+		f68_local5.models = f68_local6
+		return f68_local5
+	else
+		
+	end
+end
+
+CoD.ChallengesUtility.AddCombatTrainingChallengesToList = function ( f53_arg0, f53_arg1 )
+	for f53_local0 = 1, CoD.CTUtility.NumCTChallenges, 1 do
+		local f53_local3, f53_local4, f53_local5, f53_local6, f53_local7, f53_local8 = CoD.CTUtility.GetCTChallenge( f53_arg0, f53_local0 )
+		if f53_local3 == nil then
+			f53_local3 = 0
+		end
+		local f53_local9 = table.insert
+		local f53_local10 = f53_arg1
+		local f53_local11 = {}
+		local f53_local12 = {
+			title = Engine[@"hash_4F9F1239CFD921FE"]( f53_local6 ),
+			description = Engine[@"hash_4F9F1239CFD921FE"]( f53_local7 ),
+			iconId = f53_local8,
+			icon = CoD.ChallengesUtility.GetBackgroundByID( f53_local8 ),
+			percentComplete = f53_local3 / f53_local4,
+			statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f53_local3, f53_local4 )
+		}
+		local f53_local13
+		if not f53_local5 then
+			f53_local13 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f53_local13 = false
+		end
+		f53_local12.isLocked = f53_local13
+		f53_local11.models = f53_local12
+		f53_local11.properties = {
+			ctChallenge = true
+		}
+		f53_local9( f53_local10, f53_local11 )
+	end
+end
+
+CoD.ChallengesUtility.AddDefaultCallingCardsToList = function ( f52_arg0, f52_arg1 )
+	for f52_local8, f52_local9 in ipairs( Engine[@"getbackgroundsforcategoryname"]( f52_arg0, "default" ) ) do
+		if not f52_local9.isBGLocked then
+			local f52_local3 = table.insert
+			local f52_local4 = f52_arg1
+			local f52_local5 = {}
+			local f52_local6 = {
+				title = Engine[@"localize"]( f52_local9.description ),
+				description = "",
+				iconId = f52_local9.id,
+				icon = CoD.ChallengesUtility.GetBackgroundByID( f52_local9.id )
+			}
+			local f52_local7 = f52_local9.isBGLocked
+			if f52_local7 then
+				f52_local7 = not ShieldShouldUnlockItem_Dvar()
+			end
+			f52_local6.isLocked = f52_local7
+			f52_local5.models = f52_local6
+			f52_local5.properties = {
+				trialUnlocked = true
+			}
+			f52_local3( f52_local4, f52_local5 )
+		end
+	end
+end
+
+CoD.ChallengesUtility.GetMasteryChallengeCards = function ( f50_arg0, f50_arg1 )
+	local f50_local0 = {}
+	CoD.ChallengesUtility.AddMasteryChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_multiplayer"], "mp", f50_local0 )
+	if not CoD.isPC or not CoD.PCKoreaUtility.ShowKorea15Plus() then
+		CoD.ChallengesUtility.AddMasteryChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_zombies"], "zm", f50_local0 )
+	end
+	CoD.ChallengesUtility.AddMasteryChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_warzone"], "wz", f50_local0 )
+	local f50_local1 = CoD.ChallengesUtility.AddGlobalChallengesToList( f50_arg0, {} )
+	if not CoD.isPC or not CoD.PCKoreaUtility.ShowKorea15Plus() then
+		table.insert( f50_local0, f50_local1 )
+	end
+	local f50_local2, f50_local3, f50_local4, f50_local5, f50_local6 = CoD.CTUtility.GetCTMasterChallenge( f50_arg0 )
+	local f50_local7 = table.insert
+	local f50_local8 = f50_local0
+	local f50_local9 = {}
+	local f50_local10 = {
+		title = Engine[@"hash_4F9F1239CFD921FE"]( f50_local4 ),
+		description = Engine[@"hash_4F9F1239CFD921FE"]( f50_local5 ),
+		iconId = f50_local6,
+		icon = CoD.ChallengesUtility.GetBackgroundByID( f50_local6 ),
+		percentComplete = f50_local2 / f50_local3,
+		statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f50_local2, f50_local3 )
+	}
+	local f50_local11
+	if f50_local2 ~= f50_local3 then
+		f50_local11 = not ShieldShouldUnlockItem_Dvar()
+	else
+		f50_local11 = false
+	end
+	f50_local10.isLocked = f50_local11
+	f50_local9.models = f50_local10
+	f50_local9.properties = {
+		ctChallenge = true
+	}
+	f50_local7( f50_local8, f50_local9 )
+	f50_local7 = {}
+	if not CoD.isPC or not CoD.PCKoreaUtility.ShowKorea15Plus() then
+		f50_local8 = CoD.ChallengesUtility.AddDarkOpsChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_zombies"], "zm", f50_local7 )
+		if f50_local8 and not f50_local8.models.isLocked then
+			table.insert( f50_local0, f50_local8 )
+		end
+	end
+	if f50_arg1 then
+		table.sort( f50_local0, function ( f51_arg0, f51_arg1 )
+			local f51_local0 = f51_arg0.models
+			local f51_local1 = f51_arg1.models
+			if f51_local0.isLocked ~= f51_local1.isLocked then
+				return f51_local1.isLocked
+			else
+				return tonumber( f51_local0.iconId ) < tonumber( f51_local1.iconId )
+			end
+		end )
+	end
+	return f50_local0
+end
+
+CoD.ChallengesUtility.GetChallengeTable = function ( f38_arg0, f38_arg1, f38_arg2, f38_arg3, f38_arg4 )
+	local f38_local0 = {}
+	local f38_local1 = Engine[@"getchallengeinfoforimages"]( f38_arg0, f38_arg3, f38_arg1 )
+	if not f38_local1 then
+		return f38_local0
+	end
+	local f38_local2 = Engine[@"getplayerstats"]( f38_arg0, CoD.STATS_LOCATION_NORMAL, f38_arg1 )
+	local f38_local3 = 0
+	local f38_local4 = 0
+	if f38_local2 and f38_local2.PlayerStatsList then
+		f38_local3 = f38_local2.PlayerStatsList.RANK.StatValue:get()
+		f38_local4 = f38_local2.PlayerStatsList.PLEVEL.StatValue:get()
+	end
+	if f38_arg4 then
+		table.sort( f38_local1, f38_arg4 )
+	end
+	for f38_local31, f38_local32 in ipairs( f38_local1 ) do
+		local f38_local33 = f38_local32.challengeRow
+		local f38_local34 = f38_local32.currentChallengeRow
+		local f38_local35 = f38_local32.challengeCategory
+		local f38_local36 = f38_local32.tableNum
+		local f38_local37 = f38_local32.isMastery
+		local f38_local38 = f38_local32.challengeType
+		local f38_local28 = f38_local32.prevChallengeStatValue or 0
+		local f38_local29 = f38_local32.currChallengeStatValue
+		local f38_local39 = f38_local32.imageID
+		local f38_local17 = 0
+		local f38_local18 = 0
+		local f38_local26 = 0
+		local f38_local19 = ""
+		local f38_local40, f38_local23, f38_local24, f38_local27, f38_local25 = nil
+		if f38_local33 ~= nil then
+			local f38_local8 = "gamedata/stats/" .. f38_arg2 .. "/statsmilestones" .. f38_local36 + 1 .. ".csv"
+			local f38_local9 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.TierIdCol ) )
+			local f38_local10 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.TargetValCol )
+			local f38_local11 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.NameStringCol )
+			local f38_local12 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.NameStringCol ) .. "_DESC"
+			local f38_local13 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.XpEarnedCol ) )
+			local f38_local14 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.UnlockRankCol )
+			local f38_local15 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.UnlockPLevelCol )
+			local f38_local16 = CoD.ChallengesUtility.GetLocalizedTierText( f38_local8, f38_local33 )
+			if f38_local14 ~= "" then
+				f38_local17 = tonumber( f38_local14 )
+			end
+			if f38_local15 ~= "" then
+				f38_local18 = tonumber( f38_local15 )
+			end
+			if f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_weapon"] then
+				f38_local19 = Engine[@"hash_4F9F1239CFD921FE"]( Engine[@"getitemname"]( f38_local32.itemIndex, Enum[@"statindexoffset"][@"hash_6569E84652131CD7"], f38_arg1 ) )
+			elseif f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_group"] then
+				f38_local19 = Engine[@"hash_4F9F1239CFD921FE"]( CoD.ChallengesUtility.GetChallengeTypeString( Engine[@"getitemgroupbyindex"]( f38_local32.itemIndex ) ) )
+			elseif f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_attachments"] then
+				f38_local19 = Engine[@"localize"]( Engine[@"getattachmentnamebyindex"]( f38_local32.itemIndex ) )
+			elseif f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_gamemode"] then
+				local f38_local20 = Engine[@"getgametypeinfo"]( Engine[@"getgametypename"]( f38_local32.itemIndex ) )
+				local f38_local21 = Engine[@"hash_4F9F1239CFD921FE"]
+				local f38_local22
+				if f38_local20 then
+					f38_local22 = f38_local20[@"challengetypestring"]
+					if not f38_local22 then
+					
+					else
+						f38_local19 = f38_local21( f38_local22 )
+					end
+				end
+				f38_local22 = @"hash_0"
+			end
+			if f38_local16 ~= "" then
+				f38_local23 = true
+			end
+			if not f38_local37 then
+				if f38_local4 < f38_local18 then
+					f38_local24 = true
+					f38_local25 = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_4E2EF437F27777CE", f38_local18 )
+				elseif f38_local4 == 0 and f38_local3 < f38_local17 then
+					f38_local24 = true
+					f38_local25 = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_510EFA40E4B9F78E", CoD.GetRankName( f38_local17, 0, f38_arg1 ), f38_local17 + 1 )
+				end
+			end
+			if f38_local23 and f38_local24 then
+				f38_local16 = Engine[@"localize"]( CoD.ChallengesUtility.TierString[0] )
+			end
+			local f38_local20 = f38_local32.currentChallengeRow
+			if f38_local20 then
+				f38_local12 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.NameStringCol ) .. "_DESC"
+				if f38_local23 then
+					f38_local26 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.TierIdCol ) )
+					f38_local10 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.TargetValCol )
+					f38_local13 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.XpEarnedCol ) )
+					f38_local16 = CoD.ChallengesUtility.GetLocalizedTierText( f38_local8, f38_local20 )
+				end
+			end
+			f38_local27 = Engine[@"localize"]( f38_local11, "", f38_local19, f38_local16 )
+			if not f38_local25 then
+				f38_local25 = Engine[@"localize"]( f38_local12, f38_local10, f38_local19 )
+			end
+			if ShieldShouldUnlockItem_Dvar() then
+				f38_local28 = f38_local10
+				f38_local29 = f38_local10
+			end
+			local f38_local21 = f38_local28 / f38_local10
+			local f38_local22 = f38_local29 / f38_local10
+			local f38_local30 = f38_local22 < 1
+			if f38_local35 == "darkops" and not f38_local37 and f38_local30 then
+				f38_local27 = Engine[@"hash_4F9F1239CFD921FE"]( @"challenge/classified" )
+				f38_local25 = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_5D39450F492BCD23" )
+			end
+			table.insert( f38_local0, {
+				models = {
+					title = f38_local27,
+					description = f38_local25,
+					iconId = f38_local39,
+					icon = CoD.ChallengesUtility.GetBackgroundByID( f38_local39 ),
+					maxTier = f38_local9,
+					currentTier = f38_local26,
+					previousVal = f38_local28,
+					currentVal = f38_local29,
+					prevStatPercent = f38_local21,
+					statPercent = ShieldShouldUnlockItem_Dvar() and 1 or f38_local22,
+					statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f38_local29, f38_local10 ),
+					tierStatus = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_10038A59531FCD1E", f38_local26 + 1, f38_local9 + 1 ),
+					xp = f38_local13,
+					percentComplete = f38_local22,
+					isLocked = f38_local30 and not ShieldShouldUnlockItem_Dvar(),
+					isWZ = f38_arg1 == Enum[@"emodes"][@"mode_warzone"]
+				},
+				properties = {
+					isMastery = f38_local37,
+					isDarkOps = f38_local35 == "darkops",
+					category = f38_local35,
+					targetVal = f38_local10
+				}
+			} )
+		end
+	end
+	return f38_local0
+end
+
+CoD.PlayerRoleUtility.IsRoleUnlocked = function ( f183_arg0, f183_arg1, f183_arg2 )
+	return ShieldIsRoleUnlocked( f183_arg0, f183_arg1, f183_arg2 )
+end
+
+CoD.ChallengesUtility.SetupCategoryStatsDatasource = function ( f1_arg0, f1_arg1, f1_arg2 )
+	local f1_local0 = Engine[@"getchallengeinfoforimages"]( f1_arg0, nil, f1_arg1 )
+	local f1_local1 = {
+		[f1_arg2] = {}
+	}
+	f1_local1[f1_arg2].numComplete = 0
+	f1_local1[f1_arg2].numTotal = 0
+	for f1_local8, f1_local9 in pairs( CoD.ChallengesUtility.ChallengeCategoryTable[f1_arg2] ) do
+		for f1_local5, f1_local6 in ipairs( f1_local9 ) do
+			f1_local1[f1_local6] = {}
+			f1_local1[f1_local6].numComplete = 0
+			f1_local1[f1_local6].numTotal = 0
+		end
+		f1_local1[f1_local8] = {}
+		f1_local1[f1_local8].numComplete = 0
+		f1_local1[f1_local8].numTotal = 0
+	end
+	local f1_local2 = nil
+	local f1_local3 = Engine[@"getmodelforcontroller"]( f1_arg0 )
+	if f1_arg1 == Enum[@"emodes"][@"mode_multiplayer"] then
+		f1_local2 = f1_local3:create( "ChallengesMPCategoryStats" )
+	elseif f1_arg1 == Enum[@"emodes"][@"mode_zombies"] then
+		f1_local2 = f1_local3:create( "ChallengesZMCategoryStats" )
+	else
+		f1_local2 = f1_local3:create( "ChallengesWZCategoryStats" )
+	end
+	for f1_local10, f1_local11 in ipairs( f1_local0 ) do
+		local f1_local7 = f1_local11.challengeCategory
+		if not f1_local11.isMastery and f1_local7 ~= "darkops" then
+			assert( f1_local1[f1_local7] )
+			f1_local1[f1_local7].numTotal = f1_local1[f1_local7].numTotal + 1
+			local f1_local12
+			if f1_local11.currChallengeStatValue < Engine[@"hash_4C6F8EC444864600"]( "gamedata/stats/" .. f1_arg2 .. "/statsmilestones" .. f1_local11.tableNum + 1 .. ".csv", f1_local11.currentChallengeRow or f1_local11.challengeRow, CoD.ChallengesUtility.TargetValCol ) then
+				f1_local12 = not ShieldShouldUnlockItem_Dvar()
+			else
+				f1_local12 = false
+			end
+			if not f1_local12 then
+				f1_local1[f1_local7].numComplete = f1_local1[f1_local7].numComplete + 1
+			end
+			local f1_local13, f1_local14, f1_local15, f1_local16 = CoD.ChallengesUtility.SetupIsCategoryLocked( f1_arg0, f1_arg1, f1_arg2, f1_local11 )
+			f1_local1[f1_local7].categoryLocked = f1_local1[f1_local7].categoryLocked or f1_local13
+			f1_local1[f1_local7].categoryLockedText = f1_local1[f1_local7].categoryLockedText or f1_local14
+			f1_local1[f1_local7].unlockRank = f1_local1[f1_local7].unlockRank or f1_local15
+			f1_local1[f1_local7].unlockPLevel = f1_local1[f1_local7].unlockPLevel or f1_local16
+		end
+		if f1_local11.isMastery and f1_local1[f1_local7] then
+			f1_local1[f1_local7].masteryIconId = f1_local11.imageID
+		end
+	end
+	for f1_local10, f1_local11 in pairs( CoD.ChallengesUtility.ChallengeCategoryTable[f1_arg2] ) do
+		local f1_local7 = false
+		local f1_local5, f1_local6 = nil
+		for f1_local13, f1_local14 in ipairs( f1_local11 ) do
+			if not f1_local7 and f1_local1[f1_local14].categoryLocked then
+				if f1_local1[f1_local14].unlockPLevel and (not f1_local6 or f1_local1[f1_local14].unlockPLevel < f1_local6) then
+					f1_local6 = f1_local1[f1_local14].unlockPLevel
+				elseif f1_local1[f1_local14].unlockRank and (not f1_local5 or f1_local1[f1_local14].unlockRank < f1_local5) then
+					f1_local5 = f1_local1[f1_local14].unlockRank
+				end
+			else
+				f1_local7 = true
+			end
+			f1_local1[f1_local10].numComplete = f1_local1[f1_local10].numComplete + f1_local1[f1_local14].numComplete
+			f1_local1[f1_local10].numTotal = f1_local1[f1_local10].numTotal + f1_local1[f1_local14].numTotal
+		end
+		if not f1_local7 then
+			if f1_local6 then
+				f1_local1[f1_local10].categoryLocked = true
+				f1_local1[f1_local10].categoryLockedText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_57FFD6D29AEB436E", f1_local6 )
+			elseif f1_local5 then
+				f1_local1[f1_local10].categoryLocked = true
+				f1_local1[f1_local10].categoryLockedText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_381C07BC4A11544D", f1_local5 )
+			end
+		else
+			f1_local1[f1_local10].categoryLocked = false
+		end
+		f1_local1[f1_local10].isSuperCategory = true
+		f1_local1[f1_arg2].numComplete = f1_local1[f1_arg2].numComplete + f1_local1[f1_local10].numComplete
+		f1_local1[f1_arg2].numTotal = f1_local1[f1_arg2].numTotal + f1_local1[f1_local10].numTotal
+	end
+	for f1_local10, f1_local11 in pairs( f1_local1 ) do
+		local f1_local7 = 0
+		if f1_local11.numTotal ~= 0 then
+			f1_local7 = f1_local11.numComplete / f1_local11.numTotal
+		end
+		local f1_local5 = f1_local2:create( f1_local10 )
+		local f1_local6 = f1_local5:create( "percentComplete" )
+		f1_local6:set( f1_local7 )
+		f1_local6 = f1_local5:create( "categoryLocked" )
+		f1_local6:set( f1_local11.categoryLocked )
+		f1_local6 = f1_local5:create( "categoryLockedText" )
+		f1_local6:set( f1_local11.categoryLockedText )
+		if f1_local11.masteryIconId then
+			f1_local6 = f1_local5:create( "iconId" )
+			f1_local6:set( f1_local11.masteryIconId )
+		end
+	end
+	return f1_local2
+end
+
+CoD.WeaponOptionsUtility.IsItemLockedHelper = function ( f55_arg0, f55_arg1, f55_arg2 )
+	if not CoD.WeaponOptionsUtility.IsCACPersonalizationProgressionEnabled( f55_arg1, f55_arg2 ) then
+		
+	else
+		
+	end
+	local f55_local0, f55_local1, f55_local2, f55_local3 = CoD.WeaponOptionsUtility.GetWeaponOptionItemInfo( f55_arg0, f55_arg1, f55_arg2 )
+	if f55_local0 and f55_local1 and f55_local2 and f55_local3 then
+		if f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_paintjob"] then
+			return false
+		elseif f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_reticle"] then
+			local f55_local4 = f55_arg1:getModel()
+			if f55_local4.entitlement then
+				f55_local4 = f55_arg1:getModel()
+				if f55_local4.entitlement:get() then
+					return false
+				end
+			end
+		end
+		if (f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_camo"] or f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_reticle"]) and f55_local1 == 0 then
+			return false
+		elseif f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_invalid"] then
+			if f55_local1 == 0 then
+				return false
+			end
+			local f55_local4 = Engine[@"getattachmentref"]( f55_local0, f55_local1 )
+			for f55_local9, f55_local10 in ipairs( CoD.CACUtility.mpPrestigeAttachments ) do
+				if f55_local4 == f55_local10.ref then
+					local f55_local8
+					if CoD.CACUtility.GetWeaponPLevel( f55_arg2, f55_local0 ) < f55_local9 then
+						f55_local8 = not ShieldShouldUnlockItem_Dvar()
+					else
+						f55_local8 = false
+					end
+					return f55_local8
+				end
+			end
+			return false
+		else
+			local f55_local4 = false
+			local f55_local5 = CoD.BaseUtility.GetMenuSessionMode( f55_arg0 )
+			if CoD.SafeGetModelValue( f55_arg1:getModel(), "weaponOptionCategory" ) == "mstr" or f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_reticle"] then
+				f55_local4 = Engine[@"hash_6F1FD722970FDBA3"]( f55_arg2, f55_local0, f55_local3, f55_local5 )
+			else
+				f55_local4 = Engine[@"isitemoptionlocked"]( f55_arg2, f55_local0, f55_local3 )
+			end
+			if f55_local4 then
+				return true
+			else
+				local f55_local6 = f55_local0 and Engine[@"hash_7B98952F69D937F9"]( f55_local0 )
+				local f55_local7 = f55_local6 and CoD.BlackMarketTableUtility.LootInfoLookup( f55_arg2, f55_local6 )
+				if f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_camo"] and f55_local7 and f55_local7.isLoot then
+					return CoD.WeaponOptionsUtility.IsDarkmatterLockedForDLC( f55_arg2, f55_local0, f55_local5, f55_local2, f55_local3 )
+				else
+					return f55_local4
+				end
+			end
+		end
+	else
+		return false
+	end
+end
+
+CoD.CACUtility.GetHighestPermanentlyCompletedActiveCamoStage = function ( f118_arg0, f118_arg1, f118_arg2 )
+	local f118_local0 = 1
+	local f118_local1 = CoD.PlayerStatsUtility.GetStorageBufferForPlayer( f118_arg0 )
+	f118_local1 = f118_local1 and f118_local1[@"playerstatslist"]
+	if not f118_local1 then
+		return f118_local0
+	elseif f118_arg2 then
+		for f118_local2 = 1, #f118_arg1.stages, 1 do
+			if f118_arg1.stages[f118_local2][@"disabled"] == 1 then
+				return f118_local0
+			end
+			f118_local0 = f118_local2
+		end
+		return f118_local0
+	elseif ShieldShouldUnlockItem_Dvar() and #f118_arg1.stages >= CoD.CACUtility.BaseUnwrappedStageForActiveCamo then
+		return CoD.CACUtility.BaseUnwrappedStageForActiveCamo
+	end
+	for f118_local6, f118_local7 in ipairs( f118_arg1.stages ) do
+		local f118_local8 = f118_local7[@"permanentstatname"]
+		local f118_local9 = f118_local7[@"hash_5181D2404B77545F"]
+		if f118_local8 and f118_local9 then
+			local f118_local5 = f118_local1[f118_local8]
+			if f118_local5 then
+				f118_local5 = f118_local1[f118_local8][@"challengevalue"]:get()
+			end
+			if f118_local5 and f118_local9 <= f118_local5 then
+				f118_local0 = f118_local6 + 1
+			end
+		end
+	end
+	return f118_local0
+end
+
+---------------------------
 
 CoD.Shield_NameEditBox = InheritFrom( LUI.UIElement )
 CoD.Shield_NameEditBox.__defaultWidth = 340
@@ -1474,52 +2579,7 @@ CoD.Shield_PrestigeEditBox.__onClose = function ( f15_arg0 )
 	f15_arg0.TextBox:close()
 end
 
-
-------------------
-
---[[
-	CoD.DirectorUtility.ShowDirectorPublic = function ( f124_arg0 )
-		return true
-	end
-
-	CoD.DirectorUtility.ShowDirectorCustom = function ( f125_arg0, f125_arg1 )
-		return false
-	end
-
-	CoD.DirectorUtility.ShowDirectorPrivate = function ( f126_arg0, f126_arg1 )
-		return false
-	end
-]]
-
-------------------
-
---[[
-CoD.CACUtility.IsCACItemLocked = function ( f340_arg0, f340_arg1, f340_arg2 )
-	local f340_local0 = CoD.BaseUtility.GetMenuSessionMode( f340_arg0 )
-	if CoD.CraftUtility.Paintjobs.IsEditor( f340_arg0 ) then
-		return false
-	elseif not CoD.CACUtility.IsProgressionEnabled( f340_local0 ) then
-		return false
-	else
-		local f340_local1 = f340_arg1:getModel()
-		if f340_local1 and f340_local1.globalItemIndex then
-			local cond_engine_item = Engine[@"isitemlocked"]( f340_arg2, f340_local1.globalItemIndex:get(), f340_local0 )
-			EnhPrintInfo("engine isitemlocked", cond_engine_item)
-			return cond_engine_item
-		else
-			return false
-		end
-	end
-end
-]]
-
---CoD.CACUtility.IsCACItemLocked = function ( f340_arg0, f340_arg1, f340_arg2 )
-
---CoD.CACUtility.IsItemRefLocked = function ( f339_arg0, f339_arg1, f339_arg2 )
-
---CoD.CACUtility.IsFeatureItemLocked = function ( f345_arg0, f345_arg1, f345_arg2 )
-
---CoD.CACUtility.IsSignatureWeaponLockedByProgression = function ( f342_arg0, f342_arg1, f342_arg2 )
+---------------------------
 
 -- Data Sources
 -- Buttons in Extra Main
@@ -2034,6 +3094,52 @@ DataSources.ShieldDWGameServers = DataSourceHelpers.ListSetup( "ShieldDWGameServ
 	return InfoServers
 end, true )
 
+-- Prestige Icons (fix wz mode - unfinished menu)
+DataSources.PrestigeIcon = ListHelper_SetupDataSource( "PrestigeIcon", function ( f11_arg0 )
+	local f11_local0 = {}
+	local f11_local1 = CoD.PrestigeUtility.GetPrestigeGameMode()
+	local f11_local2 = Engine[@"getparagonicontable"]( f11_local1 )
+
+	-- nope
+	if not f11_local2 then 
+		EnhPrintInfo("What the fuck?")
+		return
+	end
+
+	local f11_local3 = CoD.PrestigeUtility.GetCurrentLevel( f11_arg0, f11_local1 )
+	local f11_local4 = CoD.PrestigeUtility.GetPrestigeCap( f11_local1 ) <= CoD.PrestigeUtility.GetCurrentPLevel( f11_arg0, f11_local1 )
+
+	-- line fail
+	local f11_local5 = CoD.CustomizePrestigeIconUtility.GetCurrentWins( f11_arg0, f11_local1 )
+
+	local f11_local6 = CoD.CustomizePrestigeIconUtility.GetCurrentParagonIconId( f11_arg0, f11_local1 )
+	
+	if f11_local2 and f11_local2.icons and #f11_local2.icons > 0 then
+		for f11_local11, f11_local12 in ipairs( f11_local2.icons ) do
+			local f11_local13 = table.insert
+			local f11_local14 = f11_local0
+			local f11_local15 = {}
+			local f11_local16 = {
+				iconId = f11_local12.iconId,
+				iconImage = f11_local12.iconNameLarge,
+				iconName = f11_local12.displayName,
+				iconOriginString = CoD.CustomizePrestigeIconUtility.EnumToTitleOfOriginString( f11_local12.titleOfOrigin ),
+				rankRequirementString = CoD.CustomizePrestigeIconUtility.RankToRankRequirementString( f11_local12.unlockLevel )
+			}
+
+			--local f11_local10
+
+			-- changed from wins to level instead for wz (unused wins mode)
+			f11_local16.isLocked = not CoD.CustomizePrestigeIconUtility.IsIconUnlockedByLevel( f11_local4, f11_local3, f11_local12.unlockLevel, f11_local1 )
+			f11_local16.isEquipped = f11_local6 == f11_local12.iconId
+			f11_local16.isLockedByWins = not CoD.CustomizePrestigeIconUtility.IsIconUnlockedByLevel( f11_local4, f11_local3, f11_local12.unlockLevel, f11_local1 )
+			f11_local15.models = f11_local16
+			f11_local13( f11_local14, f11_local15 )
+		end
+	end
+	return f11_local0
+end, true )
+
 -- Chat Overhul, Colors and Shit
 DataSources.ChatClientEntriesList = {
 	prepare = function ( f648_arg0, f648_arg1, f648_arg2 )
@@ -2242,7 +3348,9 @@ end )
 DataSources.OptionalSettingsData = DataSourceHelpers.ListSetup( "OptionalSettingsData", function ( f138_arg0 )
 	local Settings = {}
 
-	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/use_wz_alts", @"shield/use_wz_alts_desc", "shield_wz_map", "shield_wz_map", {
+	-- !! decs is not needed here!!!
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/use_wz_alts", @"menu/ok", "shield_wz_map", "shield_wz_map", {
 		{
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_def" ),
 			value = 0,
@@ -2255,6 +3363,26 @@ DataSources.OptionalSettingsData = DataSourceHelpers.ListSetup( "OptionalSetting
 		{
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_alts_other_night" ),
 			value = 2
+		}
+	}, nil, OnExtraDataChange ) )
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/ui_colors_setting", @"menu/ok", "shield_ui_color", "shield_ui_color", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Blue" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Red" ),
+			value = 1
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Green" ),
+			value = 2
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Default_Color" ),
+			value = 69
 		}
 	}, nil, OnExtraDataChange ) )
 
@@ -2357,6 +3485,99 @@ end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
 		f139_arg1:updateDataSource()
 	end, false )
 end )
+
+-- Reactives Fixes and Calling Cards
+DataSources.MasterCTCallingCard = {
+	getModel = function ( f12_arg0 )
+		local f12_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f12_arg0 ), "MasterCTCallingCard" )
+		if f12_local0 == nil then
+			f12_local0 = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f12_arg0 ), "MasterCTCallingCard" )
+			f12_local0:create( "title" )
+			f12_local0:create( "description" )
+			f12_local0:create( "iconId" )
+			f12_local0:create( "icon" )
+			f12_local0:create( "statPercent" )
+			f12_local0:create( "percentComplete" )
+			f12_local0:create( "statFractionText" )
+			f12_local0:create( "isLocked" )
+		end
+		return f12_local0
+	end,
+	setModelValues = function ( f13_arg0, f13_arg1, f13_arg2, f13_arg3, f13_arg4, f13_arg5 )
+		local f13_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f13_arg0 ), "MasterCTCallingCard" )
+		if f13_local0 == nil then
+			f13_local0 = DataSources.MasterCTCallingCard.getModel( f13_arg0 )
+		end
+		f13_local0.title:set( f13_arg1 )
+		f13_local0.description:set( f13_arg2 )
+		f13_local0.iconId:set( f13_arg3 )
+		f13_local0.icon:set( CoD.ChallengesUtility.GetBackgroundByID( f13_arg3 ) )
+		f13_local0.statPercent:set( ShieldShouldUnlockItem_Dvar() and 1 or f13_arg4 / f13_arg5 )
+		f13_local0.percentComplete:set( ShieldShouldUnlockItem_Dvar() and 1 or f13_arg4 / f13_arg5 )
+		f13_local0.statFractionText:set( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f13_arg4, f13_arg5 ) )
+		local f13_local1 = f13_local0.isLocked
+		local f13_local2 = f13_local1
+		f13_local1 = f13_local1.set
+		local f13_local3
+		if f13_arg4 < f13_arg5 then
+			f13_local3 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f13_local3 = false
+		end
+		f13_local1( f13_local2, f13_local3 )
+	end
+}
+
+DataSources.MasterCallingCard = {
+	getModel = function ( f10_arg0 )
+		local f10_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f10_arg0 ), "MasterCallingCard" )
+		if f10_local0 == nil then
+			f10_local0 = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f10_arg0 ), "MasterCallingCard" )
+			f10_local0:create( "title" )
+			f10_local0:create( "description" )
+			f10_local0:create( "icon" )
+			f10_local0:create( "percentComplete" )
+			f10_local0:create( "isLocked" )
+			f10_local0:create( "statFractionText" )
+			f10_local0:create( "xp" )
+			local f10_local1 = f10_local0:create( "maxTier" )
+			f10_local1:set( 0 )
+			f10_local1 = f10_local0:create( "currentTier" )
+			f10_local1:set( 0 )
+			f10_local1 = f10_local0:create( "tierStatus" )
+			f10_local1:set( "" )
+		end
+		return f10_local0
+	end,
+	setModelValues = function ( f11_arg0, f11_arg1, f11_arg2, f11_arg3, f11_arg4, f11_arg5, f11_arg6 )
+		local f11_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f11_arg0 ), "MasterCallingCard" )
+		if f11_local0 == nil then
+			f11_local0 = DataSources.MasterCallingCard.getModel( f11_arg0 )
+		end
+		f11_local0.title:set( f11_arg1 )
+		f11_local0.description:set( f11_arg2 )
+		f11_local0.icon:set( f11_arg3 )
+		f11_local0.percentComplete:set( f11_arg4 )
+		local f11_local1 = f11_local0.isLocked
+		local f11_local2 = f11_local1
+		f11_local1 = f11_local1.set
+		local f11_local3
+		if f11_arg4 < 1 then
+			f11_local3 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f11_local3 = false
+		end
+		f11_local1( f11_local2, f11_local3 )
+		if f11_arg5 then
+			f11_local0.statFractionText:set( f11_arg5 )
+		end
+		if f11_arg6 then
+			f11_local0.xp:set( f11_arg6 )
+		else
+			f11_local0.xp:set( 0 )
+		end
+	end
+}
 
 ---------------------------
 
@@ -3400,6 +4621,21 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	end )
 	self:addElement( selectionDescription )
 	self.selectionDescription = selectionDescription
+
+	local Shield_Nat = LUI.UIText.new( 0.05, 0.05, -70, 200, 0.9, 0.9, 10, 30 )
+	Shield_Nat:setText("NAT TYPE: Unknown")
+	Shield_Nat:setTTF( "ttmussels_regular" )
+	Shield_Nat:setLetterSpacing( 6 )
+	Shield_Nat:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	Shield_Nat:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	Shield_Nat:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "lobbyNatType", function ( model )
+		local f2_local0 = model:get()
+		if f2_local0 ~= nil then
+			Shield_Nat:setText( ConvertToUpperString( LocalizeWithNatType( f2_local0 ) ) )
+		end
+	end )
+	self:addElement( Shield_Nat )
+	self.Shield_Nat = Shield_Nat
 	
 	local PurchaseButton2 = nil
 	
@@ -3826,6 +5062,7 @@ CoD.directorSelect.__onClose = function ( f76_arg0 )
 	f76_arg0.IGRPerksDirectorButton:close()
 	f76_arg0.selectionDescription:close()
 	f76_arg0.PurchaseButton2:close()
+	f76_arg0.Shield_Nat:close()
 	f76_arg0.DirectorTierSkipNotification:close()
 	f76_arg0.DirectorTierSkipNotification2:close()
 	f76_arg0.IGREventButton:close()
@@ -4366,7 +5603,15 @@ LUI.createMenu.SystemOverlay_MessageDialog = function ( f1_arg0, f1_arg1 )
 	--DisableKeyboardNavigationByElement( emptyFocusable )
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called - > " .. ErrorText, "System Overlay Message Box")
 
 	--CoD.SystemOverlay_MessageDialog.__onClose(self)
@@ -4508,7 +5753,15 @@ LUI.createMenu.SystemOverlay_MessageDialogFull = function ( f1_arg0, f1_arg1 )
 	end
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Full Message Box")
 
 	return self
@@ -4702,7 +5955,15 @@ LUI.createMenu.SystemOverlay_Compact = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Compact")
 
 	return self
@@ -4787,7 +6048,15 @@ LUI.createMenu.SystemOverlay_NoBG = function ( f1_arg0, f1_arg1 )
 	CoD.OverlayUtility.SystemOverlayPostLoad( self, f1_arg0 )
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay No BG")
 
 	return self
@@ -4905,7 +6174,15 @@ LUI.createMenu.SystemOverlay_Full = function ( f2_arg0, f2_arg1 )
 	end
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Full")
 
 	return self
@@ -5017,7 +6294,15 @@ LUI.createMenu.SystemOverlay_FreeCursor = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Free Cursor")
 	
 	return self
@@ -5129,7 +6414,15 @@ LUI.createMenu.SystemOverlay_FreeCursor_Full = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Free Cursor Full")
 	
 	return self
@@ -5363,8 +6656,16 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 
 	-- datasources for other shit here
 	local OptionalSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
-	OptionalSettingsList:setRGB(0, 1, 1)
-	OptionalSettingsList:setLeftRight( 0.26, 0.26, 10, 700 )
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		OptionalSettingsList:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		OptionalSettingsList:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		OptionalSettingsList:setRGB(0, 1, 0)
+	end
+
+	OptionalSettingsList:setLeftRight( 0.40, 0.40, 10, 700 )
 	OptionalSettingsList:setTopBottom( 0.2225, 0.2225, 0, 50 )
 	--OptionalSettingsList:setScale(0.90, 0.90)
 	--OptionalSettingsList:setAutoScaleContent( true )
@@ -5393,9 +6694,31 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( MapHint )
 	self.MapHint = MapHint
 
+	local ColorHint = LUI.UIText.new( 0.65, 0.65, 0, 550, 0.20, 0.20, 100, 120 )
+	ColorHint:setText("Changes Style of Alert Messages")
+	ColorHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	ColorHint:setTTF("notosans_bold")
+	ColorHint:setBackingType( 2 )
+	ColorHint:setBackingColor( 0.04, 0.81, 1 )
+	ColorHint:setBackingAlpha( 0.01 )
+	ColorHint:setBackingXPadding( 12 )
+	ColorHint:setBackingYPadding( 6 )
+	ColorHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	ColorHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( ColorHint )
+	self.ColorHint = ColorHint
+
 	-- datasources for unlocks here
 	local UnlockSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
-	UnlockSettingsList:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		UnlockSettingsList:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		UnlockSettingsList:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		UnlockSettingsList:setRGB(0, 1, 0)
+	end
+
 	UnlockSettingsList:setLeftRight( 0.305, 0.305, 10, 700 )
 	UnlockSettingsList:setTopBottom( 0.57, 0.57, 0, 50 )
 	--UnlockSettingsList:setScale(0.90, 0.90)
@@ -5469,8 +6792,16 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 				RankLimit = 79
 			end
 
-			if CoD.PlayerStatsUtility.IsPrestigeMasterForMenu(Engine[@"currentsessionmode"](), f1_local1) then
+			local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "plevel")
+			local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
+
+			if isPrestigeMaster == true then
 				RankLimit = 999
+
+				-- wz is diff
+				if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+					RankLimit = 1000
+				end
 			end
 
 			if RankData ~= nil and RankData ~= "" then
@@ -5556,7 +6887,7 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 		{
 			stateName = "Locked",
 			condition = function ( menu, element, event )
-				return AlwaysTrue()
+				return AlwaysFalse()
 			end
 		}
 	} )
@@ -5571,12 +6902,21 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 		PlaySoundAlias( "uin_paint_image_flip_toggle" )
 		EnhPrintInfo("PrestigeMasterButton")
 		
-		-- shield api later
-		RankUtils.SetRank(54)
-		RankUtils.SetPrestige(10)
+		local sessionmode = Engine[@"CurrentSessionMode"]()
+		local RankSet = 55
+
+		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+			RankSet = 81
+		end
+
+		RankUtils.SetPrestige(11)
+		RankUtils.SetRank(RankSet)
+
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp 1457200")
-		-- idk if this even exists in bo4..
+		-- idk if this even exists in bo4.. (nvm it does lol)
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "PrestigeStatsMaster " .. tostring(Engine[@"CurrentSessionMode"]()))
+
+		CoD.OverlayUtility.CreateOverlay(controller, menu, "PrestigeMasterActivated")
 
 	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
 		if IsGamepad( controller ) then
@@ -5595,7 +6935,7 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 		{
 			stateName = "Disabled",
 			condition = function ( menu, element, event )
-				return AlwaysTrue()
+				return AlwaysFalse()
 			end
 		}
 	} )
@@ -5663,6 +7003,7 @@ CoD.ShieldOptionsMenu.__onClose = function ( f8_arg0 )
 	f8_arg0.OptionalSettingsList:close()
 	f8_arg0.NameHint:close()
 	f8_arg0.MapHint:close()
+	f8_arg0.ColorHint:close()
 	f8_arg0.CornerPipL:close()
 	f8_arg0.HeaderPixelGridTiledBackingL:close()
 	f8_arg0.HeaderPixelGridTiledBackingR:close()
@@ -14092,7 +15433,6 @@ CoD.DirectorLobbySettingList.__onClose = function ( f63_arg0 )
 	f63_arg0.RemoveBotButton:close()
 end
 
-
 --[[
 	local MainUnlockAll = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
 	MainUnlockAll.MiddleText:setTTF( "ttmussels_regular" )
@@ -14322,7 +15662,7 @@ end
 	-- add callback click
 	f1_local1:AddButtonCallbackFunction( MainUnlockCamos, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
 		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockCamos_Toggle()
+		ShieldUnlockCamosCards_Toggle()
 
 		if UnlockCamos then
 			MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^2Enabled")

@@ -12,6 +12,14 @@ autoexec InitSystem()
     if(util::is_frontend_map())
      return;
 
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        ShieldLog("^1HQ Mode, Returned.... (GSC)");
+        return;
+    }
+
+
     compiler::detour();
 
     system::register("SupportGSC", &Init, &PostInit, undefined);
@@ -53,6 +61,16 @@ MpBotOnSpawned()
 
 detour bot<scripts\mp_common\bots\mp_bot.gsc>::init()
 {
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        ShieldLog("^1HQ Bot Mode, Returned....");
+
+        [[ @bot<scripts\mp_common\bots\mp_bot.gsc>::init ]]();
+
+        return;
+    }
+
     level endon(#"game_ended");
 
     ShieldLog("^2Bot Init -> Called");
@@ -76,6 +94,13 @@ detour bot<scripts\mp_common\bots\mp_bot.gsc>::init()
 
 detour util<scripts\core_common\util_shared.gsc>::function_8570168d()
 {
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        //ShieldLog("^1HQ Mode, Returned....");
+        return [[ @util<scripts\core_common\util_shared.gsc>::function_8570168d ]]();
+    }
+
     //ShieldLog("^2Gamemode Check -> Called (GSC)");
 
     /*

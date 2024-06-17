@@ -111,6 +111,11 @@
             "name": "hash_17dbbb9c5e6880ac",
             "value": "&&1 has been banned from playing on this Shield Server!"
         },
+        {
+            "type": "localizeentry",
+            "name": "hash_5aa949e6b34e89ea",
+            "value": "You have been disconnected from the Shield Server! (Restart the Game to Reconnect...)"
+        },
         
         {
             "type": "localizeentry",
@@ -121,6 +126,12 @@
             "type": "localizeentry",
             "name": "shield/launchgame",
             "value": "Launch Game"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/prestige_master",
+            "value": "Prestige Master Activated!"
         },
 
         {
@@ -147,6 +158,32 @@
             "type": "localizeentry",
             "name": "shield/use_wz_alts_other_night",
             "value": "Alcatraz Map (Night)"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/ui_colors_setting",
+            "value": "UI Colors"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Green",
+            "value": "^2Color Green"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Blue",
+            "value": "^5Color Blue"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Red",
+            "value": "^1Color Red"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Default_Color",
+            "value": "Default Color"
         },
 
         {
@@ -182,12 +219,12 @@
         {
             "type": "localizeentry",
             "name": "shield/unlock_camos",
-            "value": "Unlock Camos"
+            "value": "Unlock Camos/Cards"
         },
         {
             "type": "localizeentry",
             "name": "shield/unlock_camos_desc",
-            "value": "Unlocks All Weapon's Camos"
+            "value": "Unlocks All Weapon's Camos and All Calling Cards"
         },
         {
             "type": "localizeentry",
