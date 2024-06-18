@@ -130,6 +130,17 @@
 
         {
             "type": "localizeentry",
+            "name": "shield/lobbypubs",
+            "value": "Shield Public Lobbies"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/lobbyone",
+            "value": "Lobby One"
+        },
+
+        {
+            "type": "localizeentry",
             "name": "shield/prestige_master",
             "value": "Prestige Master Activated!"
         },

@@ -823,25 +823,25 @@ RankUtils.GetLevelXP = function(level)
 	local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
 
 	if isPrestigeMaster == false then
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+		if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
 			rankTable = "gamedata/shield/rankutils/maxrankdata_mp.csv"
 		end
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+		if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
 			rankTable = "gamedata/shield/rankutils/maxrankdata_zm.csv"
 		end
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 			rankTable = "gamedata/shield/rankutils/maxrankdata_wz.csv"
 		end
 	else
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+		if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
 			rankMult = 55600
 			rankTT = 55
 		end
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+		if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
 			rankMult = 57600
 			rankTT = 55
 		end
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 			rankMult = 7500
 			rankTT = 81
 		end
@@ -870,6 +870,7 @@ RankUtils.SetRank = function(level)
 	-- local currentRank = CoD.BlackMarketUtility.GetCurrentRank(controller) + 1
 
 	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "plevel")
+	local sessionmode = Engine[@"CurrentSessionMode"]()
 
 	local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
 	local maxXP = RankUtils.GetLevelXP(tonumber(level))
@@ -879,23 +880,30 @@ RankUtils.SetRank = function(level)
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp " .. maxXP)
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp " .. 0)	
 	else
+		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rank " .. 55)
+
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp " .. RankUtils.GetLevelXP(81))
+		else
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp " .. RankUtils.GetLevelXP(55))
+		end
+
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank " .. tonumber(level)) -- rank for prestige master
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp " .. maxXP)
 	end
 
 	-- shield api to fix online stats here...
-	local sessionmode = Engine[@"CurrentSessionMode"]()
 	local RankFix = string.format("%0.2i", level)
 
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+	if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp xp " .. maxXP)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+	if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm xp " .. maxXP)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+	if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz xp " .. maxXP)
 	end
@@ -914,7 +922,7 @@ RankUtils.SetPrestige = function(prestige)
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(11))
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "PrestigeStatsMaster " .. tostring(Engine[@"CurrentSessionMode"]()))
 
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 81") -- rank for prestige master
 		else
 			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 55")
@@ -928,13 +936,13 @@ RankUtils.SetPrestige = function(prestige)
 	-- shield api to fix online stats here...
 	local PrestigeFix = string.format("%0.2i", prestige)
 
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+	if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+	if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+	if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
 	end
 
@@ -1258,17 +1266,17 @@ local function RefreshShieldShit()
 			local RankFix = string.format("%0.2i", RankCurrent) -- fix 01 issues
 			local PrestigeFix = string.format("%0.2i", PrestigeCurrent)
 
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+			if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
 				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
 				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
 			end
 
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+			if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
 				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
 				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
 			end
 
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+			if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
 				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
 			end
@@ -6788,13 +6796,13 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 			local RankLimit = 54
 			local sessionmode = Engine[@"CurrentSessionMode"]()
 
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+			if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
 				RankLimit = 54
 			end
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+			if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
 				RankLimit = 54
 			end
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+			if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 				RankLimit = 79
 			end
 
@@ -6805,7 +6813,7 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 				RankLimit = 999
 
 				-- wz is diff
-				if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+				if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 					RankLimit = 1000
 				end
 			end
@@ -6911,7 +6919,7 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 		local sessionmode = Engine[@"CurrentSessionMode"]()
 		local RankSet = 55
 
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 			RankSet = 81
 		end
 
@@ -9125,17 +9133,13 @@ CoD.ZMLobbyButtonsContainer.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3,
 		return f6_local0
 	end )
 	f1_arg0:AddButtonCallbackFunction( PrivateMatchButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
-		if not CoD.DirectorUtility.IsNumClientsExceeded( controller ) and CoD.DirectorUtility.AllClientsOwnDLCForPlaylist( controller ) then
+		if not CoD.DirectorUtility.IsNumClientsExceeded( controller ) then
 			PlaySoundAlias( "uin_toggle_generic" )
 			CoD.DirectorUtility.NavigateToPrivateLobbyForCurrentMode( menu, controller )
 			return true
 		elseif CoD.DirectorUtility.IsNumClientsExceeded( controller ) then
 			PlaySoundAlias( "uin_toggle_generic" )
 			CoD.DirectorUtility.OpenTooManyClientsPopup( self, controller )
-			return true
-		elseif not CoD.DirectorUtility.AllClientsOwnDLCForPlaylist( controller ) then
-			PlaySoundAlias( "uin_toggle_generic" )
-			CoD.DirectorUtility.OpenMapsNotEnabledPopup( self, controller )
 			return true
 		else
 			
@@ -12136,7 +12140,7 @@ CoD.directorPublic.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 			condition = function ( menu, element, event )
 				local f8_local0 = CoD.ModelUtility.IsGlobalModelValueEqualToEnum( "lobbyRoot.publicLobby.stage", LuaEnum.PUBLIC_LOBBY.INVALID )
 				if f8_local0 then
-					f8_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] )
+					f8_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"emodes"][@"mode_warzone"] )
 					if f8_local0 then
 						f8_local0 = IsLobbyPrivateHost()
 						if f8_local0 then
@@ -12235,7 +12239,7 @@ CoD.directorPublic.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 			condition = function ( menu, element, event )
 				local f16_local0 = CoD.ModelUtility.IsGlobalModelValueEqualToEnum( "lobbyRoot.publicLobby.stage", LuaEnum.PUBLIC_LOBBY.INVALID )
 				if f16_local0 then
-					f16_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] )
+					f16_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"emodes"][@"mode_warzone"] )
 					if f16_local0 then
 						if not IsLobbyPrivateHost() then
 							f16_local0 = IsWarzone()
