@@ -12,6 +12,7 @@ int	string
 3971544690	time cannot be negative
 312545010	not a vector
 1015938482	not an entity
+364298674	not an actor
 3488519410	object is not an array, string, or vector
 1461218623	string index out of range
 57350207	Unknown perk
@@ -57,6 +58,7 @@ int	string
 2589667284	invalid velocity parameter in moveslide command
 2706458388	Invalid localclientnum
 2706458388	Trying to get a local client index for a client that is not a local client.
+417308884	Invalid xpak magic
 2269096660	vector scale expecting vector
 744499668	too many vehicles
 2855209542	Cannot call IncrementClientField on a non-'counter' type clientfield.
@@ -83,6 +85,7 @@ int	string
 648498056	Can't use wait with profiler
 887228744	origin being set to NAN.
 3633073800	parameter does not exist
+1708109640	try to send format param with unknown type
 2417691091	Execution Queue out of memory
 3815761761	Error when loading fastfile
 3459949409	Failed to alloc client field - MAX_CLIENTFIELD_FIELDS_IN_SET=512 exceeded.
@@ -108,6 +111,8 @@ int	string
 554833601	Can only do this call for node_turret
 2489324310	cannot switch on type
 369972438	First argument of a match call must be a struct
+1625493526	Can't find info for script vehicle
+3669018198	not an entity
 2655465686	not a script function pointer
 219686544	object is not an array index
 762454160	not a pointer
@@ -128,6 +133,7 @@ int	string
 768316282	script stack overflow (too many embedded function calls)
 3288551912	expected array type to add value pair
 1777362536	Could not allocate memory for zone
+2512843688	GetVehicleNode used with more than one node
 245612264	foreach should be used with an array
 236473384	invalid session mode
 2202233143	waittill_timeout must have at least one valid argument
@@ -158,6 +164,7 @@ int	string
 1850691545	Debug Break
 3967909977	Trying to get version of a demo when the demo system is idle.
 525308842	GetBaseWeaponItemIndex: invalid weapon named passed.
+2240566762	entity is not a player
 3142427498	not an object
 2687742442	Forced script exception.
 3523382186	ScrEvent map is full, unable to register new event
@@ -180,7 +187,9 @@ int	string
 3559732046	script stack overflow (too many embedded function calls)
 1999906612	type is not a integer or float
 4106063796	key value provided for array is not valid
+2742072756	Can't register more dvar
 1804370036	Failed to verify file type 
+3121501044	try to send format param string isn't cached
 1697447028	Can't use wait with profiler
 1487510644	Could not load gsc object
 4077883892	Param can't be higher than 7
@@ -254,7 +263,9 @@ int	string
 3592841213	cannot directly set the origin on AI.  Use the teleport command instead.
 1609894461	bad entity
 2532286589	error message
+4131199549	GetVehicleNode - key is not internally a string
 987874813	self isn't a field object
+354335369	Unable to find HierarchicalTaskNetwork asset
 1915758537	RegisterClientField can only accept bit ranges between 1 and 32.
 3122940489	caller is not an entity
 969461336	The setHintStringForPlayer command only works on trigger or script mover entities.
@@ -309,6 +320,7 @@ int	string
 2368908708	invalid session mode
 725202020	caller is not an object
 2055356644	entity is not a script_brushmodel, script_model, script_origin, probe, or light
+1824757220	calcWeaponOptions takes at least 2 arguments
 889403597	SpawnCollision: Collision model name is not valid
 243367053	The setHintStringForPlayer command can only change prompts for players.
 2116335949	function called with too many parameters
@@ -336,3 +348,4 @@ int	string
 3016026156	Can't find asset
 4221135532	Optional argument must be a string type
 1363519084	key is not internally a string
+3671833516	accuracy mod must be nonnegative

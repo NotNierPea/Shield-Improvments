@@ -2,6 +2,8 @@
 #include scripts\core_common\clientfield_shared;
 #include scripts\core_common\util_shared;
 #include scripts\core_common\flag_shared;
+#include scripts\core_common\array_shared.gsc;
+#include scripts\core_common\callbacks_shared.gsc;
 
 #namespace SupportGSC;
 
@@ -9,6 +11,14 @@ autoexec InitSystem()
 {
     if(util::is_frontend_map())
      return;
+
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        ShieldLog("^1HQ Mode, Returned.... (GSC)");
+        return;
+    }
+
 
     compiler::detour();
 
@@ -32,11 +42,35 @@ PostInit()
 
 MPChanges()
 {
-    // later
+    callback::on_spawned(&MpBotOnSpawned);
+}
+
+MpBotOnSpawned()
+{
+    self endon(#"disconnect", #"spawned_player");
+    level endon(#"end_game", #"game_ended");
+
+    if(!IsBot(self))
+     return;
+
+    // bot funcs here
+    self thread SetRandomSkin();
+    self thread SetRandomCamos();
+    self thread SetRandomAttachments();
 }
 
 detour bot<scripts\mp_common\bots\mp_bot.gsc>::init()
 {
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        ShieldLog("^1HQ Bot Mode, Returned....");
+
+        [[ @bot<scripts\mp_common\bots\mp_bot.gsc>::init ]]();
+
+        return;
+    }
+
     level endon(#"game_ended");
 
     ShieldLog("^2Bot Init -> Called");
@@ -60,6 +94,13 @@ detour bot<scripts\mp_common\bots\mp_bot.gsc>::init()
 
 detour util<scripts\core_common\util_shared.gsc>::function_8570168d()
 {
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        //ShieldLog("^1HQ Mode, Returned....");
+        return [[ @util<scripts\core_common\util_shared.gsc>::function_8570168d ]]();
+    }
+
     //ShieldLog("^2Gamemode Check -> Called (GSC)");
 
     /*

@@ -1002,7 +1002,15 @@ LUI.createMenu.SystemOverlay_MessageDialog = function ( f1_arg0, f1_arg1 )
 	--DisableKeyboardNavigationByElement( emptyFocusable )
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called - > " .. ErrorText, "System Overlay Message Box")
 
 	--CoD.SystemOverlay_MessageDialog.__onClose(self)
@@ -1144,7 +1152,15 @@ LUI.createMenu.SystemOverlay_MessageDialogFull = function ( f1_arg0, f1_arg1 )
 	end
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Full Message Box")
 
 	return self
@@ -1338,7 +1354,15 @@ LUI.createMenu.SystemOverlay_Compact = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Compact")
 
 	return self
@@ -1423,7 +1447,15 @@ LUI.createMenu.SystemOverlay_NoBG = function ( f1_arg0, f1_arg1 )
 	CoD.OverlayUtility.SystemOverlayPostLoad( self, f1_arg0 )
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay No BG")
 
 	return self
@@ -1541,7 +1573,15 @@ LUI.createMenu.SystemOverlay_Full = function ( f2_arg0, f2_arg1 )
 	end
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Full")
 
 	return self
@@ -1653,7 +1693,15 @@ LUI.createMenu.SystemOverlay_FreeCursor = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Free Cursor")
 	
 	return self
@@ -1765,7 +1813,15 @@ LUI.createMenu.SystemOverlay_FreeCursor_Full = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+	
 	EnhPrintInfo("Called", "System Overlay Free Cursor Full")
 	
 	return self

@@ -262,6 +262,9 @@ require( "ui/uieditor/widgets/startmenu/options/startmenuoptionsmainframe" )
 require( "ui/uieditor/widgets/common/commoncenteredpopup" )
 require( "x64:fe9df26e257edb3" )
 
+require( "x64:2e656d7766a8b00a" )
+require( "x64:3b1c64f85af4ce49" )
+
 ------------------------------
 
 require( "x64:3a79adf0dbc1a1b6" )
@@ -277,24 +280,52 @@ require( "x64:334096eb04183443" )
 
 ---------------------------
 
---------------------------
+local function InitDvars()
+	-- reading c++ var
+	-- readjson
+	-- writejson
+
+	-- unlocks dvars (used for unlock settings in shield's menu)
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_all unlock all bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_loot unlock loot bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_attachments unlock attachments bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_itemoptions unlock itemoptions bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_items unlock items bool")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_unlock_classes unlock classes bool")
+
+	-- username
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
+
+	-- other shit
+	if Engine[@"getdvarint"]("shield_wz_map") > 0 then
+		-- don't reset it
+	else
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set shield_wz_map 0")
+	end
+
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_ui_color lua ui_color uint64_t 0")
+end
+
+---------------------------
+
+InitDvars()
 
 local CurrentMainRank = ""
 local CurrentTitleRank = ""
 local CurrentIconRank = ""
 local CheckClient = 0
 
--- TODO: use either dvars to save, or lua shield api.., and add sliders for level and shit.
+-- Dvars saving with C++ for now
 local UnlockAll = Engine[@"getdvarint"]("shield_unlock_all")
 local UnlockLoot = Engine[@"getdvarint"]("shield_unlock_loot")
-local UnlockAttachments = Engine[@"getdvarint"]("shield_unlock_attch")
-local UnlockCamos = Engine[@"getdvarint"]("shield_unlock_camos")
+local UnlockAttachments = Engine[@"getdvarint"]("shield_unlock_attachments")
+local UnlockCamos = Engine[@"getdvarint"]("shield_unlock_itemoptions")
 local UnlockCards = Engine[@"getdvarint"]("")
 local UnlockItems = Engine[@"getdvarint"]("shield_unlock_items")
-local UnlockClassSlots = Engine[@"getdvarint"]("shield_unlock_classslots")
+local UnlockClassSlots = Engine[@"getdvarint"]("shield_unlock_classes")
 local UnlockBlackMarket = Engine[@"getdvarint"]("")
 
---------------------------
+---------------------------
 
 -- Utils
 local function EnhPrintInfo(PrintInfo, DebugName)
@@ -324,11 +355,457 @@ local function LaunchGameFunction(Controller)
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "LobbyLaunchGame")
 end
 
+local function VM_ReloadMods()
+	-- shield command
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "reload_mods")
+
+	-- reload all vms
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "killserver")
+end
+
 local function isInteger(str)
 	return not (str == "" or string.find(str, "%D"))
 end
 
--------------------
+local function IsIPAddress(str)
+	-- check for format 1.11.111.111 for ipv4
+	local chunks = {string.match(str, "^(%d+)%.(%d+)%.(%d+)%.(%d+)$")}
+	if #chunks == 4 then
+
+	  for _,v in pairs(chunks) do
+		if tonumber(v) > 255 then return false end
+	  end
+
+	  return true
+	end
+
+	return false
+end
+
+local function IsValidName(str)
+	return string.find(str, "^[%-%.%w_]+$") ~= nil
+end
+
+local function ShieldCreateOutfits(f40_arg0, f40_arg1, f40_arg2, f40_arg3, f40_arg4, f40_arg5)
+	local f40_local0 = "ThemeOutfit" .. f40_arg3
+	DataSources[f40_local0] = DataSourceHelpers.ListSetup( f40_local0, function ( f41_arg0, f41_arg1 )
+		local f41_local0 = {}
+		for f41_local15, f41_local16 in ipairs( f40_arg4.presets ) do
+			if f41_local16.isValid then
+				local f41_local4 = CoD.BlackMarketTableUtility.LootInfoLookup( f41_arg0, f41_local16.lootId )
+				f41_local4.owned = true
+				local f41_local5 = f41_local16.entitlement
+				if f41_local5 then
+					f41_local5 = f41_local16.entitlement ~= @"hash_0"
+				end
+				local f41_local6 = ""
+				local f41_local7 = true
+				for f41_local8 = 0, Enum[@"characteritemtype"][@"character_item_type_count"] - 1, 1 do
+					local f41_local11 = nil
+					if f41_local8 == Enum[@"characteritemtype"][@"hash_141B42F0A58AC50F"] then
+						f41_local11 = f41_local16.arms
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_37AD40A4111A72FE"] then
+						f41_local11 = f41_local16.head
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_4FF8573E011622F4"] then
+						f41_local11 = f41_local16.headgear
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_283CBB806B732B11"] then
+						f41_local11 = f41_local16.legs
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_4922FE5C41D9EE8B"] then
+						f41_local11 = f41_local16.palette
+					elseif f41_local8 == Enum[@"characteritemtype"][@"hash_19DDCEC39BA98B97"] then
+						f41_local11 = f41_local16.torso
+					end
+					if f41_local11 and f41_local7 then
+						f41_local7 = f41_local11 == CoD.PlayerRoleUtility.EquippedOutfitItems[f41_arg0][@"outfits"][f40_arg3][f41_local8]
+					end
+					f41_local6 = f41_local6 .. (f41_local11 or 0) .. ";"
+				end
+				local f41_local8 = f41_local4.unlockInfo
+				if not f41_local8 then
+					f41_local8 = ""
+				end
+				local f41_local9 = ""
+				if f41_local4.isLoot and f41_local4.available and f41_local4.disableWhenAvailable and not f41_local4.owned then
+					f41_local9 = f41_local8
+					f41_local8 = ""
+				end
+				local f41_local10 = table.insert
+				local f41_local12 = f41_local0
+				local f41_local11 = {}
+				local f41_local13 = {
+					displayName = Engine[@"hash_4F9F1239CFD921FE"]( f41_local16.displayName ),
+					icon = f41_local16.icon,
+					outfitIndex = f40_arg3,
+					itemType = Enum[@"characteritemtype"][@"hash_4922FE5C41D9EE8B"],
+					itemIndex = f41_local16.palette,
+					lootId = f41_local16.lootId
+				}
+				local f41_local14 = CoD.BlackMarketUtility.LootIdRarities[f41_local4.rarity]
+				if not f41_local14 then
+					f41_local14 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+				end
+				f41_local13.rarity = f41_local14
+				f41_local13.category = @"menu/outfit"
+				f41_local13.unlockInfo = f41_local8
+				f41_local13.alertMessage = f41_local9
+				f41_local14 = f41_local4.available
+				if not f41_local14 then
+					f41_local14 = not f41_local4.isLoot
+				end
+				f41_local13.available = true
+				f41_local14 = f41_local4.owned
+				if not f41_local14 then
+					f41_local14 = not f41_local4.isLoot
+				end
+				f41_local13.owned = f41_local14
+				f41_local14 = f40_arg5
+				if not f41_local14 then
+					f41_local14 = f41_local4.available
+					if f41_local14 then
+						f41_local14 = f41_local4.disableWhenAvailable
+					end
+				end
+				f41_local13.disabled = false
+				f41_local13.skipDefaultTitle = f41_local4.isNotDefault
+				f41_local14 = f41_local4.hideRarity
+				if not f41_local14 then
+					f41_local14 = f41_local5 or false
+				end
+				f41_local13.hideRarity = f41_local14
+				f41_local13.presets = f41_local6
+				f41_local13.arms = f41_local16.arms
+				f41_local13.head = f41_local16.head
+				f41_local13.headgear = f41_local16.headgear
+				f41_local13.legs = f41_local16.legs
+				f41_local13.palette = f41_local16.palette
+				f41_local13.torso = f41_local16.torso
+				f41_local13.presetIndex = f41_local15 - 1
+				f41_local13.checkEquippedOutfit = true
+				f41_local11.models = f41_local13
+				f41_local11.properties = {
+					selectIndex = f41_local7,
+					entitlement = f41_local16.entitlement,
+					accessoryCount = 0,
+					lootData = f41_local4
+				}
+				f41_local11.options = {}
+				f41_local10( f41_local12, f41_local11 )
+			end
+		end
+		local f41_local1 = {}
+		for f41_local5, f41_local6 in LUI.IterateTableBySortedKeys( f41_local0, function ( f42_arg0, f42_arg1 )
+			f42_arg0 = f41_local0[f42_arg0]
+			f42_arg1 = f41_local0[f42_arg1]
+			if f42_arg0.properties.owned ~= f42_arg1.properties.owned then
+				return f42_arg0.properties.owned
+			elseif f42_arg0.properties.available ~= f42_arg1.properties.available then
+				return f42_arg0.properties.available
+			else
+				return f42_arg0.models.itemIndex < f42_arg1.models.itemIndex
+			end
+		end, function ( f43_arg0, f43_arg1 )
+			if f43_arg1.properties.lootData.isLoot then
+				local f43_local0 = f43_arg1.properties.lootData.owned
+				if not f43_local0 then
+					f43_local0 = f43_arg1.properties.lootData.available
+					if f43_local0 then
+						f43_local0 = f43_arg1.properties.lootData.disableWhenAvailable
+					end
+				end
+				return f43_local0
+			else
+				local f43_local0
+				if f43_arg1.properties.entitlement ~= @"hash_0" then
+					f43_local0 = Engine[@"hasentitlement"]( f41_arg0, f43_arg1.properties.entitlement )
+				else
+					f43_local0 = true
+				end
+			end
+			return f43_local0
+		end ) do
+			table.insert( f41_local1, f41_local6 )
+		end
+		return f41_local1
+	end, true )
+	return f40_local0
+end
+
+-- First Game Boot Fixes (Hooks issues)
+local function ReloadOverrides()
+
+	EnhPrintInfo("Reload Overrides...")
+
+	-- Outfits Theme Unlocking, even some unused ones
+	DataSources.MPSpecialistThemes = DataSourceHelpers.ListSetup( "MPSpecialistThemes", function ( f56_arg0, f56_arg1 )
+		local f56_local0 = f56_arg1.menu:getModel()
+		local f56_local1 = f56_local0.characterIndex:get()
+		local f56_local2 = Engine[@"currentsessionmode"]()
+		local f56_local3 = {}
+		local f56_local4 = CoD.PlayerRoleUtility.GetCachedHeroCustomization( f56_local2, f56_local1 )
+		CoD.PlayerRoleUtility.EquippedOutfitItems[f56_arg0] = Engine[@"getequippedinfoforhero"]( f56_arg0, f56_local2, f56_local1 ) or {}
+		local f56_local5 = DataSources.MPOutfitCategories.getModel( f56_arg0 )
+		f56_local5 = f56_local5.selectedCategory
+		if not f56_arg1._selectedCategorySub then
+			f56_arg1._selectedCategorySub = f56_arg1:subscribeToModel( f56_local5, function ()
+				f56_arg1:updateDataSource()
+			end, false )
+		end
+		local f56_local6 = DataSources.MPSpecialistThemes.getCurrentCategoryHelper( f56_arg0, f56_local4, f56_local2, f56_local1 )
+		if f56_local6 then
+			local f56_local7 = {}
+			local f56_local8 = true
+			for f56_local16, f56_local17 in LUI.IterateTableBySortedKeys( f56_local4.outfits, f56_local6.sort, f56_local6.filter ) do
+				f56_local8 = true
+				if f56_local7[f56_local17.displayName] then
+					f56_local8 = false
+				end
+				if f56_local8 then
+					local f56_local12 = f56_local16 - 1
+					local f56_local13 = f56_local6.getBreadcrumbModel( f56_local12 )
+					local f56_local14 = f56_local6.lookupHighestRarity( f56_local16, f56_local17 )
+					local f56_local15 = f56_local6.isDisabled( f56_local17 )
+					table.insert( f56_local3, {
+						models = {
+							displayName = Engine[@"hash_4F9F1239CFD921FE"]( f56_local17.displayName ),
+							datasourceName = f56_local6.dataSourceFunction( f56_arg0, f56_local2, f56_local1, f56_local12, f56_local17, f56_local15 ),
+							decalDataSourceName = f56_local6.decalDataSourceFunction( f56_arg0, f56_local2, f56_local1, f56_local12, f56_local17 ),
+							decalCount = #f56_local17.decals,
+							outfitIndex = f56_local12,
+							category = @"hash_54106C155ACE8F96",
+							rarity = f56_local14,
+							available = true,
+							disabled = false,
+							hideRarity = f56_local14 == Enum[@"lootraritytype"][@"loot_rarity_type_count"],
+							unlockInfo = f56_local6.getUnlockInfo( f56_local17 ),
+							alertMessage = f56_local6.getAlertMessage( f56_local17 ),
+							breadcrumb = f56_local13
+						},
+						properties = {
+							selectIndex = f56_local12 == f56_local6.selectedIndex()
+						}
+					} )
+				end
+				f56_local7[f56_local17.displayName] = true
+			end
+		end
+		return f56_local3
+	end, true, {
+		getModel = function ( f58_arg0 )
+			local f58_local0 = Engine[@"getmodelforcontroller"]( f58_arg0 )
+			f58_local0 = f58_local0:create( "MPSpecialistThemes" )
+			if not f58_local0.update then
+				f58_local0:create( "update" )
+			end
+			return f58_local0
+		end,
+		getCurrentCategoryHelper = function ( f59_arg0, f59_arg1, f59_arg2, f59_arg3 )
+			local f59_local0 = DataSources.MPOutfitCategories.getModel( f59_arg0 )
+			local f59_local1 = DataSources.MPSpecialistThemes.getCategoryHelperFunctions[f59_local0.selectedCategory:get()]
+			return f59_local1 and f59_local1( f59_arg0, f59_arg1, f59_arg2, f59_arg3 )
+		end,
+		getCategoryHelperFunctions = {
+			[@"outfit"] = function ( f60_arg0, f60_arg1, f60_arg2, f60_arg3 )
+				local f60_local0 = function ( f61_arg0 )
+					if #f61_arg0.presets == 3 and (f61_arg0.presets[2].lootId == @"hash_40AC40E28D648CB3" or f61_arg0.presets[2].lootId == @"hash_6037D456548D22D4") then
+						for f61_local3, f61_local4 in ipairs( f61_arg0.presets ) do
+							f61_local4.isValid = false
+						end
+					end
+					for f61_local3, f61_local4 in ipairs( f61_arg0.presets ) do
+						if f61_local4.isValid and CoD.PlayerRoleUtility.IsPresetOwned( f60_arg0, f61_local4 ) then
+							return true
+						end
+					end
+					return false
+				end
+				
+				local f60_local1 = function ( f62_arg0 )
+					for f62_local4, f62_local5 in ipairs( f62_arg0.presets ) do
+						if f62_local5.isValid then
+							local f62_local3 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f62_local5.lootId )
+							return f62_local3.available and f62_local3.disableWhenAvailable
+						end
+					end
+					return false
+				end
+				
+				local f60_local2 = function ( f63_arg0, f63_arg1 )
+					local f63_local0 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+					for f63_local5, f63_local6 in ipairs( f63_arg1.presets ) do
+						local f63_local7 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f63_local6.lootId )
+						if f63_local7.isLoot then
+							local f63_local4 = CoD.BlackMarketUtility.LootIdRarities[f63_local7.rarity]
+							if not f63_local4 then
+								f63_local4 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+							end
+							if f63_local4 ~= Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+								if f63_local0 == Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+									f63_local0 = f63_local4
+								else
+									f63_local0 = math.max( f63_local0, f63_local4 )
+								end
+							end
+						end
+					end
+					return f63_local0
+				end
+				
+				return {
+					filter = function ( f64_arg0, f64_arg1 )
+						if not f64_arg1.isValid then
+							return false
+						end
+						local f64_local0 = f60_local0( f64_arg1 )
+						if not f64_local0 then
+							f64_local0 = f60_local1( f64_arg1 )
+						end
+						return f64_local0
+					end
+					,
+					sort = function ( f65_arg0, f65_arg1 )
+						local f65_local0 = f60_local0( f60_arg1.outfits[f65_arg0] )
+						if f65_local0 ~= f60_local0( f60_arg1.outfits[f65_arg1] ) then
+							return f65_local0
+						elseif f65_arg0 == 1 then
+							return false
+						elseif f65_arg1 == 1 then
+							return true
+						else
+							return f60_local2( f65_arg1, f60_arg1.outfits[f65_arg1] ) < f60_local2( f65_arg0, f60_arg1.outfits[f65_arg0] )
+						end
+					end
+					,
+					lookupHighestRarity = f60_local2,
+					selectedIndex = function ()
+						return CoD.PlayerRoleUtility.EquippedOutfitItems[f60_arg0][@"selectedoutfit"]
+					end
+					,
+					dataSourceFunction = ShieldCreateOutfits,
+					decalDataSourceFunction = CoD.PlayerRoleUtility.CreateDecalsForTheme,
+					getBreadcrumbModel = function ( f67_arg0 )
+						return DataSources.SpecialistOutfitBreadcrumbs.getBreadcrumbModelForThemePresetCategory( f60_arg0, f60_arg2, f60_arg3, f67_arg0 )
+					end
+					,
+					getUnlockInfo = function ( f68_arg0 )
+						if f60_local0( f68_arg0 ) then
+							for f68_local4, f68_local5 in ipairs( f68_arg0.presets ) do
+								if f68_local5.isValid then
+									local f68_local3 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f68_local5.lootId )
+									if f68_local3.available and f68_local3.disableWhenAvailable then
+										return f68_local3.unlockInfo or ""
+									end
+								end
+							end
+						end
+						return ""
+					end
+					,
+					getAlertMessage = function ( f69_arg0 )
+						if not f60_local0( f69_arg0 ) then
+							for f69_local4, f69_local5 in ipairs( f69_arg0.presets ) do
+								if f69_local5.isValid then
+									local f69_local3 = CoD.BlackMarketTableUtility.LootInfoLookup( f60_arg0, f69_local5.lootId )
+									if f69_local3.available and f69_local3.disableWhenAvailable then
+										return f69_local3.unlockInfo or ""
+									end
+								end
+							end
+						end
+						return ""
+					end
+					,
+					isDisabled = function ( f70_arg0 )
+						return not f60_local0( f70_arg0 )
+					end
+					
+				}
+			end,
+			[@"war_paint"] = function ( f71_arg0, f71_arg1, f71_arg2, f71_arg3 )
+				local f71_local0 = function ( f72_arg0, f72_arg1 )
+					local f72_local0 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+					for f72_local5, f72_local6 in ipairs( f72_arg1.warPaints ) do
+						local f72_local7 = CoD.PlayerRoleUtility.LookupLootForWarPaint( f71_arg0, f72_local6, f72_arg1.presets )
+						if f72_local7.isLoot then
+							local f72_local4 = CoD.BlackMarketUtility.LootIdRarities[f72_local7.rarity]
+							if not f72_local4 then
+								f72_local4 = Enum[@"lootraritytype"][@"loot_rarity_type_count"]
+							end
+							if f72_local4 ~= Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+								if f72_local0 == Enum[@"lootraritytype"][@"loot_rarity_type_count"] then
+									f72_local0 = f72_local4
+								else
+									f72_local0 = math.max( f72_local0, f72_local4 )
+								end
+							end
+						end
+					end
+					return f72_local0
+				end
+				
+				local f71_local1 = function ( f73_arg0 )
+					local f73_local0 = false
+					for f73_local4, f73_local5 in ipairs( f73_arg0.warPaints ) do
+						if f73_local4 > 1 and CoD.PlayerRoleUtility.IsWarPaintOwned( f71_arg0, f73_local5, f73_arg0.presets ) then
+							f73_local0 = true
+							break
+						end
+					end
+					return f73_local0
+				end
+				
+				return {
+					filter = function ( f74_arg0, f74_arg1 )
+						if not f74_arg1.isValid then
+							return false
+						else
+							return f71_local1( f74_arg1 )
+						end
+					end
+					,
+					sort = function ( f75_arg0, f75_arg1 )
+						if f75_arg0 == 1 then
+							return false
+						elseif f75_arg1 == 1 then
+							return true
+						else
+							return f71_local0( f75_arg1, f71_arg1.outfits[f75_arg1] ) < f71_local0( f75_arg0, f71_arg1.outfits[f75_arg0] )
+						end
+					end
+					,
+					lookupHighestRarity = f71_local0,
+					selectedIndex = function ()
+						return CoD.PlayerRoleUtility.EquippedOutfitItems[f71_arg0][@"hash_4D9FCEAC8FF24CBD"]
+					end
+					,
+					dataSourceFunction = CoD.PlayerRoleUtility.CreateWarPaintsForTheme,
+					decalDataSourceFunction = function ()
+						return ""
+					end
+					,
+					getBreadcrumbModel = function ( f78_arg0 )
+						return DataSources.SpecialistOutfitBreadcrumbs.getBreadcrumbModelForThemeItemType( f71_arg0, f71_arg2, f71_arg3, f78_arg0, Enum[@"characteritemtype"][@"hash_48E3A65D78229DC1"] )
+					end
+					,
+					getUnlockInfo = function ( f79_arg0 )
+						return ""
+					end
+					,
+					getAlertMessage = function ( f80_arg0 )
+						return ""
+					end
+					,
+					isDisabled = function ( f81_arg0 )
+						return false
+					end
+					
+				}
+			end
+		}
+	} )
+
+end
+
+---------------------------
 
 -- Wanted Stuff and Utils for Stats..
 
@@ -337,16 +814,39 @@ local RankUtils = {}
 RankUtils.GetLevelXP = function(level)
 	local sessionmode = Engine[@"CurrentSessionMode"]()
 	local rankTable = ""
+	local rankMult
+	local rankTT
 	local XP = 0
 
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-		rankTable = "gamedata/shield/rankutils/maxrankdata_mp.csv"
-	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-		rankTable = "gamedata/shield/rankutils/maxrankdata_zm.csv"
-	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-		rankTable = "gamedata/shield/rankutils/maxrankdata_wz.csv"
+	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "plevel")
+
+	local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
+
+	if isPrestigeMaster == false then
+		if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
+			rankTable = "gamedata/shield/rankutils/maxrankdata_mp.csv"
+		end
+		if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
+			rankTable = "gamedata/shield/rankutils/maxrankdata_zm.csv"
+		end
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+			rankTable = "gamedata/shield/rankutils/maxrankdata_wz.csv"
+		end
+	else
+		if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
+			rankMult = 55600
+			rankTT = 55
+		end
+		if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
+			rankMult = 57600
+			rankTT = 55
+		end
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+			rankMult = 7500
+			rankTT = 81
+		end
+		local leveldiff = tonumber(level) - rankTT
+		return rankMult * leveldiff
 	end
 
 	if rankTable ~= "" then
@@ -369,35 +869,43 @@ RankUtils.SetRank = function(level)
 	-- local currentPrestige = CoD.PrestigeUtility.GetCurrentPLevel(controller, Engine.CurrentSessionMode())
 	-- local currentRank = CoD.BlackMarketUtility.GetCurrentRank(controller) + 1
 
-	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "PLEVEL")
+	local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "plevel")
+	local sessionmode = Engine[@"CurrentSessionMode"]()
 
 	local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
 	local maxXP = RankUtils.GetLevelXP(tonumber(level))
 
-	if not isPrestigeMaster then
+	if isPrestigeMaster == false then
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rank " .. tonumber(level))
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp " .. maxXP)
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp " .. 0)	
 	else
+		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rank " .. 55)
+
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp " .. RankUtils.GetLevelXP(81))
+		else
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp " .. RankUtils.GetLevelXP(55))
+		end
+
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank " .. tonumber(level)) -- rank for prestige master
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp " .. maxXP)
 	end
 
 	-- shield api to fix online stats here...
-	local sessionmode = Engine[@"CurrentSessionMode"]()
 	local RankFix = string.format("%0.2i", level)
 
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp xp " .. maxXP)
+	if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp xp " .. maxXP)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm xp " .. maxXP)
+	if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm xp " .. maxXP)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz xp " .. maxXP)
+	if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz xp " .. maxXP)
 	end
 
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats " .. tostring(Engine[@"CurrentSessionMode"]()))
@@ -406,28 +914,36 @@ end
 RankUtils.SetPrestige = function(prestige)
 	if not prestige then return end
 
+	local sessionmode = Engine[@"CurrentSessionMode"]()
+
 	-- local currentPrestige = CoD.PrestigeUtility.GetCurrentPLevel(controller, Engine.CurrentSessionMode())
 	if tonumber(prestige) == 11 then
 		-- prestige master here..
-
-		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(10))
+		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(11))
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "PrestigeStatsMaster " .. tostring(Engine[@"CurrentSessionMode"]()))
+
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 81") -- rank for prestige master
+		else
+			Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rank 55")
+		end
+
+		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname paragon_rankxp 0")
 	else
 		Engine[@"execnow"](Engine[@"getprimarycontroller"](), "statsetbyname plevel " .. tonumber(prestige))
 	end
 
 	-- shield api to fix online stats here...
-	local sessionmode = Engine[@"CurrentSessionMode"]()
 	local PrestigeFix = string.format("%0.2i", prestige)
 
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
+	if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
+	if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
 	end
-	if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
+	if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
 	end
 
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats " .. tostring(Engine[@"CurrentSessionMode"]()))
@@ -443,6 +959,20 @@ CoD.OverlayUtility.AddSystemOverlay( "ShieldPrestigeActivate", {
 	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack
 } )
 
+CoD.OverlayUtility.AddSystemOverlay( "ShieldFreshStartActivate", {
+	menuName = "SystemOverlay_Full",
+	frameWidget = "CoD.systemOverlay_Prestige",
+	title = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/fresh_start" ),
+	subtitle = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_0" ),
+	prestigeLayout = CoD.PrestigeUtility.PrestigeOverlayLayouts.RequestProcessing,
+	categoryType = CoD.OverlayUtility.OverlayTypes.Unlock,
+	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack
+} )
+
+CoD.PrestigeUtility.ShowFreshStart = function ( f51_arg0 )
+	return not IsPrestigeLevelAtZero( f51_arg0 )
+end
+
 CoD.PrestigeUtility.EnterPrestigeAction = function ( f13_arg0, f13_arg1, f13_arg2 )
 	local PrestigeCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "PLEVEL" )
 
@@ -451,13 +981,59 @@ CoD.PrestigeUtility.EnterPrestigeAction = function ( f13_arg0, f13_arg1, f13_arg
 		RankUtils.SetPrestige(PrestigeCurrent + 1)
 
 		OpenSystemOverlay(f13_arg0, f13_arg0, f13_arg1, "ShieldPrestigeActivate", nil)
+		EnhPrintInfo("Next Prestige Success!")
 	else
 		OpenSystemOverlay(f13_arg0, f13_arg0, f13_arg1, "RequestProcessingFailedOverlay", nil)
+		EnhPrintInfo("Next Prestige Failed!")
 	end
 end
 
--------------------
-  
+CoD.PrestigeUtility.FreshStartAction = function ( f18_arg0, f18_arg1, f18_arg2 )
+	-- offline stats
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "exec gamedata/stats/zm/playerstats_reset.cfg")
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "exec gamedata/stats/mp/playerstats_reset.cfg")
+
+	-- live stats
+	RankUtils.SetRank(0)
+	RankUtils.SetPrestige(0)
+
+	OpenSystemOverlay(f18_arg0, f18_arg0, f18_arg1, "ShieldFreshStartActivate", nil)
+
+	EnhPrintInfo("Fresh Restart Done")
+end
+
+---------------------------
+
+-- prestige master
+CoD.OverlayUtility.Overlays.PrestigeMasterActivated = {
+	menuName = "SystemOverlay_Compact",
+	postCreateStep = function ( f155_arg0, f155_arg1 )
+		f155_arg0.anyControllerAllowed = true
+	end,
+	title = @"menu/notice",
+	description = @"shield/prestige_master",
+	categoryType = CoD.OverlayUtility.OverlayTypes.Connection,
+	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack,
+	listDatasource = function ( f156_arg0 )
+		DataSources.PrestigeMasterActivated = DataSourceHelpers.ListSetup( "PrestigeMasterActivated", function ( f157_arg0 )
+			return {
+				{
+					models = {
+						displayText = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/ok" )
+					},
+					properties = {
+						action = function ( f158_arg0, f158_arg1, f158_arg2, f158_arg3, f158_arg4 )
+							GoBack( f158_arg4, f158_arg2 )
+						end
+					}
+				}
+			}
+		end, true, nil )
+		return "PrestigeMasterActivated"
+	end
+}
+
+-- unused for now..
 CoD.OverlayUtility.Overlays.ShieldUnlockAllEnabledMessage = {
 	menuName = "SystemOverlay_Compact",
 	postCreateStep = function ( f155_arg0, f155_arg1 )
@@ -514,20 +1090,62 @@ CoD.OverlayUtility.Overlays.ShieldUnlockAllDisabledMessage = {
 	end
 }
 
+-- used
+CoD.OverlayUtility.Overlays.ShieldIPNotice = {
+	menuName = "SystemOverlay_Compact",
+	postCreateStep = function ( f155_arg0, f155_arg1 )
+		f155_arg0.anyControllerAllowed = true
+	end,
+	title = @"menu/notice",
+	description = @"shield/ip_notice",
+	categoryType = CoD.OverlayUtility.OverlayTypes.Connection,
+	[CoD.OverlayUtility.GoBackPropertyName] = CoD.OverlayUtility.DefaultGoBack,
+	listDatasource = function ( f156_arg0 )
+		DataSources.ShieldIPNoticeList = DataSourceHelpers.ListSetup( "ShieldIPNoticeList", function ( f157_arg0 )
+			return {
+				{
+					models = {
+						displayText = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/ok" )
+					},
+					properties = {
+						action = function ( f158_arg0, f158_arg1, f158_arg2, f158_arg3, f158_arg4 )
+							GoBack( f158_arg4, f158_arg2 )
+						end
+					}
+				},
+				{
+					models = {
+						displayText = Engine[@"toupper"]( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_59F068337F7FD41D" ) )
+					},
+					properties = {
+						action = function ( f182_arg0, f182_arg1, f182_arg2, f182_arg3, f182_arg4 )
+							Engine[@"exec"]( f182_arg2, "quit" )
+						end
+						
+					}
+				}
+			}
+		end, true, nil )
+		return "ShieldIPNoticeList"
+	end
+}
+
 local function ShieldUnlockAll_Toggle(Controller)
 	UnlockAll = Engine[@"getdvarint"]("shield_unlock_all")
 
 	if UnlockAll == 1 then
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all true")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all false")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
 local function ShieldUnlockAttachments_Toggle(Controller)
-	UnlockAttachments = Engine[@"getdvarint"]("shield_unlock_attch")
+	UnlockAttachments = Engine[@"getdvarint"]("shield_unlock_attachments")
 
 	if UnlockAttachments == 1 then
 		EnhPrintInfo(UnlockAttachments, "Unlock Attachments")
@@ -554,15 +1172,17 @@ local function ShieldUnlockLoot_Toggle(Controller)
 	end
 end
 
-local function ShieldUnlockCamos_Toggle(Controller)
-	UnlockCamos = Engine[@"getdvarint"]("shield_unlock_camos")
+local function ShieldUnlockCamosCards_Toggle(Controller)
+	UnlockCamos = Engine[@"getdvarint"]("shield_unlock_itemoptions")
 
 	if UnlockCamos == 1 then
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions true")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions false")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
@@ -592,7 +1212,7 @@ end
 
 
 local function ShieldUnlockClassSlots_Toggle(Controller)
-	UnlockClassSlots = Engine[@"getdvarint"]("shield_unlock_classslots")
+	UnlockClassSlots = Engine[@"getdvarint"]("shield_unlock_classes")
 
 	if UnlockClassSlots == 1 then
 		EnhPrintInfo(UnlockClassSlots, "Unlock Class Slots")
@@ -615,6 +1235,10 @@ local function ShieldUnlockBlackMarket_Toggle(Controller)
 	end
 end
 
+local function ShieldShouldUnlockItem_Dvar()
+	return Engine[@"getdvarint"]("allitemsunlocked") == 1
+end
+
 local function RefreshShieldShit()
 
 	-- Dvars for Matchmaking..
@@ -630,32 +1254,38 @@ local function RefreshShieldShit()
 
 	EnhPrintInfo("Refresh Dvars..")
 
-	-- Refresh PLevels (Prestige) and Rank5
-	local RankCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "RANK" )
-	local PrestigeCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "PLEVEL" )
+	-- not needed anymore
+	
+	--[[
+		-- Refresh PLevels (Prestige) and Rank5
+		local RankCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "RANK" )
+		local PrestigeCurrent = Engine[@"getstatbyname"]( Engine[@"getprimarycontroller"](), "PLEVEL" )
 
-	if RankCurrent and PrestigeCurrent then
-		local sessionmode = Engine[@"CurrentSessionMode"]()
-		local RankFix = string.format("%0.2i", RankCurrent) -- fix 01 issues
-		local PrestigeFix = string.format("%0.2i", PrestigeCurrent)
+		if RankCurrent and PrestigeCurrent then
+			local sessionmode = Engine[@"CurrentSessionMode"]()
+			local RankFix = string.format("%0.2i", RankCurrent) -- fix 01 issues
+			local PrestigeFix = string.format("%0.2i", PrestigeCurrent)
 
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
+			if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankFix)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeFix)
+			end
+
+			if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
+			end
+
+			if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
+			end
+
+			EnhPrintInfo(PrestigeCurrent .. " - " .. PrestigeFix .. " - " .. RankCurrent .. " - " .. RankFix, "Refresh Player Stats Data..")
 		end
+	]]
 
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm rank " .. RankFix)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat zm prestige " .. PrestigeFix)
-		end
-
-		if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz rank " .. RankFix)
-			Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat wz prestige " .. PrestigeFix)
-		end
-
-		EnhPrintInfo(PrestigeCurrent .. " - " .. PrestigeFix .. " - " .. RankCurrent .. " - " .. RankFix, "Refresh Player Stats Data..")
-	end
+	ReloadOverrides()
 end
 
 -- Override
@@ -733,6 +1363,54 @@ CoD.LobbyUtility.OpenBotSettings = function ( f105_arg0, f105_arg1 )
 	end )
 end
 
+-- remove annoying new xuid user popups (offer redeem ones)
+CoD.EntitlementUtility.OpenEntitlementPopups = function ( f14_arg0, f14_arg1 )
+	EnhPrintInfo("Open Entitlement Popups Removed..")
+	return false
+end
+
+CoD.EntitlementUtility.OpenEntitlementPopup = function ( f8_arg0, f8_arg1, f8_arg2 )
+	EnhPrintInfo("Entitlement Offer Popups Removed..")
+	return false
+end
+
+-- prestige one (beta token)
+CoD.PrestigeUtility.DisplayBetaRewardInventoryNotification = function ( f17_arg0, f17_arg1, f17_arg2 )
+	EnhPrintInfo("Beta Token Offer Popup Removed..")
+	return false
+end
+
+-- fix wz prestige icons
+CoD.CustomizePrestigeIconUtility.GetCurrentWins = function ( f5_arg0, f5_arg1 )
+	-- useless, only for wz
+	return 999
+end
+
+CoD.CustomizePrestigeIconUtility.IsIconUnlockedByWins = function ( f3_arg0, f3_arg1 )
+	return true
+end
+
+CoD.CustomizePrestigeIconUtility.IsIconUnlockedByLevel = function ( f4_arg0, f4_arg1, f4_arg2, f4_arg3, f4_arg4 )
+
+	-- treyarch being retarded again (failed func for WZ)
+	--if f4_arg4 == Enum[@"emodes"][@"mode_warzone"] then
+	--	return f4_arg0 and f4_arg2 <= f4_arg1 + 1
+	--end
+
+	if Engine[@"CurrentSessionMode"]() == Enum[@"emodes"][@"mode_warzone"] then
+		return f4_arg0 and f4_arg2 <= f4_arg1
+	end
+	
+	local f4_local0 = f4_arg0
+	local f4_local1
+	if f4_arg2 > f4_arg1 + 1 and f4_arg3 ~= Enum[@"hash_79FC886F1051643D"][@"hash_6CBFFC10B9836971"] then
+		f4_local1 = false
+	else
+		f4_local1 = f4_local0 and true
+	end
+	return f4_local1
+end
+
 local function OnBotHardModeChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
 	local dvar_name = f137_arg3
 	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
@@ -759,78 +1437,1163 @@ local function OnBotHardModeChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3,
 	end
 end
 
-local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+local function OnExtraDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
 	local dvar_name = f137_arg3
-	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
-	local f137_local2 = f137_arg1.value
+	local dvar_val = Engine[@"getdvarint"]( dvar_name )
+	local current_val = f137_arg1.value
 	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
 
-	if f137_local2 == f137_local1 then
+	if current_val == dvar_val then
 		return 
 	else
-		Engine[@"setdvar"]( dvar_name, f137_local2 )
+		Engine[@"setdvar"]( dvar_name, current_val )
+	end
+
+	local dvar_val_new = Engine[@"getdvarint"]( dvar_name )
+
+	if dvar_name == "shield_wz_map" then	
+		if current_val == 0 then -- none
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
+		elseif current_val == 1 then -- alt
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 1")
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 0")
+		else -- night
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape 0")
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "set use_wz_escape_alt 1")
+		end
+	end
+
+	if dvar_name == "shield_ui_color" then	
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson lua ui_color " .. dvar_val_new .. " uint64_t")
+	end
+end
+
+local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+	local dvar_name = f137_arg3
+	local dvar_val = Engine[@"getdvarint"]( dvar_name )
+	local current_val = f137_arg1.value
+	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
+
+	if current_val == dvar_val then
+		return 
+	else
+		Engine[@"setdvar"]( dvar_name, current_val )
 	end
 	
 	if dvar_name == "shield_unlock_all" then
 		ShieldUnlockAll_Toggle()
-	elseif dvar_name == "shield_unlock_attch" then
+	elseif dvar_name == "shield_unlock_attachments" then
 		ShieldUnlockAttachments_Toggle()
 	elseif dvar_name == "shield_unlock_loot" then
 		ShieldUnlockLoot_Toggle()
-	elseif dvar_name == "shield_unlock_camos" then
-		ShieldUnlockCamos_Toggle()
+	elseif dvar_name == "shield_unlock_itemoptions" then
+		ShieldUnlockCamosCards_Toggle()
 	elseif dvar_name == "shield_unlock_items" then
 		ShieldItems_Toggle()
-	elseif dvar_name == "shield_unlock_classslots" then
+	elseif dvar_name == "shield_unlock_classes" then
 		ShieldUnlockClassSlots_Toggle()
 	end
 end
 
-------------------
-
---[[
-	CoD.DirectorUtility.ShowDirectorPublic = function ( f124_arg0 )
+local function ShieldIsRoleUnlocked(f119_arg0, f119_arg1, f119_arg2)
+	local f119_local0 = Engine[@"getpositionrolebundleinfo"]( f119_arg1, f119_arg2 )
+	if not f119_local0 then
+		return false
+	elseif f119_local0[@"entitlement"] ~= nil then
+		return Engine[@"hasentitlement"]( f119_arg0, f119_local0[@"entitlement"] )
+	end
+	local f119_local1 = f119_local0[@"hash_7A01F4246639318C"]
+	if f119_local1 and CoDShared.IsIntDvarNonZero( f119_local1 ) then
 		return true
+	elseif f119_local0[@"unlockableitementry"] ~= nil then
+		local f119_local2 = Engine[@"hash_68FF94BB44442412"]( f119_local0[@"unlockableitementry"], f119_arg1 )
+		if f119_local2 > CoDShared.EmptyItemIndex and not Engine[@"isitemlocked"]( f119_arg0, f119_local2, f119_arg1 ) then
+			return true
+		elseif f119_local0[@"hash_41D6157DBA773DA3"] ~= nil and f119_local0[@"hash_41D6157DBA773DA3"] ~= @"hash_0" then
+			local f119_local3 = CoDShared.LootIndexInfoLookup( f119_local0[@"hash_41D6157DBA773DA3"] )
+			if f119_local3 then
+				return CoDShared.IsLootItemOwnedByName( f119_arg0, f119_local3.nameHash )
+			end
+		end
 	end
-
-	CoD.DirectorUtility.ShowDirectorCustom = function ( f125_arg0, f125_arg1 )
-		return false
-	end
-
-	CoD.DirectorUtility.ShowDirectorPrivate = function ( f126_arg0, f126_arg1 )
-		return false
-	end
-]]
-
-------------------
-
---[[
-CoD.CACUtility.IsCACItemLocked = function ( f340_arg0, f340_arg1, f340_arg2 )
-	local f340_local0 = CoD.BaseUtility.GetMenuSessionMode( f340_arg0 )
-	if CoD.CraftUtility.Paintjobs.IsEditor( f340_arg0 ) then
-		return false
-	elseif not CoD.CACUtility.IsProgressionEnabled( f340_local0 ) then
-		return false
-	else
-		local f340_local1 = f340_arg1:getModel()
-		if f340_local1 and f340_local1.globalItemIndex then
-			local cond_engine_item = Engine[@"isitemlocked"]( f340_arg2, f340_local1.globalItemIndex:get(), f340_local0 )
-			EnhPrintInfo("engine isitemlocked", cond_engine_item)
-			return cond_engine_item
-		else
+	if f119_local0[@"hash_5D48E06E94FE4AFA"] == 1 then
+		return true
+	elseif ShieldShouldUnlockItem_Dvar() then
+		return true
+	elseif f119_arg1 == Enum[@"emodes"][@"mode_warzone"] and (not CoDShared.IsIntDvarNonZero( @"hash_4A5FD7D94CFC9DFD" ) or f119_local0[@"modecategory"] ~= Enum[@"emodes"][@"mode_multiplayer"]) then
+		if Engine[@"storagegetbuffer"]( f119_arg0, Enum[@"storagefiletype"][@"storage_wz_stats_online"] ) == nil then
 			return false
+		elseif Engine[@"storagegetbuffer"]( f119_arg0, Enum[@"storagefiletype"][@"storage_common_settings"] ) == nil then
+			return false
+		end
+		local f119_local4 = Engine[@"storagegetbuffer"]( f119_arg0, Enum[@"storagefiletype"][@"hash_1AB0E693244221BC"] )
+		if not f119_local4 then
+			return false
+		end
+		local f119_local5 = Engine[@"hash_682C5756563934AE"]( f119_arg1, f119_arg2 )
+		if f119_local5 and f119_local4[@"characters"][f119_local5] then
+			return f119_local4[@"characters"][f119_local5][@"unlocked"]:get() == 1
+		end
+		return false
+	end
+	return true
+end
+
+-- Reactives and Calling Card Fixes
+CoD.ChallengesUtility.GetCTChallengeTable = function ( f70_arg0 )
+	local f70_local0 = {}
+	for f70_local1 = 1, CoD.CTUtility.NumCTChallenges, 1 do
+		local f70_local4, f70_local5, f70_local6, f70_local7, f70_local8, f70_local9 = CoD.CTUtility.GetCTChallenge( f70_arg0, f70_local1 )
+		if not f70_local6 then
+			f70_local9 = 0
+		end
+		local f70_local10 = table.insert
+		local f70_local11 = f70_local0
+		local f70_local12 = {}
+		local f70_local13 = {
+			title = f70_local7,
+			description = f70_local8,
+			iconId = f70_local9,
+			icon = CoD.ChallengesUtility.GetBackgroundByID( f70_local9 ),
+			statPercent = ShieldShouldUnlockItem_Dvar() and 1 or f70_local4 / f70_local5,
+			statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f70_local4, f70_local5 )
+		}
+		local f70_local14
+		if not f70_local6 then
+			f70_local14 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f70_local14 = false
+		end
+		f70_local13.isLocked = f70_local14
+		f70_local12.models = f70_local13
+		f70_local10( f70_local11, f70_local12 )
+	end
+	return f70_local0
+end
+
+CoD.ChallengesUtility.AddDarkOpsChallengeCardsToList = function ( f68_arg0, f68_arg1, f68_arg2, f68_arg3 )
+	local f68_local0 = CoD.ChallengesUtility.GetChallengeTable( f68_arg0, f68_arg1, f68_arg2, "darkops", function ( f69_arg0, f69_arg1 )
+		return tonumber( f69_arg0.imageID ) < tonumber( f69_arg1.imageID )
+	end )
+	local f68_local1 = 0
+	local f68_local2 = 0
+	local f68_local3 = nil
+	for f68_local7, f68_local8 in ipairs( f68_local0 ) do
+		local f68_local9 = f68_local8.models
+		if f68_local8.properties.isMastery then
+			f68_local3 = f68_local8
+		end
+		table.insert( f68_arg3, f68_local8 )
+		f68_local2 = f68_local2 + 1
+		if not f68_local9.isLocked then
+			f68_local1 = f68_local1 + 1
+		end
+	end
+	if f68_local3 then
+		local f68_local4 = f68_local3.models
+		local f68_local5 = {}
+		local f68_local6 = {
+			title = f68_local4.title,
+			description = f68_local4.description,
+			iconId = f68_local4.iconId,
+			icon = f68_local4.icon,
+			percentComplete = f68_local1 / f68_local2,
+			statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f68_local1, f68_local2 )
+		}
+		if f68_local1 < f68_local2 then
+			local f68_local7 = not ShieldShouldUnlockItem_Dvar()
+		else
+			local f68_local7 = false
+		end
+		f68_local6.isLocked = f68_local7
+		f68_local5.models = f68_local6
+		return f68_local5
+	else
+		
+	end
+end
+
+CoD.ChallengesUtility.AddCombatTrainingChallengesToList = function ( f53_arg0, f53_arg1 )
+	for f53_local0 = 1, CoD.CTUtility.NumCTChallenges, 1 do
+		local f53_local3, f53_local4, f53_local5, f53_local6, f53_local7, f53_local8 = CoD.CTUtility.GetCTChallenge( f53_arg0, f53_local0 )
+		if f53_local3 == nil then
+			f53_local3 = 0
+		end
+		local f53_local9 = table.insert
+		local f53_local10 = f53_arg1
+		local f53_local11 = {}
+		local f53_local12 = {
+			title = Engine[@"hash_4F9F1239CFD921FE"]( f53_local6 ),
+			description = Engine[@"hash_4F9F1239CFD921FE"]( f53_local7 ),
+			iconId = f53_local8,
+			icon = CoD.ChallengesUtility.GetBackgroundByID( f53_local8 ),
+			percentComplete = f53_local3 / f53_local4,
+			statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f53_local3, f53_local4 )
+		}
+		local f53_local13
+		if not f53_local5 then
+			f53_local13 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f53_local13 = false
+		end
+		f53_local12.isLocked = f53_local13
+		f53_local11.models = f53_local12
+		f53_local11.properties = {
+			ctChallenge = true
+		}
+		f53_local9( f53_local10, f53_local11 )
+	end
+end
+
+CoD.ChallengesUtility.AddDefaultCallingCardsToList = function ( f52_arg0, f52_arg1 )
+	for f52_local8, f52_local9 in ipairs( Engine[@"getbackgroundsforcategoryname"]( f52_arg0, "default" ) ) do
+		if not f52_local9.isBGLocked then
+			local f52_local3 = table.insert
+			local f52_local4 = f52_arg1
+			local f52_local5 = {}
+			local f52_local6 = {
+				title = Engine[@"localize"]( f52_local9.description ),
+				description = "",
+				iconId = f52_local9.id,
+				icon = CoD.ChallengesUtility.GetBackgroundByID( f52_local9.id )
+			}
+			local f52_local7 = f52_local9.isBGLocked
+			if f52_local7 then
+				f52_local7 = not ShieldShouldUnlockItem_Dvar()
+			end
+			f52_local6.isLocked = f52_local7
+			f52_local5.models = f52_local6
+			f52_local5.properties = {
+				trialUnlocked = true
+			}
+			f52_local3( f52_local4, f52_local5 )
 		end
 	end
 end
-]]
 
---CoD.CACUtility.IsCACItemLocked = function ( f340_arg0, f340_arg1, f340_arg2 )
+CoD.ChallengesUtility.GetMasteryChallengeCards = function ( f50_arg0, f50_arg1 )
+	local f50_local0 = {}
+	CoD.ChallengesUtility.AddMasteryChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_multiplayer"], "mp", f50_local0 )
+	if not CoD.isPC or not CoD.PCKoreaUtility.ShowKorea15Plus() then
+		CoD.ChallengesUtility.AddMasteryChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_zombies"], "zm", f50_local0 )
+	end
+	CoD.ChallengesUtility.AddMasteryChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_warzone"], "wz", f50_local0 )
+	local f50_local1 = CoD.ChallengesUtility.AddGlobalChallengesToList( f50_arg0, {} )
+	if not CoD.isPC or not CoD.PCKoreaUtility.ShowKorea15Plus() then
+		table.insert( f50_local0, f50_local1 )
+	end
+	local f50_local2, f50_local3, f50_local4, f50_local5, f50_local6 = CoD.CTUtility.GetCTMasterChallenge( f50_arg0 )
+	local f50_local7 = table.insert
+	local f50_local8 = f50_local0
+	local f50_local9 = {}
+	local f50_local10 = {
+		title = Engine[@"hash_4F9F1239CFD921FE"]( f50_local4 ),
+		description = Engine[@"hash_4F9F1239CFD921FE"]( f50_local5 ),
+		iconId = f50_local6,
+		icon = CoD.ChallengesUtility.GetBackgroundByID( f50_local6 ),
+		percentComplete = f50_local2 / f50_local3,
+		statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f50_local2, f50_local3 )
+	}
+	local f50_local11
+	if f50_local2 ~= f50_local3 then
+		f50_local11 = not ShieldShouldUnlockItem_Dvar()
+	else
+		f50_local11 = false
+	end
+	f50_local10.isLocked = f50_local11
+	f50_local9.models = f50_local10
+	f50_local9.properties = {
+		ctChallenge = true
+	}
+	f50_local7( f50_local8, f50_local9 )
+	f50_local7 = {}
+	if not CoD.isPC or not CoD.PCKoreaUtility.ShowKorea15Plus() then
+		f50_local8 = CoD.ChallengesUtility.AddDarkOpsChallengeCardsToList( f50_arg0, Enum[@"emodes"][@"mode_zombies"], "zm", f50_local7 )
+		if f50_local8 and not f50_local8.models.isLocked then
+			table.insert( f50_local0, f50_local8 )
+		end
+	end
+	if f50_arg1 then
+		table.sort( f50_local0, function ( f51_arg0, f51_arg1 )
+			local f51_local0 = f51_arg0.models
+			local f51_local1 = f51_arg1.models
+			if f51_local0.isLocked ~= f51_local1.isLocked then
+				return f51_local1.isLocked
+			else
+				return tonumber( f51_local0.iconId ) < tonumber( f51_local1.iconId )
+			end
+		end )
+	end
+	return f50_local0
+end
 
---CoD.CACUtility.IsItemRefLocked = function ( f339_arg0, f339_arg1, f339_arg2 )
+CoD.ChallengesUtility.GetChallengeTable = function ( f38_arg0, f38_arg1, f38_arg2, f38_arg3, f38_arg4 )
+	local f38_local0 = {}
+	local f38_local1 = Engine[@"getchallengeinfoforimages"]( f38_arg0, f38_arg3, f38_arg1 )
+	if not f38_local1 then
+		return f38_local0
+	end
+	local f38_local2 = Engine[@"getplayerstats"]( f38_arg0, CoD.STATS_LOCATION_NORMAL, f38_arg1 )
+	local f38_local3 = 0
+	local f38_local4 = 0
+	if f38_local2 and f38_local2.PlayerStatsList then
+		f38_local3 = f38_local2.PlayerStatsList.RANK.StatValue:get()
+		f38_local4 = f38_local2.PlayerStatsList.PLEVEL.StatValue:get()
+	end
+	if f38_arg4 then
+		table.sort( f38_local1, f38_arg4 )
+	end
+	for f38_local31, f38_local32 in ipairs( f38_local1 ) do
+		local f38_local33 = f38_local32.challengeRow
+		local f38_local34 = f38_local32.currentChallengeRow
+		local f38_local35 = f38_local32.challengeCategory
+		local f38_local36 = f38_local32.tableNum
+		local f38_local37 = f38_local32.isMastery
+		local f38_local38 = f38_local32.challengeType
+		local f38_local28 = f38_local32.prevChallengeStatValue or 0
+		local f38_local29 = f38_local32.currChallengeStatValue
+		local f38_local39 = f38_local32.imageID
+		local f38_local17 = 0
+		local f38_local18 = 0
+		local f38_local26 = 0
+		local f38_local19 = ""
+		local f38_local40, f38_local23, f38_local24, f38_local27, f38_local25 = nil
+		if f38_local33 ~= nil then
+			local f38_local8 = "gamedata/stats/" .. f38_arg2 .. "/statsmilestones" .. f38_local36 + 1 .. ".csv"
+			local f38_local9 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.TierIdCol ) )
+			local f38_local10 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.TargetValCol )
+			local f38_local11 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.NameStringCol )
+			local f38_local12 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.NameStringCol ) .. "_DESC"
+			local f38_local13 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.XpEarnedCol ) )
+			local f38_local14 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.UnlockRankCol )
+			local f38_local15 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local33, CoD.ChallengesUtility.UnlockPLevelCol )
+			local f38_local16 = CoD.ChallengesUtility.GetLocalizedTierText( f38_local8, f38_local33 )
+			if f38_local14 ~= "" then
+				f38_local17 = tonumber( f38_local14 )
+			end
+			if f38_local15 ~= "" then
+				f38_local18 = tonumber( f38_local15 )
+			end
+			if f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_weapon"] then
+				f38_local19 = Engine[@"hash_4F9F1239CFD921FE"]( Engine[@"getitemname"]( f38_local32.itemIndex, Enum[@"statindexoffset"][@"hash_6569E84652131CD7"], f38_arg1 ) )
+			elseif f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_group"] then
+				f38_local19 = Engine[@"hash_4F9F1239CFD921FE"]( CoD.ChallengesUtility.GetChallengeTypeString( Engine[@"getitemgroupbyindex"]( f38_local32.itemIndex ) ) )
+			elseif f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_attachments"] then
+				f38_local19 = Engine[@"localize"]( Engine[@"getattachmentnamebyindex"]( f38_local32.itemIndex ) )
+			elseif f38_local38 == Enum[@"statsmilestonetypes_t"][@"milestone_gamemode"] then
+				local f38_local20 = Engine[@"getgametypeinfo"]( Engine[@"getgametypename"]( f38_local32.itemIndex ) )
+				local f38_local21 = Engine[@"hash_4F9F1239CFD921FE"]
+				local f38_local22
+				if f38_local20 then
+					f38_local22 = f38_local20[@"challengetypestring"]
+					if not f38_local22 then
+					
+					else
+						f38_local19 = f38_local21( f38_local22 )
+					end
+				end
+				f38_local22 = @"hash_0"
+			end
+			if f38_local16 ~= "" then
+				f38_local23 = true
+			end
+			if not f38_local37 then
+				if f38_local4 < f38_local18 then
+					f38_local24 = true
+					f38_local25 = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_4E2EF437F27777CE", f38_local18 )
+				elseif f38_local4 == 0 and f38_local3 < f38_local17 then
+					f38_local24 = true
+					f38_local25 = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_510EFA40E4B9F78E", CoD.GetRankName( f38_local17, 0, f38_arg1 ), f38_local17 + 1 )
+				end
+			end
+			if f38_local23 and f38_local24 then
+				f38_local16 = Engine[@"localize"]( CoD.ChallengesUtility.TierString[0] )
+			end
+			local f38_local20 = f38_local32.currentChallengeRow
+			if f38_local20 then
+				f38_local12 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.NameStringCol ) .. "_DESC"
+				if f38_local23 then
+					f38_local26 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.TierIdCol ) )
+					f38_local10 = Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.TargetValCol )
+					f38_local13 = tonumber( Engine[@"hash_4C6F8EC444864600"]( f38_local8, f38_local20, CoD.ChallengesUtility.XpEarnedCol ) )
+					f38_local16 = CoD.ChallengesUtility.GetLocalizedTierText( f38_local8, f38_local20 )
+				end
+			end
+			f38_local27 = Engine[@"localize"]( f38_local11, "", f38_local19, f38_local16 )
+			if not f38_local25 then
+				f38_local25 = Engine[@"localize"]( f38_local12, f38_local10, f38_local19 )
+			end
+			if ShieldShouldUnlockItem_Dvar() then
+				f38_local28 = f38_local10
+				f38_local29 = f38_local10
+			end
+			local f38_local21 = f38_local28 / f38_local10
+			local f38_local22 = f38_local29 / f38_local10
+			local f38_local30 = f38_local22 < 1
+			if f38_local35 == "darkops" and not f38_local37 and f38_local30 then
+				f38_local27 = Engine[@"hash_4F9F1239CFD921FE"]( @"challenge/classified" )
+				f38_local25 = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_5D39450F492BCD23" )
+			end
+			table.insert( f38_local0, {
+				models = {
+					title = f38_local27,
+					description = f38_local25,
+					iconId = f38_local39,
+					icon = CoD.ChallengesUtility.GetBackgroundByID( f38_local39 ),
+					maxTier = f38_local9,
+					currentTier = f38_local26,
+					previousVal = f38_local28,
+					currentVal = f38_local29,
+					prevStatPercent = f38_local21,
+					statPercent = ShieldShouldUnlockItem_Dvar() and 1 or f38_local22,
+					statFractionText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f38_local29, f38_local10 ),
+					tierStatus = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_10038A59531FCD1E", f38_local26 + 1, f38_local9 + 1 ),
+					xp = f38_local13,
+					percentComplete = f38_local22,
+					isLocked = f38_local30 and not ShieldShouldUnlockItem_Dvar(),
+					isWZ = f38_arg1 == Enum[@"emodes"][@"mode_warzone"]
+				},
+				properties = {
+					isMastery = f38_local37,
+					isDarkOps = f38_local35 == "darkops",
+					category = f38_local35,
+					targetVal = f38_local10
+				}
+			} )
+		end
+	end
+	return f38_local0
+end
 
---CoD.CACUtility.IsFeatureItemLocked = function ( f345_arg0, f345_arg1, f345_arg2 )
+CoD.PlayerRoleUtility.IsRoleUnlocked = function ( f183_arg0, f183_arg1, f183_arg2 )
+	return ShieldIsRoleUnlocked( f183_arg0, f183_arg1, f183_arg2 )
+end
 
---CoD.CACUtility.IsSignatureWeaponLockedByProgression = function ( f342_arg0, f342_arg1, f342_arg2 )
+CoD.ChallengesUtility.SetupCategoryStatsDatasource = function ( f1_arg0, f1_arg1, f1_arg2 )
+	local f1_local0 = Engine[@"getchallengeinfoforimages"]( f1_arg0, nil, f1_arg1 )
+	local f1_local1 = {
+		[f1_arg2] = {}
+	}
+	f1_local1[f1_arg2].numComplete = 0
+	f1_local1[f1_arg2].numTotal = 0
+	for f1_local8, f1_local9 in pairs( CoD.ChallengesUtility.ChallengeCategoryTable[f1_arg2] ) do
+		for f1_local5, f1_local6 in ipairs( f1_local9 ) do
+			f1_local1[f1_local6] = {}
+			f1_local1[f1_local6].numComplete = 0
+			f1_local1[f1_local6].numTotal = 0
+		end
+		f1_local1[f1_local8] = {}
+		f1_local1[f1_local8].numComplete = 0
+		f1_local1[f1_local8].numTotal = 0
+	end
+	local f1_local2 = nil
+	local f1_local3 = Engine[@"getmodelforcontroller"]( f1_arg0 )
+	if f1_arg1 == Enum[@"emodes"][@"mode_multiplayer"] then
+		f1_local2 = f1_local3:create( "ChallengesMPCategoryStats" )
+	elseif f1_arg1 == Enum[@"emodes"][@"mode_zombies"] then
+		f1_local2 = f1_local3:create( "ChallengesZMCategoryStats" )
+	else
+		f1_local2 = f1_local3:create( "ChallengesWZCategoryStats" )
+	end
+	for f1_local10, f1_local11 in ipairs( f1_local0 ) do
+		local f1_local7 = f1_local11.challengeCategory
+		if not f1_local11.isMastery and f1_local7 ~= "darkops" then
+			assert( f1_local1[f1_local7] )
+			f1_local1[f1_local7].numTotal = f1_local1[f1_local7].numTotal + 1
+			local f1_local12
+			if f1_local11.currChallengeStatValue < Engine[@"hash_4C6F8EC444864600"]( "gamedata/stats/" .. f1_arg2 .. "/statsmilestones" .. f1_local11.tableNum + 1 .. ".csv", f1_local11.currentChallengeRow or f1_local11.challengeRow, CoD.ChallengesUtility.TargetValCol ) then
+				f1_local12 = not ShieldShouldUnlockItem_Dvar()
+			else
+				f1_local12 = false
+			end
+			if not f1_local12 then
+				f1_local1[f1_local7].numComplete = f1_local1[f1_local7].numComplete + 1
+			end
+			local f1_local13, f1_local14, f1_local15, f1_local16 = CoD.ChallengesUtility.SetupIsCategoryLocked( f1_arg0, f1_arg1, f1_arg2, f1_local11 )
+			f1_local1[f1_local7].categoryLocked = f1_local1[f1_local7].categoryLocked or f1_local13
+			f1_local1[f1_local7].categoryLockedText = f1_local1[f1_local7].categoryLockedText or f1_local14
+			f1_local1[f1_local7].unlockRank = f1_local1[f1_local7].unlockRank or f1_local15
+			f1_local1[f1_local7].unlockPLevel = f1_local1[f1_local7].unlockPLevel or f1_local16
+		end
+		if f1_local11.isMastery and f1_local1[f1_local7] then
+			f1_local1[f1_local7].masteryIconId = f1_local11.imageID
+		end
+	end
+	for f1_local10, f1_local11 in pairs( CoD.ChallengesUtility.ChallengeCategoryTable[f1_arg2] ) do
+		local f1_local7 = false
+		local f1_local5, f1_local6 = nil
+		for f1_local13, f1_local14 in ipairs( f1_local11 ) do
+			if not f1_local7 and f1_local1[f1_local14].categoryLocked then
+				if f1_local1[f1_local14].unlockPLevel and (not f1_local6 or f1_local1[f1_local14].unlockPLevel < f1_local6) then
+					f1_local6 = f1_local1[f1_local14].unlockPLevel
+				elseif f1_local1[f1_local14].unlockRank and (not f1_local5 or f1_local1[f1_local14].unlockRank < f1_local5) then
+					f1_local5 = f1_local1[f1_local14].unlockRank
+				end
+			else
+				f1_local7 = true
+			end
+			f1_local1[f1_local10].numComplete = f1_local1[f1_local10].numComplete + f1_local1[f1_local14].numComplete
+			f1_local1[f1_local10].numTotal = f1_local1[f1_local10].numTotal + f1_local1[f1_local14].numTotal
+		end
+		if not f1_local7 then
+			if f1_local6 then
+				f1_local1[f1_local10].categoryLocked = true
+				f1_local1[f1_local10].categoryLockedText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_57FFD6D29AEB436E", f1_local6 )
+			elseif f1_local5 then
+				f1_local1[f1_local10].categoryLocked = true
+				f1_local1[f1_local10].categoryLockedText = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_381C07BC4A11544D", f1_local5 )
+			end
+		else
+			f1_local1[f1_local10].categoryLocked = false
+		end
+		f1_local1[f1_local10].isSuperCategory = true
+		f1_local1[f1_arg2].numComplete = f1_local1[f1_arg2].numComplete + f1_local1[f1_local10].numComplete
+		f1_local1[f1_arg2].numTotal = f1_local1[f1_arg2].numTotal + f1_local1[f1_local10].numTotal
+	end
+	for f1_local10, f1_local11 in pairs( f1_local1 ) do
+		local f1_local7 = 0
+		if f1_local11.numTotal ~= 0 then
+			f1_local7 = f1_local11.numComplete / f1_local11.numTotal
+		end
+		local f1_local5 = f1_local2:create( f1_local10 )
+		local f1_local6 = f1_local5:create( "percentComplete" )
+		f1_local6:set( f1_local7 )
+		f1_local6 = f1_local5:create( "categoryLocked" )
+		f1_local6:set( f1_local11.categoryLocked )
+		f1_local6 = f1_local5:create( "categoryLockedText" )
+		f1_local6:set( f1_local11.categoryLockedText )
+		if f1_local11.masteryIconId then
+			f1_local6 = f1_local5:create( "iconId" )
+			f1_local6:set( f1_local11.masteryIconId )
+		end
+	end
+	return f1_local2
+end
+
+CoD.WeaponOptionsUtility.IsItemLockedHelper = function ( f55_arg0, f55_arg1, f55_arg2 )
+	if not CoD.WeaponOptionsUtility.IsCACPersonalizationProgressionEnabled( f55_arg1, f55_arg2 ) then
+		
+	else
+		
+	end
+	local f55_local0, f55_local1, f55_local2, f55_local3 = CoD.WeaponOptionsUtility.GetWeaponOptionItemInfo( f55_arg0, f55_arg1, f55_arg2 )
+	if f55_local0 and f55_local1 and f55_local2 and f55_local3 then
+		if f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_paintjob"] then
+			return false
+		elseif f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_reticle"] then
+			local f55_local4 = f55_arg1:getModel()
+			if f55_local4.entitlement then
+				f55_local4 = f55_arg1:getModel()
+				if f55_local4.entitlement:get() then
+					return false
+				end
+			end
+		end
+		if (f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_camo"] or f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_reticle"]) and f55_local1 == 0 then
+			return false
+		elseif f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_invalid"] then
+			if f55_local1 == 0 then
+				return false
+			end
+			local f55_local4 = Engine[@"getattachmentref"]( f55_local0, f55_local1 )
+			for f55_local9, f55_local10 in ipairs( CoD.CACUtility.mpPrestigeAttachments ) do
+				if f55_local4 == f55_local10.ref then
+					local f55_local8
+					if CoD.CACUtility.GetWeaponPLevel( f55_arg2, f55_local0 ) < f55_local9 then
+						f55_local8 = not ShieldShouldUnlockItem_Dvar()
+					else
+						f55_local8 = false
+					end
+					return f55_local8
+				end
+			end
+			return false
+		else
+			local f55_local4 = false
+			local f55_local5 = CoD.BaseUtility.GetMenuSessionMode( f55_arg0 )
+			if CoD.SafeGetModelValue( f55_arg1:getModel(), "weaponOptionCategory" ) == "mstr" or f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_reticle"] then
+				f55_local4 = Engine[@"hash_6F1FD722970FDBA3"]( f55_arg2, f55_local0, f55_local3, f55_local5 )
+			else
+				f55_local4 = Engine[@"isitemoptionlocked"]( f55_arg2, f55_local0, f55_local3 )
+			end
+			if f55_local4 then
+				return true
+			else
+				local f55_local6 = f55_local0 and Engine[@"hash_7B98952F69D937F9"]( f55_local0 )
+				local f55_local7 = f55_local6 and CoD.BlackMarketTableUtility.LootInfoLookup( f55_arg2, f55_local6 )
+				if f55_local2 == Enum[@"eweaponoptiongroup"][@"weaponoption_group_camo"] and f55_local7 and f55_local7.isLoot then
+					return CoD.WeaponOptionsUtility.IsDarkmatterLockedForDLC( f55_arg2, f55_local0, f55_local5, f55_local2, f55_local3 )
+				else
+					return f55_local4
+				end
+			end
+		end
+	else
+		return false
+	end
+end
+
+CoD.CACUtility.GetHighestPermanentlyCompletedActiveCamoStage = function ( f118_arg0, f118_arg1, f118_arg2 )
+	local f118_local0 = 1
+	local f118_local1 = CoD.PlayerStatsUtility.GetStorageBufferForPlayer( f118_arg0 )
+	f118_local1 = f118_local1 and f118_local1[@"playerstatslist"]
+	if not f118_local1 then
+		return f118_local0
+	elseif f118_arg2 then
+		for f118_local2 = 1, #f118_arg1.stages, 1 do
+			if f118_arg1.stages[f118_local2][@"disabled"] == 1 then
+				return f118_local0
+			end
+			f118_local0 = f118_local2
+		end
+		return f118_local0
+	elseif ShieldShouldUnlockItem_Dvar() and #f118_arg1.stages >= CoD.CACUtility.BaseUnwrappedStageForActiveCamo then
+		return CoD.CACUtility.BaseUnwrappedStageForActiveCamo
+	end
+	for f118_local6, f118_local7 in ipairs( f118_arg1.stages ) do
+		local f118_local8 = f118_local7[@"permanentstatname"]
+		local f118_local9 = f118_local7[@"hash_5181D2404B77545F"]
+		if f118_local8 and f118_local9 then
+			local f118_local5 = f118_local1[f118_local8]
+			if f118_local5 then
+				f118_local5 = f118_local1[f118_local8][@"challengevalue"]:get()
+			end
+			if f118_local5 and f118_local9 <= f118_local5 then
+				f118_local0 = f118_local6 + 1
+			end
+		end
+	end
+	return f118_local0
+end
+
+---------------------------
+
+CoD.Shield_NameEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_NameEditBox.__defaultWidth = 340
+CoD.Shield_NameEditBox.__defaultHeight = 60
+CoD.Shield_NameEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.Shield_NameEditBox )
+	self.id = "Shield_NameEditBox"
+	self.soundSet = "default"
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
+	Backing:setRGB( 0, 0, 0 )
+	Backing:setAlpha( 0.5 )
+	self:addElement( Backing )
+	self.Backing = Backing
+	
+	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	Frame:setRGB( 0.78, 0.74, 0.67 )
+	Frame:setAlpha( 0.04 )
+	self:addElement( Frame )
+	self.Frame = Frame
+	
+	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Corner )
+	self.Corner = Corner
+	
+	local TextBox = LUI.UIText.new( 0, 0, 20 + 70, 320 + 70, 0.5, 0.5, -10.5, 10.5 )
+	TextBox:setRGB( 0.78, 0.74, 0.67 )
+	TextBox:setTTF( "notosans_regular" )
+	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( TextBox )
+	self.TextBox = TextBox
+
+	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
+	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
+	RankHighlight:setTTF( "notosans_regular" )
+	RankHighlight:setText("^2Set Rank: ")
+	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( RankHighlight )
+	self.RankHighlight = RankHighlight
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	local f1_local5 = self
+	self.__editControlMaxChar = 16
+	--self.__editControlNumerical = 1
+	self.__editControlIsInteger = 0
+	self.__editControlMin = 0
+	self.__editControlMax = 1000
+
+	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
+
+	CoD.BaseUtility.SetUseStencil( self )
+	DisableModelStringReplacement( TextBox )
+
+	return self
+end
+
+CoD.Shield_NameEditBox.__resetProperties = function ( f3_arg0 )
+	f3_arg0.Corner:completeAnimation()
+	f3_arg0.Frame:completeAnimation()
+	f3_arg0.Backing:completeAnimation()
+	f3_arg0.TextBox:completeAnimation()
+	f3_arg0.Corner:setScale( 1, 1 )
+	f3_arg0.Frame:setAlpha( 0.04 )
+	f3_arg0.Backing:setAlpha( 0.5 )
+	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
+end
+
+CoD.Shield_NameEditBox.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f4_arg0, f4_arg1 )
+			f4_arg0:__resetProperties()
+			f4_arg0:setupElementClipCounter( 0 )
+		end,
+		Focus = function ( f5_arg0, f5_arg1 )
+			f5_arg0:__resetProperties()
+			f5_arg0:setupElementClipCounter( 3 )
+			f5_arg0.Backing:completeAnimation()
+			f5_arg0.Backing:setAlpha( 0.8 )
+			f5_arg0.clipFinished( f5_arg0.Backing )
+			f5_arg0.Frame:completeAnimation()
+			f5_arg0.Frame:setAlpha( 0.6 )
+			f5_arg0.clipFinished( f5_arg0.Frame )
+			f5_arg0.Corner:completeAnimation()
+			f5_arg0.Corner:setScale( 0.98, 0.9 )
+			f5_arg0.clipFinished( f5_arg0.Corner )
+		end,
+		GainFocus = function ( f6_arg0, f6_arg1 )
+			f6_arg0:__resetProperties()
+			f6_arg0:setupElementClipCounter( 3 )
+			local f6_local0 = function ( f7_arg0 )
+				f6_arg0.Backing:beginAnimation( 200 )
+				f6_arg0.Backing:setAlpha( 0.8 )
+				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Backing:completeAnimation()
+			f6_arg0.Backing:setAlpha( 0.5 )
+			f6_local0( f6_arg0.Backing )
+			local f6_local1 = function ( f8_arg0 )
+				f6_arg0.Frame:beginAnimation( 200 )
+				f6_arg0.Frame:setAlpha( 0.6 )
+				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Frame:completeAnimation()
+			f6_arg0.Frame:setAlpha( 0.04 )
+			f6_local1( f6_arg0.Frame )
+			local f6_local2 = function ( f9_arg0 )
+				f6_arg0.Corner:beginAnimation( 200 )
+				f6_arg0.Corner:setScale( 0.98, 0.9 )
+				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Corner:completeAnimation()
+			f6_arg0.Corner:setScale( 1, 1 )
+			f6_local2( f6_arg0.Corner )
+		end,
+		LoseFocus = function ( f10_arg0, f10_arg1 )
+			f10_arg0:__resetProperties()
+			f10_arg0:setupElementClipCounter( 3 )
+			local f10_local0 = function ( f11_arg0 )
+				f10_arg0.Backing:beginAnimation( 200 )
+				f10_arg0.Backing:setAlpha( 0.5 )
+				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Backing:completeAnimation()
+			f10_arg0.Backing:setAlpha( 0.8 )
+			f10_local0( f10_arg0.Backing )
+			local f10_local1 = function ( f12_arg0 )
+				f10_arg0.Frame:beginAnimation( 200 )
+				f10_arg0.Frame:setAlpha( 0.04 )
+				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Frame:completeAnimation()
+			f10_arg0.Frame:setAlpha( 0.6 )
+			f10_local1( f10_arg0.Frame )
+			local f10_local2 = function ( f13_arg0 )
+				f10_arg0.Corner:beginAnimation( 200 )
+				f10_arg0.Corner:setScale( 1, 1 )
+				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Corner:completeAnimation()
+			f10_arg0.Corner:setScale( 0.98, 0.9 )
+			f10_local2( f10_arg0.Corner )
+		end,
+		InputFocus = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 1 )
+			f14_arg0.TextBox:completeAnimation()
+			f14_arg0.TextBox:setRGB( 1, 1, 1 )
+			f14_arg0.clipFinished( f14_arg0.TextBox )
+		end
+	}
+}
+
+CoD.Shield_NameEditBox.__onClose = function ( f15_arg0 )
+	f15_arg0.Frame:close()
+	f15_arg0.Corner:close()
+	f15_arg0.TextBox:close()
+end
+
+CoD.Shield_RankEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_RankEditBox.__defaultWidth = 340
+CoD.Shield_RankEditBox.__defaultHeight = 60
+CoD.Shield_RankEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.Shield_RankEditBox )
+	self.id = "Shield_RankEditBox"
+	self.soundSet = "default"
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
+	Backing:setRGB( 0, 0, 0 )
+	Backing:setAlpha( 0.5 )
+	self:addElement( Backing )
+	self.Backing = Backing
+	
+	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	Frame:setRGB( 0.78, 0.74, 0.67 )
+	Frame:setAlpha( 0.04 )
+	self:addElement( Frame )
+	self.Frame = Frame
+	
+	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Corner )
+	self.Corner = Corner
+	
+	local TextBox = LUI.UIText.new( 0, 0, 20 + 70, 320 + 70, 0.5, 0.5, -10.5, 10.5 )
+	TextBox:setRGB( 0.78, 0.74, 0.67 )
+	TextBox:setTTF( "notosans_regular" )
+	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( TextBox )
+	self.TextBox = TextBox
+
+	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
+	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
+	RankHighlight:setTTF( "notosans_regular" )
+	RankHighlight:setText("^2Set Rank: ")
+	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( RankHighlight )
+	self.RankHighlight = RankHighlight
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	local f1_local5 = self
+	self.__editControlMaxChar = 4
+	--self.__editControlNumerical = 1
+	self.__editControlIsInteger = 1
+	self.__editControlMin = 0
+	self.__editControlMax = 1000
+
+	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
+
+	CoD.BaseUtility.SetUseStencil( self )
+	DisableModelStringReplacement( TextBox )
+
+	return self
+end
+
+CoD.Shield_RankEditBox.__resetProperties = function ( f3_arg0 )
+	f3_arg0.Corner:completeAnimation()
+	f3_arg0.Frame:completeAnimation()
+	f3_arg0.Backing:completeAnimation()
+	f3_arg0.TextBox:completeAnimation()
+	f3_arg0.Corner:setScale( 1, 1 )
+	f3_arg0.Frame:setAlpha( 0.04 )
+	f3_arg0.Backing:setAlpha( 0.5 )
+	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
+end
+
+CoD.Shield_RankEditBox.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f4_arg0, f4_arg1 )
+			f4_arg0:__resetProperties()
+			f4_arg0:setupElementClipCounter( 0 )
+		end,
+		Focus = function ( f5_arg0, f5_arg1 )
+			f5_arg0:__resetProperties()
+			f5_arg0:setupElementClipCounter( 3 )
+			f5_arg0.Backing:completeAnimation()
+			f5_arg0.Backing:setAlpha( 0.8 )
+			f5_arg0.clipFinished( f5_arg0.Backing )
+			f5_arg0.Frame:completeAnimation()
+			f5_arg0.Frame:setAlpha( 0.6 )
+			f5_arg0.clipFinished( f5_arg0.Frame )
+			f5_arg0.Corner:completeAnimation()
+			f5_arg0.Corner:setScale( 0.98, 0.9 )
+			f5_arg0.clipFinished( f5_arg0.Corner )
+		end,
+		GainFocus = function ( f6_arg0, f6_arg1 )
+			f6_arg0:__resetProperties()
+			f6_arg0:setupElementClipCounter( 3 )
+			local f6_local0 = function ( f7_arg0 )
+				f6_arg0.Backing:beginAnimation( 200 )
+				f6_arg0.Backing:setAlpha( 0.8 )
+				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Backing:completeAnimation()
+			f6_arg0.Backing:setAlpha( 0.5 )
+			f6_local0( f6_arg0.Backing )
+			local f6_local1 = function ( f8_arg0 )
+				f6_arg0.Frame:beginAnimation( 200 )
+				f6_arg0.Frame:setAlpha( 0.6 )
+				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Frame:completeAnimation()
+			f6_arg0.Frame:setAlpha( 0.04 )
+			f6_local1( f6_arg0.Frame )
+			local f6_local2 = function ( f9_arg0 )
+				f6_arg0.Corner:beginAnimation( 200 )
+				f6_arg0.Corner:setScale( 0.98, 0.9 )
+				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Corner:completeAnimation()
+			f6_arg0.Corner:setScale( 1, 1 )
+			f6_local2( f6_arg0.Corner )
+		end,
+		LoseFocus = function ( f10_arg0, f10_arg1 )
+			f10_arg0:__resetProperties()
+			f10_arg0:setupElementClipCounter( 3 )
+			local f10_local0 = function ( f11_arg0 )
+				f10_arg0.Backing:beginAnimation( 200 )
+				f10_arg0.Backing:setAlpha( 0.5 )
+				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Backing:completeAnimation()
+			f10_arg0.Backing:setAlpha( 0.8 )
+			f10_local0( f10_arg0.Backing )
+			local f10_local1 = function ( f12_arg0 )
+				f10_arg0.Frame:beginAnimation( 200 )
+				f10_arg0.Frame:setAlpha( 0.04 )
+				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Frame:completeAnimation()
+			f10_arg0.Frame:setAlpha( 0.6 )
+			f10_local1( f10_arg0.Frame )
+			local f10_local2 = function ( f13_arg0 )
+				f10_arg0.Corner:beginAnimation( 200 )
+				f10_arg0.Corner:setScale( 1, 1 )
+				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Corner:completeAnimation()
+			f10_arg0.Corner:setScale( 0.98, 0.9 )
+			f10_local2( f10_arg0.Corner )
+		end,
+		InputFocus = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 1 )
+			f14_arg0.TextBox:completeAnimation()
+			f14_arg0.TextBox:setRGB( 1, 1, 1 )
+			f14_arg0.clipFinished( f14_arg0.TextBox )
+		end
+	}
+}
+
+CoD.Shield_RankEditBox.__onClose = function ( f15_arg0 )
+	f15_arg0.Frame:close()
+	f15_arg0.Corner:close()
+	f15_arg0.TextBox:close()
+end
+
+CoD.Shield_PrestigeEditBox = InheritFrom( LUI.UIElement )
+CoD.Shield_PrestigeEditBox.__defaultWidth = 340
+CoD.Shield_PrestigeEditBox.__defaultHeight = 60
+CoD.Shield_PrestigeEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.Shield_PrestigeEditBox )
+	self.id = "Shield_PrestigeEditBox"
+	self.soundSet = "default"
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
+	Backing:setRGB( 0, 0, 0 )
+	Backing:setAlpha( 0.5 )
+	self:addElement( Backing )
+	self.Backing = Backing
+	
+	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	Frame:setRGB( 0.78, 0.74, 0.67 )
+	Frame:setAlpha( 0.04 )
+	self:addElement( Frame )
+	self.Frame = Frame
+	
+	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Corner )
+	self.Corner = Corner
+	
+	local TextBox = LUI.UIText.new( 0, 0, 20 + 95, 320 + 95, 0.5, 0.5, -10.5, 10.5 )
+	TextBox:setRGB( 0.78, 0.74, 0.67 )
+	TextBox:setTTF( "notosans_regular" )
+	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( TextBox )
+	self.TextBox = TextBox
+
+	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
+	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
+	RankHighlight:setTTF( "notosans_regular" )
+	RankHighlight:setText("^2Set Prestige: ")
+	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	self:addElement( RankHighlight )
+	self.RankHighlight = RankHighlight
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	self.__editControlMaxChar = 2
+	self.__editControlIsInteger = 1
+	self.__editControlMin = 0
+	self.__editControlMax = 1000
+
+	CoD.BaseUtility.SetUseStencil( self )
+	DisableModelStringReplacement( TextBox )
+
+	return self
+end
+
+CoD.Shield_PrestigeEditBox.__resetProperties = function ( f3_arg0 )
+	f3_arg0.Corner:completeAnimation()
+	f3_arg0.Frame:completeAnimation()
+	f3_arg0.Backing:completeAnimation()
+	f3_arg0.TextBox:completeAnimation()
+	f3_arg0.Corner:setScale( 1, 1 )
+	f3_arg0.Frame:setAlpha( 0.04 )
+	f3_arg0.Backing:setAlpha( 0.5 )
+	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
+end
+
+CoD.Shield_PrestigeEditBox.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f4_arg0, f4_arg1 )
+			f4_arg0:__resetProperties()
+			f4_arg0:setupElementClipCounter( 0 )
+		end,
+		Focus = function ( f5_arg0, f5_arg1 )
+			f5_arg0:__resetProperties()
+			f5_arg0:setupElementClipCounter( 3 )
+			f5_arg0.Backing:completeAnimation()
+			f5_arg0.Backing:setAlpha( 0.8 )
+			f5_arg0.clipFinished( f5_arg0.Backing )
+			f5_arg0.Frame:completeAnimation()
+			f5_arg0.Frame:setAlpha( 0.6 )
+			f5_arg0.clipFinished( f5_arg0.Frame )
+			f5_arg0.Corner:completeAnimation()
+			f5_arg0.Corner:setScale( 0.98, 0.9 )
+			f5_arg0.clipFinished( f5_arg0.Corner )
+		end,
+		GainFocus = function ( f6_arg0, f6_arg1 )
+			f6_arg0:__resetProperties()
+			f6_arg0:setupElementClipCounter( 3 )
+			local f6_local0 = function ( f7_arg0 )
+				f6_arg0.Backing:beginAnimation( 200 )
+				f6_arg0.Backing:setAlpha( 0.8 )
+				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Backing:completeAnimation()
+			f6_arg0.Backing:setAlpha( 0.5 )
+			f6_local0( f6_arg0.Backing )
+			local f6_local1 = function ( f8_arg0 )
+				f6_arg0.Frame:beginAnimation( 200 )
+				f6_arg0.Frame:setAlpha( 0.6 )
+				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Frame:completeAnimation()
+			f6_arg0.Frame:setAlpha( 0.04 )
+			f6_local1( f6_arg0.Frame )
+			local f6_local2 = function ( f9_arg0 )
+				f6_arg0.Corner:beginAnimation( 200 )
+				f6_arg0.Corner:setScale( 0.98, 0.9 )
+				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
+				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
+			end
+			
+			f6_arg0.Corner:completeAnimation()
+			f6_arg0.Corner:setScale( 1, 1 )
+			f6_local2( f6_arg0.Corner )
+		end,
+		LoseFocus = function ( f10_arg0, f10_arg1 )
+			f10_arg0:__resetProperties()
+			f10_arg0:setupElementClipCounter( 3 )
+			local f10_local0 = function ( f11_arg0 )
+				f10_arg0.Backing:beginAnimation( 200 )
+				f10_arg0.Backing:setAlpha( 0.5 )
+				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Backing:completeAnimation()
+			f10_arg0.Backing:setAlpha( 0.8 )
+			f10_local0( f10_arg0.Backing )
+			local f10_local1 = function ( f12_arg0 )
+				f10_arg0.Frame:beginAnimation( 200 )
+				f10_arg0.Frame:setAlpha( 0.04 )
+				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Frame:completeAnimation()
+			f10_arg0.Frame:setAlpha( 0.6 )
+			f10_local1( f10_arg0.Frame )
+			local f10_local2 = function ( f13_arg0 )
+				f10_arg0.Corner:beginAnimation( 200 )
+				f10_arg0.Corner:setScale( 1, 1 )
+				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
+				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
+			end
+			
+			f10_arg0.Corner:completeAnimation()
+			f10_arg0.Corner:setScale( 0.98, 0.9 )
+			f10_local2( f10_arg0.Corner )
+		end,
+		InputFocus = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 1 )
+			f14_arg0.TextBox:completeAnimation()
+			f14_arg0.TextBox:setRGB( 1, 1, 1 )
+			f14_arg0.clipFinished( f14_arg0.TextBox )
+		end
+	}
+}
+
+CoD.Shield_PrestigeEditBox.__onClose = function ( f15_arg0 )
+	f15_arg0.Frame:close()
+	f15_arg0.Corner:close()
+	f15_arg0.TextBox:close()
+end
+
+---------------------------
 
 -- Data Sources
 -- Buttons in Extra Main
@@ -925,7 +2688,7 @@ DataSources.DirectorExtraHomeButtonsCustom = ListHelper_SetupDataSource( "Direct
 				iconBackgroundFocus = @"ui_icon_blackmarket_store_tile_focus_05",
 				showOnLeft = true,
 				small = false,
-				locked = true -- later support
+				locked = false -- later support
 			},
 			properties = {
 				action = CoD.DirectorUtility.DirectorSelectOpenPopup,
@@ -1027,8 +2790,276 @@ DataSources.DirectorExtraHomeButtonsCustom = ListHelper_SetupDataSource( "Direct
 	return f85_local0
 end )
 
--- Shield's Server Data
-DataSources.ShieldListServers = DataSourceHelpers.ListSetup( "ShieldListServers", function ( f3_arg0, f3_arg1 )
+-- Pregame Buttons (checks for enh main mod)
+if not DataSources.DirectorPregameButtonsCustom then
+	DataSources.DirectorPregameButtonsCustom = ListHelper_SetupDataSource( "DirectorPregameButtonsCustom", function ( f115_arg0, f115_arg1 )
+		local f115_local0 = {}
+		local f115_local1 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "lobbyRoot.lobbyMainMode" )
+		f115_local1 = f115_local1:get()
+		local f115_local2 = LuaUtils.GetEModeForLobbyMainMode( f115_local1 )
+		local f115_local3 = CoD.BreadcrumbUtility.GetStorageLoadoutBufferForPlayer( f115_arg0, f115_local2 )
+		local f115_local4 = function ( f116_arg0, f116_arg1 )
+			local f116_local0 = {}
+			local f116_local1 = f116_arg0.hintText
+			local f116_local2 = false
+			local f116_local3 = false
+			if not f116_local1 and f116_arg0.featureItemIndex then
+				f116_local1 = nil
+				if CoD.CACUtility.IsFeatureItemLocked( f115_arg0, f116_arg0.featureItemIndex, f115_local2 ) then
+					f116_local1 = CoD.GetUnlockStringForItemIndex( f115_arg0, f116_arg0.featureItemIndex, Enum[@"statindexoffset"][@"hash_13057ABF96AF8289"], f115_local2 )
+				end
+			end
+			if f116_arg0.newBreadcrumbFunc then
+				f116_local2 = f116_arg0.newBreadcrumbFunc( nil, f115_arg0, f115_local2 )
+			end
+			if f116_arg0.hasRestrictionsEquippedFunc then
+				f116_local3 = f116_arg0.hasRestrictionsEquippedFunc( f115_arg0 )
+			end
+			local f116_local4 = table.insert
+			local f116_local5 = f115_local0
+			local f116_local6 = {}
+			local f116_local7 = {
+				name = f116_arg0.name,
+				subtitle = f116_arg0.subtitle,
+				iconBackground = f116_arg0.iconBackground,
+				featureItemIndex = f116_arg0.featureItemIndex or -1,
+				showPregameButton = f116_arg0.showPregameButton,
+				hintText = f116_local1 or "",
+				hasBreadcrumb = f116_local2,
+				isRestricted = f116_local3,
+				trialLocked = f116_arg0.trialLocked or false
+			}
+			local f116_local8 = f116_arg0.breadcrumbModel
+			if not f116_local8 then
+				f116_local8 = Engine[@"getglobalmodel"]()
+			end
+			f116_local7.breadcrumbModel = f116_local8
+			f116_local6.models = f116_local7
+			f116_local6.properties = {
+				action = f116_arg1.action,
+				actionParam = f116_arg1.actionParam,
+				selectIndex = f116_arg1.selectIndex
+			}
+			f116_local4( f116_local5, f116_local6 )
+		end
+		
+		if f115_local1 == Enum[@"lobbymainmode"][@"lobby_mainmode_mp"] then
+			local f115_local5 = Engine[@"getglobalmodel"]()
+			f115_local5 = f115_local5["lobbyRoot.selectedGameType"]
+			local f115_local6 = true
+			if f115_arg1:getParent() then
+				local f115_local7 = f115_arg1:getParent()
+				if f115_local7._preGameType == "custom" and CoD.DirectorUtility.HideCustomizationGametypes[f115_local5:get()] then
+					f115_local6 = false
+				end
+			end
+			if f115_arg1:getParent() then
+				local f115_local7 = f115_arg1:getParent()
+				if f115_local7._preGameType == "public" then
+					f115_local7 = Engine[@"getglobalmodel"]()
+					f115_local7 = f115_local7["lobbyRoot.playlistId"]
+					if f115_local7 and f115_local7:get() then
+						local f115_local8 = IsLobbyNetworkModeLive()
+						if f115_local8 then
+							f115_local8 = Engine[@"getplaylistinfobyid"]( f115_local7:get() )
+						end
+						if f115_local8 and #f115_local8.rotationList > 0 then
+							f115_local6 = not CoD.DirectorUtility.HideCustomizationPlaylistGametypes[f115_local8.rotationList[1].gametype]
+						end
+					end
+				end
+			end
+			if not CoDShared.IsInTheaterLobby() then
+				if not IsLobbyNetworkModeLAN() and (not CoD.DirectorUtility.IsOfflineDemo() or Engine[@"hash_5CB675CA7856DA25"]()) then
+					f115_local4( {
+						name = @"menu/depot",
+						subtitle = @"menu/depot",
+						iconBackground = @"$blacktransparent",
+						showPregameButton = true,
+						breadcrumbModel = DataSources.DepotBreadcrumbs.getModel( f115_arg0 )
+					}, {
+						action = CoD.DirectorUtility.OpenDirectorPersonalizationMenu,
+						actionParam = {
+							_sessionMode = f115_local2,
+							_storageLoadoutBuffer = f115_local3,
+							_allowsQuickSelect = true
+						}
+					} )
+					f115_local4( {
+						name = @"hash_6FF94A9EB646C873",
+						subtitle = @"hash_6FF94A9EB646C873",
+						iconBackground = @"$blacktransparent",
+						showPregameButton = true,
+						breadcrumbModel = DataSources.CharacterBreadcrumbs.recreateCharacterBreadcrumbModelsIfNeeded( f115_arg0, f115_local2 )
+					}, {
+						action = CoD.DirectorUtility.OpenDirectorChangeCharacterMenu,
+						actionParam = {
+							_sessionMode = f115_local2,
+							_storageLoadoutBuffer = f115_local3,
+							_selectIndex = 1
+						}
+					} )
+				end
+				f115_local4( {
+					name = @"menu/change",
+					subtitle = @"hash_31A1B9A85C55950F",
+					iconBackground = @"$blacktransparent",
+					showPregameButton = f115_local6,
+					newBreadcrumbFunc = CoD.BreadcrumbUtility.IsAnyScorestreaksNew,
+					hasRestrictionsEquippedFunc = CoD.CACUtility.AnyEquippedScorestreaksBanned
+				}, {
+					action = CoD.DirectorUtility.DirectorOpenOverlayWithMenuSessionMode,
+					actionParam = {
+						menuName = "SupportSelection",
+						eMode = f115_local2
+					}
+				} )
+				f115_local4( {
+					name = @"menu/edit",
+					subtitle = @"hash_6C705394F8BCCCC9",
+					iconBackground = @"$blacktransparent",
+					featureItemIndex = CoD.CACUtility.GetFeatureCACItemIndex(),
+					showPregameButton = f115_local6,
+					newBreadcrumbFunc = CoD.BreadcrumbUtility.IsAnythingInCACNew,
+					hasRestrictionsEquippedFunc = CoD.CACUtility.AnyClassContainsRestrictedItems
+				}, {
+					action = CoD.DirectorUtility.OpenCACWithMenuSessionMode,
+					actionParam = {
+						eMode = f115_local2
+					},
+					selectIndex = true
+				} )
+			end
+		end
+		if f115_local1 == Enum[@"lobbymainmode"][@"lobby_mainmode_zm"] then
+			if not IsLobbyNetworkModeLAN() and (not CoD.DirectorUtility.IsOfflineDemo() or Engine[@"hash_5CB675CA7856DA25"]()) then
+				f115_local4( {
+					name = @"hash_249E353FB642CB3F",
+					subtitle = @"hash_249E353FB642CB3F",
+					iconBackground = @"$blacktransparent",
+					showPregameButton = true,
+					breadcrumbModel = DataSources.CharacterBreadcrumbs.recreateCharacterBreadcrumbModelsIfNeeded( f115_arg0, f115_local2 )
+				}, {
+					action = CoD.DirectorUtility.OpenDirectorChangeCharacterMenu,
+					actionParam = {
+						_sessionMode = f115_local2,
+						_storageLoadoutBuffer = f115_local3,
+						_selectIndex = 1
+					}
+				} )
+			end
+			f115_local4( {
+				name = @"menu/armory",
+				subtitle = @"menu/armory",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true
+			}, {
+				action = CoD.DirectorUtility.OpenArmoryMenu,
+				actionParam = {
+					_sessionMode = f115_local2,
+					_loadoutSlot = "armory"
+				}
+			} )
+			f115_local4( {
+				name = @"menu/edit",
+				subtitle = @"hash_43E876868767ECEB",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true
+			}, {
+				action = CoD.DirectorUtility.OpenCACWithMenuSessionMode,
+				actionParam = {
+					eMode = f115_local2
+				},
+				selectIndex = true
+			} )
+		end
+		if f115_local1 == Enum[@"lobbymainmode"][@"lobby_mainmode_wz"] then
+			if not IsLobbyNetworkModeLAN() and (not CoD.DirectorUtility.IsOfflineDemo() or Engine[@"hash_5CB675CA7856DA25"]()) then
+				f115_local4( {
+					name = @"menu/depot",
+					subtitle = @"menu/depot",
+					iconBackground = @"$blacktransparent",
+					showPregameButton = true,
+					breadcrumbModel = DataSources.DepotBreadcrumbs.getModel( f115_arg0 )
+				}, {
+					action = CoD.DirectorUtility.OpenDirectorPersonalizationMenu,
+					actionParam = {
+						_sessionMode = f115_local2,
+						_storageLoadoutBuffer = f115_local3,
+						_allowsQuickSelect = true
+					}
+				} )
+			end
+			f115_local4( {
+				name = @"hash_249E353FB642CB3F",
+				subtitle = @"hash_249E353FB642CB3F",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true,
+				breadcrumbModel = DataSources.CharacterBreadcrumbs.recreateCharacterBreadcrumbModelsIfNeeded( f115_arg0, f115_local2 )
+			}, {
+				action = CoD.DirectorUtility.OpenDirectorChangeCharacterMenu,
+				actionParam = {
+					_sessionMode = f115_local2,
+					_storageLoadoutBuffer = f115_local3
+				}
+			} )
+			f115_local4( {
+				name = @"menu/armory",
+				subtitle = @"menu/armory",
+				iconBackground = @"$blacktransparent",
+				showPregameButton = true,
+				trialLocked = IsGameTrial()
+			}, {
+				action = CoD.DirectorUtility.OpenWZPersonalizeWeaponMenu,
+				actionParam = {
+					_sessionMode = f115_local2,
+					_loadoutSlot = "wzpersonalize"
+				},
+				selectIndex = true
+			} )
+		end
+		local f115_local5 = CoD.DirectorUtility.CreateOfflineScreenState()
+		if f115_arg1.offlineScreenStateSubscription == nil then
+			f115_arg1.offlineScreenStateSubscription = f115_arg1:subscribeToModel( f115_local5, function ()
+				f115_arg1:updateDataSource()
+			end, false )
+		end
+		if not f115_arg1.occlusionChangeSubscription then
+			f115_arg1.occlusionChangeSubscription = true
+			f115_arg1.menu:appendEventHandler( "occlusion_change", function ( f118_arg0, f118_arg1 )
+				if not f118_arg1.occluded then
+					f115_arg1:updateDataSource()
+				end
+			end )
+		end
+		CoD.DirectorUtility.AddLobbyNavSubscriptionOnce( f115_arg1 )
+		return f115_local0
+	end )	
+end
+
+-- Disconnected State
+DataSources.ExtraButtonsDisconnectedState = ListHelper_SetupDataSource( "ExtraButtonsDisconnectedState", function ( f85_arg0, f85_arg1 )
+	local listdisconnectedbuttons = {}
+	table.insert( listdisconnectedbuttons, {
+		models = {
+			subtitle = @"shield/serverbrowser",
+			iconBackground = @"ui_icon_blackmarket_store_tile_focus_05",
+			iconBackgroundFocus = @"ui_icon_blackmarket_store_tile_focus_05",
+			showOnLeft = true,
+			small = false,
+			locked = false -- later support
+		},
+		properties = {
+			action = CoD.DirectorUtility.DirectorSelectOpenPopup,
+			actionParam = "ShieldLobbyServerBrowserOverlay"
+		}
+	} )
+
+	return listdisconnectedbuttons
+end )
+
+-- Shield's DW Server Data
+DataSources.ShieldDWServers = DataSourceHelpers.ListSetup( "ShieldDWServers", function ( f3_arg0, f3_arg1 )
 	local InfoServers = {
 		{
 			models = {
@@ -1037,19 +3068,90 @@ DataSources.ShieldListServers = DataSourceHelpers.ListSetup( "ShieldListServers"
 				ClientCount = "?",
 				ConnectionIP = "78.157.42.107"
 			},
-			properties = {}
+			properties = {
+				-- none yet
+			}
 		},
 		{
 			models = {
 				ServerName = "^3Public Server 2",
-				HostedBy = "????",
+				HostedBy = "Synx",
 				ClientCount = "?",
-				ConnectionIP = "?"
+				ConnectionIP = "85.215.193.238"
 			},
-			properties = {}
+			properties = {
+				-- none yet
+			}
 		}
 	}
 	return InfoServers
+end, true )
+
+-- Shield's DW Game Server Data
+DataSources.ShieldDWGameServers = DataSourceHelpers.ListSetup( "ShieldDWGameServers", function ( f3_arg0, f3_arg1 )
+	local InfoServers = {
+		--[[
+			{
+				models = {
+					ServerName = "Server Name Test",
+					HostedBy = "Test User",
+					ClientCount = "Unknown",
+					ConnectionIP = "Test:1234"
+				},
+				properties = {
+					-- none yet
+				}
+			}
+		]]
+	}
+
+	return InfoServers
+end, true )
+
+-- Prestige Icons (fix wz mode - unfinished menu)
+DataSources.PrestigeIcon = ListHelper_SetupDataSource( "PrestigeIcon", function ( f11_arg0 )
+	local f11_local0 = {}
+	local f11_local1 = CoD.PrestigeUtility.GetPrestigeGameMode()
+	local f11_local2 = Engine[@"getparagonicontable"]( f11_local1 )
+
+	-- nope
+	if not f11_local2 then 
+		EnhPrintInfo("What the fuck?")
+		return
+	end
+
+	local f11_local3 = CoD.PrestigeUtility.GetCurrentLevel( f11_arg0, f11_local1 )
+	local f11_local4 = CoD.PrestigeUtility.GetPrestigeCap( f11_local1 ) <= CoD.PrestigeUtility.GetCurrentPLevel( f11_arg0, f11_local1 )
+
+	-- line fail
+	local f11_local5 = CoD.CustomizePrestigeIconUtility.GetCurrentWins( f11_arg0, f11_local1 )
+
+	local f11_local6 = CoD.CustomizePrestigeIconUtility.GetCurrentParagonIconId( f11_arg0, f11_local1 )
+	
+	if f11_local2 and f11_local2.icons and #f11_local2.icons > 0 then
+		for f11_local11, f11_local12 in ipairs( f11_local2.icons ) do
+			local f11_local13 = table.insert
+			local f11_local14 = f11_local0
+			local f11_local15 = {}
+			local f11_local16 = {
+				iconId = f11_local12.iconId,
+				iconImage = f11_local12.iconNameLarge,
+				iconName = f11_local12.displayName,
+				iconOriginString = CoD.CustomizePrestigeIconUtility.EnumToTitleOfOriginString( f11_local12.titleOfOrigin ),
+				rankRequirementString = CoD.CustomizePrestigeIconUtility.RankToRankRequirementString( f11_local12.unlockLevel )
+			}
+
+			--local f11_local10
+
+			-- changed from wins to level instead for wz (unused wins mode)
+			f11_local16.isLocked = not CoD.CustomizePrestigeIconUtility.IsIconUnlockedByLevel( f11_local4, f11_local3, f11_local12.unlockLevel, f11_local1 )
+			f11_local16.isEquipped = f11_local6 == f11_local12.iconId
+			f11_local16.isLockedByWins = not CoD.CustomizePrestigeIconUtility.IsIconUnlockedByLevel( f11_local4, f11_local3, f11_local12.unlockLevel, f11_local1 )
+			f11_local15.models = f11_local16
+			f11_local13( f11_local14, f11_local15 )
+		end
+	end
+	return f11_local0
 end, true )
 
 -- Chat Overhul, Colors and Shit
@@ -1256,7 +3358,61 @@ end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
 	end, false )
 end )
 
--- Unlock Settings (ShieldUnlockData)
+-- Optional Settings (Other)
+DataSources.OptionalSettingsData = DataSourceHelpers.ListSetup( "OptionalSettingsData", function ( f138_arg0 )
+	local Settings = {}
+
+	-- !! decs is not needed here!!!
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/use_wz_alts", @"menu/ok", "shield_wz_map", "shield_wz_map", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_def" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_alts_other" ),
+			value = 1
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/use_wz_alts_other_night" ),
+			value = 2
+		}
+	}, nil, OnExtraDataChange ) )
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/ui_colors_setting", @"menu/ok", "shield_ui_color", "shield_ui_color", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Blue" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Red" ),
+			value = 1
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Green" ),
+			value = 2
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"shield/Default_Color" ),
+			value = 69
+		}
+	}, nil, OnExtraDataChange ) )
+
+	return Settings
+
+end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
+	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
+	if f139_arg1.updateSubscription then
+		f139_arg1:removeSubscription( f139_arg1.updateSubscription )
+	end
+	f139_arg1.updateSubscription = f139_arg1:subscribeToModel( f139_local0, function ()
+		f139_arg1:updateDataSource()
+	end, false )
+end )
+
+-- Unlock Settings (Shield Unlock Data)
 DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", function ( f138_arg0 )
 	local Settings = {}
 
@@ -1272,7 +3428,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 		}
 	}, nil, OnUnlockDataChange ) )
 
-	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_attch", @"shield/unlock_attch_desc", "shield_unlock_attch", "shield_unlock_attch", {
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_attch", @"shield/unlock_attch_desc", "shield_unlock_attachments", "shield_unlock_attachments", {
 		{
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
 			value = 0,
@@ -1296,7 +3452,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 		}
 	}, nil, OnUnlockDataChange ) )
 
-	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_camos", @"shield/unlock_camos_desc", "shield_unlock_camos", "shield_unlock_camos", {
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlock_camos", @"shield/unlock_camos_desc", "shield_unlock_itemoptions", "shield_unlock_itemoptions", {
 		{
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
 			value = 0,
@@ -1320,7 +3476,7 @@ DataSources.ShieldUnlockData = DataSourceHelpers.ListSetup( "ShieldUnlockData", 
 		}
 	}, nil, OnUnlockDataChange ) )
 
-	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlockclassslots", @"shield/unlockclassslots_desc", "shield_unlock_classslots", "shield_unlock_classslots", {
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/unlockclassslots", @"shield/unlockclassslots_desc", "shield_unlock_classes", "shield_unlock_classes", {
 		{
 			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
 			value = 0,
@@ -1343,6 +3499,99 @@ end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
 		f139_arg1:updateDataSource()
 	end, false )
 end )
+
+-- Reactives Fixes and Calling Cards
+DataSources.MasterCTCallingCard = {
+	getModel = function ( f12_arg0 )
+		local f12_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f12_arg0 ), "MasterCTCallingCard" )
+		if f12_local0 == nil then
+			f12_local0 = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f12_arg0 ), "MasterCTCallingCard" )
+			f12_local0:create( "title" )
+			f12_local0:create( "description" )
+			f12_local0:create( "iconId" )
+			f12_local0:create( "icon" )
+			f12_local0:create( "statPercent" )
+			f12_local0:create( "percentComplete" )
+			f12_local0:create( "statFractionText" )
+			f12_local0:create( "isLocked" )
+		end
+		return f12_local0
+	end,
+	setModelValues = function ( f13_arg0, f13_arg1, f13_arg2, f13_arg3, f13_arg4, f13_arg5 )
+		local f13_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f13_arg0 ), "MasterCTCallingCard" )
+		if f13_local0 == nil then
+			f13_local0 = DataSources.MasterCTCallingCard.getModel( f13_arg0 )
+		end
+		f13_local0.title:set( f13_arg1 )
+		f13_local0.description:set( f13_arg2 )
+		f13_local0.iconId:set( f13_arg3 )
+		f13_local0.icon:set( CoD.ChallengesUtility.GetBackgroundByID( f13_arg3 ) )
+		f13_local0.statPercent:set( ShieldShouldUnlockItem_Dvar() and 1 or f13_arg4 / f13_arg5 )
+		f13_local0.percentComplete:set( ShieldShouldUnlockItem_Dvar() and 1 or f13_arg4 / f13_arg5 )
+		f13_local0.statFractionText:set( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_631CF0F51CCA3A27", f13_arg4, f13_arg5 ) )
+		local f13_local1 = f13_local0.isLocked
+		local f13_local2 = f13_local1
+		f13_local1 = f13_local1.set
+		local f13_local3
+		if f13_arg4 < f13_arg5 then
+			f13_local3 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f13_local3 = false
+		end
+		f13_local1( f13_local2, f13_local3 )
+	end
+}
+
+DataSources.MasterCallingCard = {
+	getModel = function ( f10_arg0 )
+		local f10_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f10_arg0 ), "MasterCallingCard" )
+		if f10_local0 == nil then
+			f10_local0 = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f10_arg0 ), "MasterCallingCard" )
+			f10_local0:create( "title" )
+			f10_local0:create( "description" )
+			f10_local0:create( "icon" )
+			f10_local0:create( "percentComplete" )
+			f10_local0:create( "isLocked" )
+			f10_local0:create( "statFractionText" )
+			f10_local0:create( "xp" )
+			local f10_local1 = f10_local0:create( "maxTier" )
+			f10_local1:set( 0 )
+			f10_local1 = f10_local0:create( "currentTier" )
+			f10_local1:set( 0 )
+			f10_local1 = f10_local0:create( "tierStatus" )
+			f10_local1:set( "" )
+		end
+		return f10_local0
+	end,
+	setModelValues = function ( f11_arg0, f11_arg1, f11_arg2, f11_arg3, f11_arg4, f11_arg5, f11_arg6 )
+		local f11_local0 = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f11_arg0 ), "MasterCallingCard" )
+		if f11_local0 == nil then
+			f11_local0 = DataSources.MasterCallingCard.getModel( f11_arg0 )
+		end
+		f11_local0.title:set( f11_arg1 )
+		f11_local0.description:set( f11_arg2 )
+		f11_local0.icon:set( f11_arg3 )
+		f11_local0.percentComplete:set( f11_arg4 )
+		local f11_local1 = f11_local0.isLocked
+		local f11_local2 = f11_local1
+		f11_local1 = f11_local1.set
+		local f11_local3
+		if f11_arg4 < 1 then
+			f11_local3 = not ShieldShouldUnlockItem_Dvar()
+		else
+			f11_local3 = false
+		end
+		f11_local1( f11_local2, f11_local3 )
+		if f11_arg5 then
+			f11_local0.statFractionText:set( f11_arg5 )
+		end
+		if f11_arg6 then
+			f11_local0.xp:set( f11_arg6 )
+		else
+			f11_local0.xp:set( 0 )
+		end
+	end
+}
 
 ---------------------------
 
@@ -1432,6 +3681,72 @@ CoD.DirectorQuitButtonContainer.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_a
 		FrontMain.StartLabel:setAlpha(0)
 		FrontMain.BGFill:setAlpha(0)
 		FrontMain.PCBnetStoreKeyart:setAlpha(0)
+		
+		-- Add IPV4 Edit for Disconnected Servers
+		local ServerBrowserButton = LUI.UIList.new( f1_arg0, f1_arg1, 15, 0, nil, false, false, false, false )
+		ServerBrowserButton:setLeftRight( 0.473, 0.473, -725, -513 )
+		ServerBrowserButton:setTopBottom( 0, 0, 265 + 460, 510 + 460 )
+		ServerBrowserButton:setWidgetType( CoD.DirectorPreGameButtonLeftJustified )
+		ServerBrowserButton:setVerticalCount( 4 )
+		ServerBrowserButton:setSpacing( 15 )
+		ServerBrowserButton:setFilter( function ( f3_arg0 )
+			return f3_arg0.showOnLeft:get() == true
+		end )
+		
+		ServerBrowserButton:setDataSource( "ExtraButtonsDisconnectedState" )
+		ServerBrowserButton:linkToElementModel( ServerBrowserButton, "trialLocked", true, function ( model, f4_arg1 )
+			CoD.Menu.UpdateButtonShownState( f4_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		end )
+		ServerBrowserButton:linkToElementModel( ServerBrowserButton, "locked", true, function ( model, f5_arg1 )
+			CoD.Menu.UpdateButtonShownState( f5_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		end )
+
+		ServerBrowserButton:linkToElementModel( ServerBrowserButton, "showForAllClients", true, function ( model, f9_arg1 )
+			CoD.Menu.UpdateButtonShownState( f9_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		end )
+		ServerBrowserButton:registerEventHandler( "list_item_gain_focus", function ( element, event )
+			local f10_local0 = nil
+			CoD.DirectorUtility.UpdateDescriptionTextFromSelectMenu( f1_arg1, element )
+			return f10_local0
+		end )
+		ServerBrowserButton:registerEventHandler( "gain_focus", function ( element, event )
+			local f11_local0 = nil
+			if element.gainFocus then
+				f11_local0 = element:gainFocus( event )
+			elseif element.super.gainFocus then
+				f11_local0 = element.super:gainFocus( event )
+			end
+			CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+			return f11_local0
+		end )
+		f1_arg0:AddButtonCallbackFunction( ServerBrowserButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+			if CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) and AlwaysFalse() then
+				OpenOverlay( f1_arg0, "Store", controller )
+				PlaySoundAlias( "uin_toggle_generic" )
+				return true
+			elseif not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "locked" ) and not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) then
+				ProcessListAction( f1_arg0, element, controller, menu )
+				PlaySoundAlias( "uin_toggle_generic" )
+				return true
+			else
+				
+			end
+		end, function ( element, menu, controller )
+			if CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) and AlwaysFalse() then
+				CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_4191CDDA584B4408", nil, "ui_confirm" )
+				return true
+			elseif not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "locked" ) and not CoD.ModelUtility.IsSelfModelValueTrue( element, controller, "trialLocked" ) then
+				CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+				return true
+			else
+				return false
+			end
+		end, false )
+		f1_arg0:addElement( ServerBrowserButton )
+		f1_arg0.ServerBrowserButton = ServerBrowserButton
+
+		ServerBrowserButton.id = "ServerBrowserButton"
+
 	end
 
 	return self
@@ -1573,7 +3888,7 @@ CoD.DirectorCommonSafeAreaBottomAndLeft.new = function ( f1_arg0, f1_arg1, f1_ar
 	PreGameButtons.LobbyButtons:setFilter( function ( f5_arg0 )
 		return f5_arg0.showPregameButton:get() == true
 	end )
-	PreGameButtons.LobbyButtons:setDataSource( "DirectorPregameButtons" )
+	PreGameButtons.LobbyButtons:setDataSource( "DirectorPregameButtonsCustom" )
 	PreGameButtons.LobbyButtons:setHorizontalCount(4)
 	PreGameButtons.LobbyButtons:setVerticalCount(1)
 	PreGameButtons:registerEventHandler( "record_curr_focused_elem_id", function ( element, event )
@@ -1594,23 +3909,23 @@ CoD.DirectorCommonSafeAreaBottomAndLeft.new = function ( f1_arg0, f1_arg1, f1_ar
 	self:addElement( PreGameButtons )
 	self.PreGameButtons = PreGameButtons
 
-	local UnlockOptions = CoD.DirectorSelectButtonMiniInternal.new( f1_arg0, f1_arg1, 0.072, 0.072, 0, 250, 0.30, 0.30, -70, -20 )
-	UnlockOptions.MiddleText:setTTF( "ttmussels_regular" )
-	UnlockOptions.MiddleText:setText("^3Unlock Options")
-	UnlockOptions.MiddleTextFocus:setText("^3Unlock Options")
-	UnlockOptions.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	UnlockOptions:linkToElementModel( self, nil, false, function ( model )
-		UnlockOptions:setModel( model, f1_arg1 )
+	local ShieldOptions = CoD.DirectorSelectButtonMiniInternal.new( f1_arg0, f1_arg1, 0.072, 0.072, 0, 250, 0.30, 0.30, -70, -20 )
+	ShieldOptions.MiddleText:setTTF( "ttmussels_regular" )
+	ShieldOptions.MiddleText:setText("^3Shield Options")
+	ShieldOptions.MiddleTextFocus:setText("^3Shield Options")
+	ShieldOptions.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	ShieldOptions:linkToElementModel( self, nil, false, function ( model )
+		ShieldOptions:setModel( model, f1_arg1 )
 	end )
-	self:addElement( UnlockOptions )
-	self.UnlockOptions = UnlockOptions
+	self:addElement( ShieldOptions )
+	self.ShieldOptions = ShieldOptions
 
 	-- add callback click
-	f1_arg0:AddButtonCallbackFunction( UnlockOptions, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+	f1_arg0:AddButtonCallbackFunction( ShieldOptions, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
 		PlaySoundAlias( "uin_paint_image_flip_toggle" )
 
 		-- these args are treyarch's most braindead ones
-		CoD.DirectorUtility.DirectorSelectOpenPopup(f1_arg0, nil, f1_arg1, "ShieldUnlockOptionsMenu")
+		CoD.DirectorUtility.DirectorSelectOpenPopup(f1_arg0, nil, f1_arg1, "ShieldOptionsMenu")
 	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
 		if IsGamepad( controller ) then
 			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
@@ -1623,8 +3938,8 @@ CoD.DirectorCommonSafeAreaBottomAndLeft.new = function ( f1_arg0, f1_arg1, f1_ar
 		end
 	end, false )
 	
-	local sizeUnlockOptions = CoD.DirectorSelectButtonImageInternal.new( f1_arg0, f1_arg1, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
-	sizeUnlockOptions:mergeStateConditions( {
+	local sizeShieldOptions = CoD.DirectorSelectButtonImageInternal.new( f1_arg0, f1_arg1, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
+	sizeShieldOptions:mergeStateConditions( {
 		{
 			stateName = "Disabled",
 			condition = function ( menu, element, event )
@@ -1633,18 +3948,18 @@ CoD.DirectorCommonSafeAreaBottomAndLeft.new = function ( f1_arg0, f1_arg1, f1_ar
 		}
 	} )
 
-	sizeUnlockOptions:setAlpha( 0 )
-	sizeUnlockOptions.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeUnlockOptions.Tint:setAlpha( 0.25 )
-	sizeUnlockOptions:linkToElementModel( self, nil, false, function ( model )
-		sizeUnlockOptions:setModel( model, f1_arg1 )
+	sizeShieldOptions:setAlpha( 0 )
+	sizeShieldOptions.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeShieldOptions.Tint:setAlpha( 0.25 )
+	sizeShieldOptions:linkToElementModel( self, nil, false, function ( model )
+		sizeShieldOptions:setModel( model, f1_arg1 )
 	end )
-	sizeUnlockOptions.ButtonName.GameModeText:setText("3Unlock Options") -- doesn't really do anything lol
-	self:addElement( sizeUnlockOptions )
-	self.sizeUnlockOptions = sizeUnlockOptions
+	sizeShieldOptions.ButtonName.GameModeText:setText("3Unlock Options") -- doesn't really do anything lol
+	self:addElement( sizeShieldOptions )
+	self.sizeShieldOptions = sizeShieldOptions
 
-	UnlockOptions.id = "UnlockOptions"
-	sizeUnlockOptions.id = "sizeUnlockOptions"
+	ShieldOptions.id = "ShieldOptions"
+	sizeShieldOptions.id = "sizeShieldOptions"
 	
 	local HintText = CoD.onOffTextImageBacking.new( f1_arg0, f1_arg1, 0.5, 0.5, 246, 707, 1, 1, -100, -79 )
 	HintText:mergeStateConditions( {
@@ -2320,6 +4635,21 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	end )
 	self:addElement( selectionDescription )
 	self.selectionDescription = selectionDescription
+
+	local Shield_Nat = LUI.UIText.new( 0.05, 0.05, -70, 200, 0.9, 0.9, 10, 30 )
+	Shield_Nat:setText("NAT TYPE: Unknown")
+	Shield_Nat:setTTF( "ttmussels_regular" )
+	Shield_Nat:setLetterSpacing( 6 )
+	Shield_Nat:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	Shield_Nat:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	Shield_Nat:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "lobbyNatType", function ( model )
+		local f2_local0 = model:get()
+		if f2_local0 ~= nil then
+			Shield_Nat:setText( ConvertToUpperString( LocalizeWithNatType( f2_local0 ) ) )
+		end
+	end )
+	self:addElement( Shield_Nat )
+	self.Shield_Nat = Shield_Nat
 	
 	local PurchaseButton2 = nil
 	
@@ -2746,6 +5076,7 @@ CoD.directorSelect.__onClose = function ( f76_arg0 )
 	f76_arg0.IGRPerksDirectorButton:close()
 	f76_arg0.selectionDescription:close()
 	f76_arg0.PurchaseButton2:close()
+	f76_arg0.Shield_Nat:close()
 	f76_arg0.DirectorTierSkipNotification:close()
 	f76_arg0.DirectorTierSkipNotification2:close()
 	f76_arg0.IGREventButton:close()
@@ -3286,7 +5617,15 @@ LUI.createMenu.SystemOverlay_MessageDialog = function ( f1_arg0, f1_arg1 )
 	--DisableKeyboardNavigationByElement( emptyFocusable )
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called - > " .. ErrorText, "System Overlay Message Box")
 
 	--CoD.SystemOverlay_MessageDialog.__onClose(self)
@@ -3428,7 +5767,15 @@ LUI.createMenu.SystemOverlay_MessageDialogFull = function ( f1_arg0, f1_arg1 )
 	end
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Full Message Box")
 
 	return self
@@ -3622,7 +5969,15 @@ LUI.createMenu.SystemOverlay_Compact = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Compact")
 
 	return self
@@ -3707,7 +6062,15 @@ LUI.createMenu.SystemOverlay_NoBG = function ( f1_arg0, f1_arg1 )
 	CoD.OverlayUtility.SystemOverlayPostLoad( self, f1_arg0 )
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay No BG")
 
 	return self
@@ -3825,7 +6188,15 @@ LUI.createMenu.SystemOverlay_Full = function ( f2_arg0, f2_arg1 )
 	end
 	
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Full")
 
 	return self
@@ -3937,7 +6308,15 @@ LUI.createMenu.SystemOverlay_FreeCursor = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Free Cursor")
 	
 	return self
@@ -4049,7 +6428,15 @@ LUI.createMenu.SystemOverlay_FreeCursor_Full = function ( f1_arg0, f1_arg1 )
 	end
 
 	self:setAlpha(0.75)
-	self:setRGB(0, 1, 1)
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		self:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		self:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		self:setRGB(0, 1, 0)
+	end
+
 	EnhPrintInfo("Called", "System Overlay Free Cursor Full")
 	
 	return self
@@ -4061,11 +6448,11 @@ CoD.SystemOverlay_FreeCursor_Full.__onClose = function ( f11_arg0 )
 end
 
 -- Unlock Shit
-CoD.ShieldUnlockOptionsMenu = InheritFrom( CoD.Menu )
-LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
-	local self = CoD.Menu.NewForUIEditor( "ShieldUnlockOptionsMenu", f1_arg0 )
+CoD.ShieldOptionsMenu = InheritFrom( CoD.Menu )
+LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
+	local self = CoD.Menu.NewForUIEditor( "ShieldOptionsMenu", f1_arg0 )
 	local f1_local1 = self
-	self:setClass( CoD.ShieldUnlockOptionsMenu )
+	self:setClass( CoD.ShieldOptionsMenu )
 	self.soundSet = "default"
 	self:setOwner( f1_arg0 )
 	self:setLeftRight( 0, 1, 0, 0 )
@@ -4088,8 +6475,8 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	local FooterContainerFrontendRight2 = CoD.Fo..., -48, 0 )
 	]]
 
-	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 50, 1796.5, 0.31, 0.31, -160.5, -120.5 )
-	HeaderPixelGridTiledBackingL:setAlpha( 0.15 )
+	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 50, 1796.5, 0.61, 0.61, -160.5, -120.5 )
+	HeaderPixelGridTiledBackingL:setAlpha( 0.25 )
 	HeaderPixelGridTiledBackingL:setImage( RegisterImage( @"hash_1311E811A3183347" ) )
 	HeaderPixelGridTiledBackingL:setMaterial( LUI.UIImage.GetCachedMaterial( @"hash_16CBE95C250C6D15" ) )
 	HeaderPixelGridTiledBackingL:setShaderVector( 0, 0, 0, 0, 0 )
@@ -4097,9 +6484,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( HeaderPixelGridTiledBackingL )
 	self.HeaderPixelGridTiledBackingL = HeaderPixelGridTiledBackingL
 	
-	-- other header, not needed tbh
-	--[[
-	local HeaderPixelGridTiledBackingR = LUI.UIImage.new( 0.02, 0.02, 1211.5, 1727.5, 0.31, 0.31, -160.5, -120.5 )
+	local HeaderPixelGridTiledBackingR = LUI.UIImage.new( 0.02, 0.02, 50, 1796.5, 0.27, 0.27, -160.5, -120.5 )
 	HeaderPixelGridTiledBackingR:setAlpha( 0.15 )
 	HeaderPixelGridTiledBackingR:setImage( RegisterImage( @"hash_1311E811A3183347" ) )
 	HeaderPixelGridTiledBackingR:setMaterial( LUI.UIImage.GetCachedMaterial( @"hash_16CBE95C250C6D15" ) )
@@ -4107,7 +6492,6 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	HeaderPixelGridTiledBackingR:setupNineSliceShader( 128, 128 )
 	self:addElement( HeaderPixelGridTiledBackingR )
 	self.HeaderPixelGridTiledBackingR = HeaderPixelGridTiledBackingR
-	]]
 	
 	local CornerPipR = LUI.UIImage.new( 0, 0, 1749.5, 1765.5, 0, 0, 930, 946 )
 	CornerPipR:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
@@ -4128,8 +6512,8 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( TabbedScoreboardFuiBox )
 	self.TabbedScoreboardFuiBox = TabbedScoreboardFuiBox
 
-	local ShieldUnlockOptionsMenu_SafeAreaFront = CoD.ShieldUnlockOptionsMenu_SafeAreaFront.new( f1_local1, f1_arg0, 0, 0, 0, 1920, 0, 0, 0, 1080 )
-	ShieldUnlockOptionsMenu_SafeAreaFront:registerEventHandler( "menu_loaded", function ( element, event )
+	local ShieldOptionsMenu_SafeAreaFront = CoD.ShieldOptionsMenu_SafeAreaFront.new( f1_local1, f1_arg0, 0, 0, 0, 1920, 0, 0, 0, 1080 )
+	ShieldOptionsMenu_SafeAreaFront:registerEventHandler( "menu_loaded", function ( element, event )
 		local f3_local0 = nil
 		if element.menuLoaded then
 			f3_local0 = element:menuLoaded( event )
@@ -4144,18 +6528,213 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 		return f3_local0
 	end )
-	self:addElement( ShieldUnlockOptionsMenu_SafeAreaFront )
-	self.ShieldUnlockOptionsMenu_SafeAreaFront = ShieldUnlockOptionsMenu_SafeAreaFront
+	self:addElement( ShieldOptionsMenu_SafeAreaFront )
+	self.ShieldOptionsMenu_SafeAreaFront = ShieldOptionsMenu_SafeAreaFront
 
 	-- !!!
 	-- no im not fucking using datasources, too many errors to deal with, this easier tbh..
 	-- nevermind, found an easier way lol
 	-- !!!
 
-	-- datasources here
+	-- Name Edit
+	local NameEditBox = CoD.Shield_NameEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, -20, 350, 0.13, 0.13, 100, 150 )
+	NameEditBox:linkToElementModel( self, nil, false, function ( model )
+		NameEditBox:setModel( model, f1_arg1 )
+	end )
+	NameEditBox.TextBox:setLeftRight(0, 0, 20 + 110, 320 + 110)
+	NameEditBox.RankHighlight:setText("^2Set Username: ")
+	self:addElement( NameEditBox )
+	self.NameEditBox = NameEditBox
+
+	-- prevent element pool being fucked
+	local NameEditBoxModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Name" )
+
+	if NameEditBoxModel == nil then
+		NameEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Name" )
+	end
+
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
+
+	NameEditBoxModel:set(Engine[@"getdvarstring"]("shield_username"))
+
+	CoD.PCUtility.SetupEditControlWithModel( NameEditBox, f1_arg0, f1_local1, NameEditBoxModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local NameData = f331_arg0:get()
+
+			EnhPrintInfo("Username", NameData)
+			PlaySoundAlias( "uin_paint_image_flip_toggle" )
+			
+			if not IsValidName(NameData) then
+				f331_arg0:set("^1Invalid Username!")
+				NameEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+					-- reset old name
+				f331_arg0:set(Engine[@"getdvarstring"]("shield_username"))
+				end ) )
+			else
+				f331_arg0:set("^3Username Set!")
+				NameEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+					-- reset new name
+				f331_arg0:set(NameData)
+				end ) )
+
+				-- shield api here later..
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson identity name " .. NameData .. " string")
+				Engine[@"setdvar"]("shield_username", NameData)
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+	self.NameEditBoxModel = NameEditBoxModel
+
+	local ReloadModsButton = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 310, 0.35, 0.35, 0, 50 )
+	
+	ReloadModsButton.MiddleText:setTTF( "ttmussels_regular" )
+	ReloadModsButton.MiddleText:setText("^3Reload Shield Mods")
+
+	ReloadModsButton.MiddleTextFocus:setText("^3Reload Shield Mods")
+	ReloadModsButton.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	ReloadModsButton:mergeStateConditions( {
+		{
+			stateName = "Locked",
+			condition = function ( menu, element, event )
+				return false
+			end
+		}
+	} )
+
+	ReloadModsButton:linkToElementModel( self, nil, false, function ( model )
+		ReloadModsButton:setModel( model, f1_arg1 )
+	end )
+	self:addElement( ReloadModsButton )
+	self.ReloadModsButton = ReloadModsButton
+
+	f1_local1:AddButtonCallbackFunction( ReloadModsButton, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("ReloadModsButton")
+		
+		-- reload with killserver
+		VM_ReloadMods()
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeReloadModsButton = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 310, 0.35, 0.35, 0, 50 )
+	sizeReloadModsButton:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeReloadModsButton:setAlpha( 0 )
+	sizeReloadModsButton.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeReloadModsButton.Tint:setAlpha( 0.25 )
+	sizeReloadModsButton:linkToElementModel( self, nil, false, function ( model )
+		sizeReloadModsButton:setModel( model, f1_arg1 )
+	end )
+	sizeReloadModsButton.ButtonName.GameModeText:setText("^3Reload Mods")
+	self:addElement( sizeReloadModsButton )
+	self.sizeReloadModsButton = sizeReloadModsButton
+
+	ReloadModsButton.id = "ReloadModsButton"
+	sizeReloadModsButton.id = "sizeReloadModsButton"
+
+	-- desc for name
+	local NameHint = LUI.UIText.new( 0.10, 0.10, 0, 550, 0.20, 0.20, 100, 120 )
+	NameHint:setText("To Apply Username Change, Restart the Game!")
+	NameHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	NameHint:setTTF("notosans_bold")
+	NameHint:setBackingType( 2 )
+	NameHint:setBackingColor( 0.04, 0.81, 1 )
+	NameHint:setBackingAlpha( 0.01 )
+	NameHint:setBackingXPadding( 12 )
+	NameHint:setBackingYPadding( 6 )
+	NameHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	NameHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( NameHint )
+	self.NameHint = NameHint
+
+	-- datasources for other shit here
+	local OptionalSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		OptionalSettingsList:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		OptionalSettingsList:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		OptionalSettingsList:setRGB(0, 1, 0)
+	end
+
+	OptionalSettingsList:setLeftRight( 0.40, 0.40, 10, 700 )
+	OptionalSettingsList:setTopBottom( 0.2225, 0.2225, 0, 50 )
+	--OptionalSettingsList:setScale(0.90, 0.90)
+	--OptionalSettingsList:setAutoScaleContent( true )
+	OptionalSettingsList:setVerticalCount(3) -- fix
+	OptionalSettingsList:setHorizontalCount(3)
+	OptionalSettingsList:setSpacing(30) -- spacing needed..
+	OptionalSettingsList:setWidgetType( CoD.CustomGames_SettingSliderNoCustom )
+	OptionalSettingsList:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	OptionalSettingsList:setDataSource( "OptionalSettingsData" )
+	self:addElement( OptionalSettingsList )
+	self.OptionalSettingsList = OptionalSettingsList
+
+	OptionalSettingsList.id = "OptionalSettingsList"
+
+	local MapHint = LUI.UIText.new( 0.35, 0.35, 0, 550, 0.20, 0.20, 100, 120 )
+	MapHint:setText("Changes Blackout Maps (Must be Host!)")
+	MapHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	MapHint:setTTF("notosans_bold")
+	MapHint:setBackingType( 2 )
+	MapHint:setBackingColor( 0.04, 0.81, 1 )
+	MapHint:setBackingAlpha( 0.01 )
+	MapHint:setBackingXPadding( 12 )
+	MapHint:setBackingYPadding( 6 )
+	MapHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	MapHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( MapHint )
+	self.MapHint = MapHint
+
+	local ColorHint = LUI.UIText.new( 0.65, 0.65, 0, 550, 0.20, 0.20, 100, 120 )
+	ColorHint:setText("Changes Style of Alert Messages")
+	ColorHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	ColorHint:setTTF("notosans_bold")
+	ColorHint:setBackingType( 2 )
+	ColorHint:setBackingColor( 0.04, 0.81, 1 )
+	ColorHint:setBackingAlpha( 0.01 )
+	ColorHint:setBackingXPadding( 12 )
+	ColorHint:setBackingYPadding( 6 )
+	ColorHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	ColorHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( ColorHint )
+	self.ColorHint = ColorHint
+
+	-- datasources for unlocks here
 	local UnlockSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		UnlockSettingsList:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		UnlockSettingsList:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		UnlockSettingsList:setRGB(0, 1, 0)
+	end
+
 	UnlockSettingsList:setLeftRight( 0.305, 0.305, 10, 700 )
-	UnlockSettingsList:setTopBottom( 0.27, 0.27, 0, 50 )
+	UnlockSettingsList:setTopBottom( 0.57, 0.57, 0, 50 )
 	--UnlockSettingsList:setScale(0.90, 0.90)
 	--UnlockSettingsList:setAutoScaleContent( true )
 	UnlockSettingsList:setVerticalCount(3) -- fix
@@ -4173,11 +6752,11 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	local UnlockSettingDescription = LUI.UIText.new( 0.5, 0.5, -300, 250, 0.70, 0.70, 150, 180 )
 	UnlockSettingDescription:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
 	UnlockSettingDescription:setTTF("notosans_bold")
-	UnlockSettingDescription:setBackingType( 2 ) --[[ @ 0]]
-	UnlockSettingDescription:setBackingColor( 0.04, 0.81, 1 ) --[[ @ 0]]
-	UnlockSettingDescription:setBackingAlpha( 0.01 ) --[[ @ 0]]
-	UnlockSettingDescription:setBackingXPadding( 12 ) --[[ @ 0]]
-	UnlockSettingDescription:setBackingYPadding( 6 ) --[[ @ 0]]
+	UnlockSettingDescription:setBackingType( 2 )
+	UnlockSettingDescription:setBackingColor( 0.04, 0.81, 1 )
+	UnlockSettingDescription:setBackingAlpha( 0.01 )
+	UnlockSettingDescription:setBackingXPadding( 12 )
+	UnlockSettingDescription:setBackingYPadding( 6 )
 	UnlockSettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
 	UnlockSettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
 	self:addElement( UnlockSettingDescription )
@@ -4191,566 +6770,8 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end )
 
-	--[[
-	local MainUnlockAll = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
-	MainUnlockAll.MiddleText:setTTF( "ttmussels_regular" )
-
-	if UnlockAll then
-		MainUnlockAll.MiddleText:setText("^3Unlock All: ^2Enabled")
-		MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^2Enabled")
-	else
-		MainUnlockAll.MiddleText:setText("^3Unlock All: ^1Disabled")
-		MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^1Disabled")
-	end
-
-	MainUnlockAll.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockAll:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockAll:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockAll )
-	self.MainUnlockAll = MainUnlockAll
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockAll, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockAll_Toggle()
-
-		if UnlockAll then
-			MainUnlockAll.MiddleText:setText("^3Unlock All: ^2Enabled")
-			MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^2Enabled")
-			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllEnabledMessage")
-		else
-			MainUnlockAll.MiddleText:setText("^3Unlock All: ^1Disabled")
-			MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^1Disabled")
-			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllDisabledMessage")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockAll = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
-	sizeMainUnlockAll:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockAll:setAlpha( 0 )
-	sizeMainUnlockAll.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockAll.Tint:setAlpha( 0.25 )
-	sizeMainUnlockAll:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockAll:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockAll.ButtonName.GameModeText:setText("Unlock All") -- doesn't really do anything lol
-	self:addElement( sizeMainUnlockAll )
-	self.sizeMainUnlockAll = sizeMainUnlockAll
-
-	MainUnlockAll.id = "MainUnlockAll"
-	sizeMainUnlockAll.id = "sizeMainUnlockAll"
-	--self.__defaultFocus = baseButton
-
-	-- attachments
-	local MainUnlockAttach = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 0, 50 )
-	MainUnlockAttach.MiddleText:setTTF( "ttmussels_regular" )
-
-	if UnlockAttachments then
-		MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^2Enabled")
-		MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^2Enabled")
-	else
-		MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^1Disabled")
-		MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^1Disabled")
-	end
-
-	MainUnlockAttach.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockAttach:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockAttach:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockAttach )
-	self.MainUnlockAttach = MainUnlockAttach
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockAttach, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockAttachments_Toggle()
-
-		if UnlockAttachments then
-			MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^2Enabled")
-			MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^2Enabled")
-			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllEnabledMessage")
-		else
-			MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^1Disabled")
-			MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^1Disabled")
-			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllDisabledMessage")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockAttach = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 0, 50 )
-	sizeMainUnlockAttach:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockAttach:setAlpha( 0 )
-	sizeMainUnlockAttach.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockAttach.Tint:setAlpha( 0.25 )
-	sizeMainUnlockAttach:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockAttach:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockAttach.ButtonName.GameModeText:setText("Unlock Attachments")
-	self:addElement( sizeMainUnlockAttach )
-	self.sizeMainUnlockAttach = sizeMainUnlockAttach
-
-	MainUnlockAttach.id = "MainUnlockAttach"
-	sizeMainUnlockAttach.id = "sizeMainUnlockAttach"
-
-	-- loot
-	local MainUnlockLoot = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 0, 50 )
-	MainUnlockLoot.MiddleText:setTTF( "ttmussels_regular" )
-
-	if UnlockLoot then
-		MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^2Enabled")
-		MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^2Enabled")
-	else
-		MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^1Disabled")
-		MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^1Disabled")
-	end
-
-	MainUnlockLoot.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockLoot:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockLoot:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockLoot )
-	self.MainUnlockLoot = MainUnlockLoot
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockLoot, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockLoot_Toggle()
-
-		if UnlockLoot then
-			MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^2Enabled")
-			MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^2Enabled")
-			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllEnabledMessage")
-		else
-			MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^1Disabled")
-			MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^1Disabled")
-			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllDisabledMessage")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockLoot = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 0, 50 )
-	sizeMainUnlockLoot:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockLoot:setAlpha( 0 )
-	sizeMainUnlockLoot.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockLoot.Tint:setAlpha( 0.25 )
-	sizeMainUnlockLoot:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockLoot:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockLoot.ButtonName.GameModeText:setText("Unlock Loot")
-	self:addElement( sizeMainUnlockLoot )
-	self.sizeMainUnlockLoot = sizeMainUnlockLoot
-
-	MainUnlockLoot.id = "MainUnlockLoot"
-	sizeMainUnlockLoot.id = "sizeMainUnlockLoot"
-
-	local MainUnlockCamos = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 70, 120 )
-	MainUnlockCamos.MiddleText:setTTF( "ttmussels_regular" )
-
-	if UnlockCamos then
-		MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^2Enabled")
-		MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^2Enabled")
-	else
-		MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^1Disabled")
-		MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^1Disabled")
-	end
-
-	MainUnlockCamos.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockCamos:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockCamos:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockCamos )
-	self.MainUnlockCamos = MainUnlockCamos
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockCamos, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockCamos_Toggle()
-
-		if UnlockCamos then
-			MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^2Enabled")
-			MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^2Enabled")
-		else
-			MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^1Disabled")
-			MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^1Disabled")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockCamos = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 70, 120 )
-	sizeMainUnlockCamos:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockCamos:setAlpha( 0 )
-	sizeMainUnlockCamos.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockCamos.Tint:setAlpha( 0.25 )
-	sizeMainUnlockCamos:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockCamos:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockCamos.ButtonName.GameModeText:setText("Unlock Camos")
-	self:addElement( sizeMainUnlockCamos )
-	self.sizeMainUnlockCamos = sizeMainUnlockCamos
-
-	MainUnlockCamos.id = "MainUnlockCamos"
-	sizeMainUnlockCamos.id = "sizeMainUnlockCamos"
-
-	local MainUnlockCards = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 70, 120 )
-	MainUnlockCards.MiddleText:setTTF( "ttmussels_regular" )
-
-	MainUnlockCards:mergeStateConditions( {
-		{
-			stateName = "Locked",
-			condition = function ( menu, element, event )
-				return true
-			end
-		}
-	} )
-
-	if UnlockCards then
-		MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^2Enabled")
-		MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^2Enabled")
-	else
-		MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^1Disabled")
-		MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^1Disabled")
-	end
-
-	MainUnlockCards.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockCards:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockCards:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockCards )
-	self.MainUnlockCards = MainUnlockCards
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockCards, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockCards_Toggle()
-
-		if UnlockCards then
-			MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^2Enabled")
-			MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^2Enabled")
-		else
-			MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^1Disabled")
-			MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^1Disabled")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockCards = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 70, 120 )
-	sizeMainUnlockCards:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockCards:setAlpha( 0 )
-	sizeMainUnlockCards.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockCards.Tint:setAlpha( 0.25 )
-	sizeMainUnlockCards:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockCards:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockCards.ButtonName.GameModeText:setText("Unlock Calling Cards")
-	self:addElement( sizeMainUnlockCards )
-	self.sizeMainUnlockCards = sizeMainUnlockCards
-
-	MainUnlockCards.id = "MainUnlockCards"
-	sizeMainUnlockCards.id = "sizeMainUnlockCards"
-
-	local MainUnlockItems = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 70, 120 )
-	MainUnlockItems.MiddleText:setTTF( "ttmussels_regular" )
-
-	if UnlockItems then
-		MainUnlockItems.MiddleText:setText("^3Unlock Items: ^2Enabled")
-		MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^2Enabled")
-	else
-		MainUnlockItems.MiddleText:setText("^3Unlock Items: ^1Disabled")
-		MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^1Disabled")
-	end
-
-	MainUnlockItems.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockItems:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockItems:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockItems )
-	self.MainUnlockItems = MainUnlockItems
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockItems, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldItems_Toggle()
-
-		if UnlockItems then
-			MainUnlockItems.MiddleText:setText("^3Unlock Items: ^2Enabled")
-			MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^2Enabled")
-		else
-			MainUnlockItems.MiddleText:setText("^3Unlock Items: ^1Disabled")
-			MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^1Disabled")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockItems = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 70, 120 )
-	sizeMainUnlockItems:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockItems:setAlpha( 0 )
-	sizeMainUnlockItems.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockItems.Tint:setAlpha( 0.25 )
-	sizeMainUnlockItems:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockItems:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockItems.ButtonName.GameModeText:setText("Unlock Items")
-	self:addElement( sizeMainUnlockItems )
-	self.sizeMainUnlockItems = sizeMainUnlockItems
-
-	MainUnlockItems.id = "MainUnlockItems"
-	sizeMainUnlockItems.id = "sizeMainUnlockItems"
-
-	local MainUnlockClassSlots = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 140, 190 )
-	MainUnlockClassSlots.MiddleText:setTTF( "ttmussels_regular" )
-
-	if UnlockClassSlots then
-		MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^2Enabled")
-		MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^2Enabled")
-	else
-		MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^1Disabled")
-		MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^1Disabled")
-	end
-
-	MainUnlockClassSlots.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockClassSlots:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockClassSlots:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockClassSlots )
-	self.MainUnlockClassSlots = MainUnlockClassSlots
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockClassSlots, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockClassSlots_Toggle()
-
-		if UnlockClassSlots then
-			MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^2Enabled")
-			MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^2Enabled")
-		else
-			MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^1Disabled")
-			MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^1Disabled")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockClassSlots = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 140, 190 )
-	sizeMainUnlockClassSlots:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockClassSlots:setAlpha( 0 )
-	sizeMainUnlockClassSlots.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockClassSlots.Tint:setAlpha( 0.25 )
-	sizeMainUnlockClassSlots:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockClassSlots:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockClassSlots.ButtonName.GameModeText:setText("Unlock Class Slots")
-	self:addElement( sizeMainUnlockClassSlots )
-	self.sizeMainUnlockClassSlots = sizeMainUnlockClassSlots
-
-	MainUnlockClassSlots.id = "MainUnlockClassSlots"
-	sizeMainUnlockClassSlots.id = "sizeMainUnlockClassSlots"
-
-	local MainUnlockBlackMarket = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 950, 0.23, 0.23, 140, 190 )
-	MainUnlockBlackMarket.MiddleText:setTTF( "ttmussels_regular" )
-
-	MainUnlockBlackMarket:mergeStateConditions( {
-		{
-			stateName = "Locked",
-			condition = function ( menu, element, event )
-				return true
-			end
-		}
-	} )
-
-	if UnlockBlackMarket then
-		MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^2Enabled")
-		MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^2Enabled")
-	else
-		MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^1Disabled")
-		MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^1Disabled")
-	end
-
-	MainUnlockBlackMarket.MiddleTextFocus:setTTF( "ttmussels_regular" )
-	MainUnlockBlackMarket:linkToElementModel( self, nil, false, function ( model )
-		MainUnlockBlackMarket:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MainUnlockBlackMarket )
-	self.MainUnlockBlackMarket = MainUnlockBlackMarket
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MainUnlockBlackMarket, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		ShieldUnlockBlackMarket_Toggle()
-
-		if UnlockBlackMarket then
-			MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^2Enabled")
-			MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^2Enabled")
-		else
-			MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^1Disabled")
-			MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^1Disabled")
-		end
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMainUnlockBlackMarket = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 950, 0.23, 0.23, 140, 190 )
-	sizeMainUnlockBlackMarket:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMainUnlockBlackMarket:setAlpha( 0 )
-	sizeMainUnlockBlackMarket.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMainUnlockBlackMarket.Tint:setAlpha( 0.25 )
-	sizeMainUnlockBlackMarket:linkToElementModel( self, nil, false, function ( model )
-		sizeMainUnlockBlackMarket:setModel( model, f1_arg1 )
-	end )
-	sizeMainUnlockBlackMarket.ButtonName.GameModeText:setText("Unlock Black Market Items")
-	self:addElement( sizeMainUnlockBlackMarket )
-	self.sizeMainUnlockBlackMarket = sizeMainUnlockBlackMarket
-
-	MainUnlockBlackMarket.id = "MainUnlockBlackMarket"
-	sizeMainUnlockBlackMarket.id = "sizeMainUnlockBlackMarket"
-
-	]]
-
 	-- Rank Edit
-	local RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, -20, 350, 0.23, 0.23, 400, 450 )
+	local RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, -20, 350, 0.35, 0.35, 400, 450 )
 	RankEditBox:linkToElementModel( self, nil, false, function ( model )
 		RankEditBox:setModel( model, f1_arg1 )
 	end )
@@ -4759,7 +6780,12 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( RankEditBox )
 	self.RankEditBox = RankEditBox
 
-	local RankEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Blackout_Shield_Rank" )
+	local RankEditBoxModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Rank" )
+
+	if RankEditBoxModel == nil then
+		RankEditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Rank" )
+	end
+
 	if RankEditBoxModel:get() == nil then
 		RankEditBoxModel:set( "" )
 	end
@@ -4770,18 +6796,26 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 			local RankLimit = 54
 			local sessionmode = Engine[@"CurrentSessionMode"]()
 
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_383EBA96F36BC4E5"] then -- mp
+			if sessionmode == Enum[@"emodes"][@"mode_multiplayer"] then -- mp
 				RankLimit = 54
 			end
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_73723205FAE52C4A"] then -- zm
+			if sessionmode == Enum[@"emodes"][@"mode_zombies"] then -- zm
 				RankLimit = 54
 			end
-			if sessionmode == Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] then -- wz
+			if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
 				RankLimit = 79
 			end
 
-			if CoD.PlayerStatsUtility.IsPrestigeMasterForMenu(Engine[@"currentsessionmode"](), f1_local1) then
+			local Prestige = Engine[@"getstatbyname"](Engine[@"getprimarycontroller"](), "plevel")
+			local isPrestigeMaster = Prestige ~= nil and tonumber(Prestige) == 11
+
+			if isPrestigeMaster == true then
 				RankLimit = 999
+
+				-- wz is diff
+				if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+					RankLimit = 1000
+				end
 			end
 
 			if RankData ~= nil and RankData ~= "" then
@@ -4809,7 +6843,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	end )
 
 
-	local PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380 - 5, 730, 0.23, 0.23, 400, 450 )
+	local PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380 - 5, 730, 0.35, 0.35, 400, 450 )
 	PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
 		PrestigeEditBox:setModel( model, f1_arg1 )
 	end )
@@ -4818,7 +6852,12 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( PrestigeEditBox )
 	self.PrestigeEditBox = PrestigeEditBox
 
-	local PrestigeEditModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Blackout_Shield_Prestige" )
+	local PrestigeEditModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Prestige" )
+
+	if PrestigeEditModel == nil then
+		PrestigeEditModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_Prestige" )
+	end
+
 	if PrestigeEditModel:get() == nil then
 		PrestigeEditModel:set( "" )
 	end
@@ -4850,7 +6889,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		end
 	end )
 
-	local PrestigeMasterButton = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400, 450 )
+	local PrestigeMasterButton = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.35, 0.35, 400, 450 )
 	
 	PrestigeMasterButton.MiddleText:setTTF( "ttmussels_regular" )
 	PrestigeMasterButton.MiddleText:setText("^2Prestige Master")
@@ -4862,7 +6901,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 		{
 			stateName = "Locked",
 			condition = function ( menu, element, event )
-				return true
+				return AlwaysFalse()
 			end
 		}
 	} )
@@ -4873,12 +6912,25 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self:addElement( PrestigeMasterButton )
 	self.PrestigeMasterButton = PrestigeMasterButton
 
-	-- add callback click
-	--[[
 	f1_local1:AddButtonCallbackFunction( PrestigeMasterButton, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
 		PlaySoundAlias( "uin_paint_image_flip_toggle" )
 		EnhPrintInfo("PrestigeMasterButton")
-		-- shield api later
+		
+		local sessionmode = Engine[@"CurrentSessionMode"]()
+		local RankSet = 55
+
+		if sessionmode == Enum[@"emodes"][@"mode_warzone"] then -- wz
+			RankSet = 81
+		end
+
+		RankUtils.SetPrestige(11)
+		RankUtils.SetRank(RankSet)
+
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "statsetbyname rankxp 1457200")
+		-- idk if this even exists in bo4.. (nvm it does lol)
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "PrestigeStatsMaster " .. tostring(Engine[@"CurrentSessionMode"]()))
+
+		CoD.OverlayUtility.CreateOverlay(controller, menu, "PrestigeMasterActivated")
 
 	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
 		if IsGamepad( controller ) then
@@ -4891,9 +6943,8 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 			return false
 		end
 	end, false )
-	]]
 	
-	local sizePrestigeMasterButton = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400, 450 )
+	local sizePrestigeMasterButton = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.35, 0.35, 400, 450 )
 	sizePrestigeMasterButton:mergeStateConditions( {
 		{
 			stateName = "Disabled",
@@ -4919,299 +6970,7 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	RankEditBox.id = "RankEditBox"
 	PrestigeEditBox.id = "PrestigeEditBox"
 
-	--[[
-
-	-- Multiplayer
-	local Multiplayer_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400 + 100, 450 + 100 )
-	Multiplayer_RankEditBox:linkToElementModel( self, nil, false, function ( model )
-		Multiplayer_RankEditBox:setModel( model, f1_arg1 )
-	end )
-	Multiplayer_RankEditBox.TextBox:setLeftRight(0, 0, 20 + 155, 320 + 155)
-	Multiplayer_RankEditBox.RankHighlight:setText("^2Set Multiplayer Rank: ")
-	self:addElement( Multiplayer_RankEditBox )
-	self.Multiplayer_RankEditBox = Multiplayer_RankEditBox
-
-	local MultiplayerRankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Multiplayer_Shield_Rank" )
-	if MultiplayerRankModel:get() == nil then
-		MultiplayerRankModel:set( "" )
-	end
-
-	CoD.PCUtility.SetupEditControlWithModel( Multiplayer_RankEditBox, f1_arg0, f1_local1, MultiplayerRankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
-		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
-			local RankData = f331_arg0:get()
-			if RankData ~= nil and RankData ~= "" then
-				EnhPrintInfo("Multiplayer RankData", RankData)
-				PlaySoundAlias( "uin_paint_image_flip_toggle" )
-
-				if not isInteger(RankData) or tonumber(RankData) > 1000 or tonumber(RankData) < 1 then
-					f331_arg0:set("^1Invalid Rank!")
-					Multiplayer_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-				else
-					f331_arg0:set("^3Rank Set!")
-					Multiplayer_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-
-					-- shield api here later..
-					Engine[@"exec"](Engine[@"getprimarycontroller"](), "statsetbyname rank " .. RankData)
-					Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankData)
-
-					-- save
-					Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats")
-				end
-			end
-		else
-			f331_arg0:set("") -- reset it
-		end
-	end )
-
-
-	local Multiplayer_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400 + 100, 450 + 100 )
-	Multiplayer_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
-		Multiplayer_PrestigeEditBox:setModel( model, f1_arg1 )
-	end )
-	Multiplayer_PrestigeEditBox.TextBox:setLeftRight(0, 0, 20 + 175, 320 + 175)
-	Multiplayer_PrestigeEditBox.RankHighlight:setText("^2Set Multiplayer Prestige: ")
-	self:addElement( Multiplayer_PrestigeEditBox )
-	self.Multiplayer_PrestigeEditBox = Multiplayer_PrestigeEditBox
-
-	local MultiplayerPrestigeModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Multiplayer_Shield_Prestige" )
-	if MultiplayerPrestigeModel:get() == nil then
-		MultiplayerPrestigeModel:set( "" )
-	end
-
-	CoD.PCUtility.SetupEditControlWithModel( Multiplayer_PrestigeEditBox, f1_arg0, f1_local1, MultiplayerPrestigeModel, function ( f331_arg0, f331_arg1, f331_arg2 )
-		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
-			local PrestigeData = f331_arg0:get()
-			if PrestigeData ~= nil and PrestigeData ~= "" then
-				EnhPrintInfo("Multiplayer PrestigeData", PrestigeData)
-				PlaySoundAlias( "uin_paint_image_flip_toggle" )
-
-				if not isInteger(PrestigeData) or tonumber(PrestigeData) > 10 or tonumber(PrestigeData) < 1 then
-					f331_arg0:set("^1Invalid Prestige!")
-					Multiplayer_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-				else
-					f331_arg0:set("^3Prestige Set!")
-					Multiplayer_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-
-					-- shield api here later..
-					Engine[@"exec"](Engine[@"getprimarycontroller"](), "statsetbyname PLEVEL " .. PrestigeData)
-					Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeData)
-
-					-- save
-					Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats")
-				end
-			end
-		else
-			f331_arg0:set("") -- reset it
-		end
-	end )
-
-	local MultiplayePrestigeMaster = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 100, 450 + 100 )
-	
-	MultiplayePrestigeMaster.MiddleText:setTTF( "ttmussels_regular" )
-	MultiplayePrestigeMaster.MiddleText:setText("^2Prestige Master")
-
-	MultiplayePrestigeMaster.MiddleTextFocus:setText("^2Prestige Master")
-	MultiplayePrestigeMaster.MiddleTextFocus:setTTF( "ttmussels_regular" )
-
-	MultiplayePrestigeMaster:linkToElementModel( self, nil, false, function ( model )
-		MultiplayePrestigeMaster:setModel( model, f1_arg1 )
-	end )
-	self:addElement( MultiplayePrestigeMaster )
-	self.MultiplayePrestigeMaster = MultiplayePrestigeMaster
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( MultiplayePrestigeMaster, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		EnhPrintInfo("MultiplayePrestigeMaster")
-		-- shield api later
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeMultiplayePrestigeMaster = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 100, 450 + 100 )
-	sizeMultiplayePrestigeMaster:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeMultiplayePrestigeMaster:setAlpha( 0 )
-	sizeMultiplayePrestigeMaster.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeMultiplayePrestigeMaster.Tint:setAlpha( 0.25 )
-	sizeMultiplayePrestigeMaster:linkToElementModel( self, nil, false, function ( model )
-		sizeMultiplayePrestigeMaster:setModel( model, f1_arg1 )
-	end )
-	sizeMultiplayePrestigeMaster.ButtonName.GameModeText:setText("^2Prestige Master")
-	self:addElement( sizeMultiplayePrestigeMaster )
-	self.sizeMultiplayePrestigeMaster = sizeMultiplayePrestigeMaster
-
-	MultiplayePrestigeMaster.id = "MultiplayePrestigeMaster"
-	sizeMultiplayePrestigeMaster.id = "sizeMultiplayePrestigeMaster"
-	
-	Multiplayer_RankEditBox.id = "Multiplayer_RankEditBox"
-	Multiplayer_PrestigeEditBox.id = "Multiplayer_PrestigeEditBox"
-
-	-- Zombies
-	local Zombies_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400 + 200, 450 + 200 )
-	Zombies_RankEditBox:linkToElementModel( self, nil, false, function ( model )
-		Zombies_RankEditBox:setModel( model, f1_arg1 )
-	end )
-	Zombies_RankEditBox.TextBox:setLeftRight(0, 0, 20 + 130, 320 + 130)
-	Zombies_RankEditBox.RankHighlight:setText("^2Set Zombies Rank: ")
-	self:addElement( Zombies_RankEditBox )
-	self.Zombies_RankEditBox = Zombies_RankEditBox
-
-	local ZombiesRankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Zombies_Shield_Rank" )
-	if ZombiesRankModel:get() == nil then
-		ZombiesRankModel:set( "" )
-	end
-
-	CoD.PCUtility.SetupEditControlWithModel( Zombies_RankEditBox, f1_arg0, f1_local1, ZombiesRankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
-		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
-			local RankData = f331_arg0:get()
-			if RankData ~= nil and RankData ~= "" then
-				EnhPrintInfo("Zombies RankData", RankData)
-				PlaySoundAlias( "uin_paint_image_flip_toggle" )
-
-				if not isInteger(RankData) or tonumber(RankData) > 1000 or tonumber(RankData) < 1 then
-					f331_arg0:set("^1Invalid Rank!")
-					Zombies_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-				else
-					f331_arg0:set("^3Rank Set!")
-					Zombies_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-
-					-- shield api here later..
-				end
-			end
-		else
-			f331_arg0:set("") -- reset it
-		end
-	end )
-
-
-	local Zombies_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400 + 200, 450 + 200 )
-	Zombies_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
-		Zombies_PrestigeEditBox:setModel( model, f1_arg1 )
-	end )
-	Zombies_PrestigeEditBox.TextBox:setLeftRight(0, 0, 20 + 155, 320 + 155)
-	Zombies_PrestigeEditBox.RankHighlight:setText("^2Set Zombies Prestige: ")
-	self:addElement( Zombies_PrestigeEditBox )
-	self.Zombies_PrestigeEditBox = Zombies_PrestigeEditBox
-
-	local ZombiesPrestigeModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Zombies_Shield_Prestige" )
-	if ZombiesPrestigeModel:get() == nil then
-		ZombiesPrestigeModel:set( "" )
-	end
-
-	CoD.PCUtility.SetupEditControlWithModel( Zombies_PrestigeEditBox, f1_arg0, f1_local1, ZombiesPrestigeModel, function ( f331_arg0, f331_arg1, f331_arg2 )
-		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
-			local PrestigeData = f331_arg0:get()
-			if PrestigeData ~= nil and PrestigeData ~= "" then
-				EnhPrintInfo("Zombies PrestigeData", PrestigeData)
-				PlaySoundAlias( "uin_paint_image_flip_toggle" )
-
-				if not isInteger(PrestigeData) or tonumber(PrestigeData) > 10 or tonumber(PrestigeData) < 1 then
-					f331_arg0:set("^1Invalid Prestige!")
-					Zombies_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-				else
-					f331_arg0:set("^3Prestige Set!")
-					Zombies_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
-						f331_arg0:set("")
-					end ) )
-
-					-- shield api here later..
-				end
-			end
-		else
-			f331_arg0:set("") -- reset it
-		end
-	end )
-
-	local ZombiesPrestigeMaster = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 200, 450 + 200 )
-	
-	ZombiesPrestigeMaster.MiddleText:setTTF( "ttmussels_regular" )
-	ZombiesPrestigeMaster.MiddleText:setText("^2Prestige Master")
-
-	ZombiesPrestigeMaster.MiddleTextFocus:setText("^2Prestige Master")
-	ZombiesPrestigeMaster.MiddleTextFocus:setTTF( "ttmussels_regular" )
-
-	ZombiesPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
-		ZombiesPrestigeMaster:setModel( model, f1_arg1 )
-	end )
-	self:addElement( ZombiesPrestigeMaster )
-	self.ZombiesPrestigeMaster = ZombiesPrestigeMaster
-
-	-- add callback click
-	f1_local1:AddButtonCallbackFunction( ZombiesPrestigeMaster, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
-		PlaySoundAlias( "uin_paint_image_flip_toggle" )
-		EnhPrintInfo("ZombiesPrestigeMaster")
-		-- shield api later
-
-	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
-		if IsGamepad( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
-			return true
-		elseif IsMouseOrKeyboard( controller ) then
-			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
-			return false
-		else
-			return false
-		end
-	end, false )
-	
-	local sizeZombiesPrestigeMaster = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 200, 450 + 200 )
-	sizeZombiesPrestigeMaster:mergeStateConditions( {
-		{
-			stateName = "Disabled",
-			condition = function ( menu, element, event )
-				return AlwaysFalse()
-			end
-		}
-	} )
-
-	sizeZombiesPrestigeMaster:setAlpha( 0 )
-	sizeZombiesPrestigeMaster.Tint:setRGB( 0.05, 0.08, 0.11 )
-	sizeZombiesPrestigeMaster.Tint:setAlpha( 0.25 )
-	sizeZombiesPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
-		sizeZombiesPrestigeMaster:setModel( model, f1_arg1 )
-	end )
-	sizeZombiesPrestigeMaster.ButtonName.GameModeText:setText("^2Prestige Master")
-	self:addElement( sizeZombiesPrestigeMaster )
-	self.sizeZombiesPrestigeMaster = sizeZombiesPrestigeMaster
-
-	ZombiesPrestigeMaster.id = "ZombiesPrestigeMaster"
-	sizeZombiesPrestigeMaster.id = "sizeZombiesPrestigeMaster"
-	
-	Zombies_RankEditBox.id = "Zombies_RankEditBox"
-	Zombies_PrestigeEditBox.id = "Zombies_PrestigeEditBox"
-
-	]]
+	NameEditBox.id = "NameEditBox"
 
 	f1_local1:AddButtonCallbackFunction( self, f1_arg0, Enum[@"hash_3DD78803F918E9D"][@"hash_1805EFA15E9E7E5A"], nil, function ( element, menu, controller, model )
 		GoBack( self, controller )
@@ -5241,20 +7000,40 @@ LUI.createMenu.ShieldUnlockOptionsMenu = function ( f1_arg0, f1_arg1 )
 	return self
 end
 
-CoD.ShieldUnlockOptionsMenu.__onClose = function ( f8_arg0 )
+CoD.ShieldOptionsMenu.__onClose = function ( f8_arg0 )
+	-- adding on close to everything in lua menu i make is important
+	-- its mostly because to avoid element pool being fucked
+
 	f8_arg0.Background:close()
 	f8_arg0.FooterContainerFrontendRight:close()
 	f8_arg0.TabbedScoreboardFuiBox:close()
-	f8_arg0.ShieldUnlockOptionsMenu_SafeAreaFront:close()
+	f8_arg0.ShieldOptionsMenu_SafeAreaFront:close()
+	f8_arg0.sizePrestigeMasterButton:close()
+	f8_arg0.PrestigeMasterButton:close()
+	f8_arg0.PrestigeEditBox:close()
+	f8_arg0.RankEditBox:close()
+	f8_arg0.UnlockSettingDescription:close()
+	f8_arg0.UnlockSettingsList:close()
+	f8_arg0.OptionalSettingsList:close()
+	f8_arg0.NameHint:close()
+	f8_arg0.MapHint:close()
+	f8_arg0.ColorHint:close()
+	f8_arg0.CornerPipL:close()
+	f8_arg0.HeaderPixelGridTiledBackingL:close()
+	f8_arg0.HeaderPixelGridTiledBackingR:close()
+	f8_arg0.CornerPipR:close()
+	f8_arg0.NameEditBox:close()
+	f8_arg0.ReloadModsButton:close()
+	f8_arg0.sizeReloadModsButton:close()
 end
 
-CoD.ShieldUnlockOptionsMenu_SafeAreaFront = InheritFrom( LUI.UIElement )
-CoD.ShieldUnlockOptionsMenu_SafeAreaFront.__defaultWidth = 1920
-CoD.ShieldUnlockOptionsMenu_SafeAreaFront.__defaultHeight = 1080
-CoD.ShieldUnlockOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+CoD.ShieldOptionsMenu_SafeAreaFront = InheritFrom( LUI.UIElement )
+CoD.ShieldOptionsMenu_SafeAreaFront.__defaultWidth = 1920
+CoD.ShieldOptionsMenu_SafeAreaFront.__defaultHeight = 1080
+CoD.ShieldOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
 	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.ShieldUnlockOptionsMenu_SafeAreaFront )
-	self.id = "ShieldUnlockOptionsMenu_SafeAreaFront"
+	self:setClass( CoD.ShieldOptionsMenu_SafeAreaFront )
+	self.id = "ShieldOptionsMenu_SafeAreaFront"
 	self.soundSet = "none"
 	self.onlyChildrenFocusable = true
 	self.anyChildUsesUpdateState = true
@@ -5265,25 +7044,18 @@ CoD.ShieldUnlockOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_
 	self.TabBacking = TabBacking
 	
 	local CommonHeader = CoD.CommonHeader.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 0, 67 )
-	CommonHeader.subtitle.StageTitle:setText("^2Unlock All Options")
-	CommonHeader.subtitle.subtitle:setText("^3Modify Unlock Options and Rank")
+	CommonHeader.subtitle.StageTitle:setText("^2Shield Options")
+	CommonHeader.subtitle.subtitle:setText("^3Modify Username, Unlock Options and Rank")
 	self:addElement( CommonHeader )
 	self.CommonHeader = CommonHeader
 	
-	local FETabBar = CoD.DirectorSelect_Tabbar_Center.new( f1_arg0, f1_arg1, 0.5, 0.5, -100.5, 100.5, 0, 0, 52.5, 113.5 )
-	FETabBar:mergeStateConditions( {
-		{
-			stateName = "DimBumperIcons",
-			condition = function ( menu, element, event )
-				return IsLobbyNetworkModeLAN()
-			end
-		}
-	} )
-	local f1_local4 = FETabBar
-	local HeaderStripe = FETabBar.subscribeToModel
+	local ShieldSettingsTabs = CoD.Common_Tabbar_Center.new( f1_arg0, f1_arg1, 0.5, 0.5, -100.5, 100.5, 0, 0, 52.5 - 15, 113.5 - 15 )
+
+	local f1_local4 = ShieldSettingsTabs
+	local HeaderStripe = ShieldSettingsTabs.subscribeToModel
 	local f1_local6 = Engine[@"hash_78DF2E5447F384B9"]()
 	HeaderStripe( f1_local4, f1_local6["lobbyRoot.lobbyNav"], function ( f3_arg0 )
-		f1_arg0:updateElementState( FETabBar, {
+		f1_arg0:updateElementState( ShieldSettingsTabs, {
 			name = "model_validation",
 			menu = f1_arg0,
 			controller = f1_arg1,
@@ -5291,22 +7063,22 @@ CoD.ShieldUnlockOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_
 			modelName = "lobbyRoot.lobbyNav"
 		} )
 	end, false )
-	FETabBar.Tabs.grid:setHorizontalCount( 5 )
-	FETabBar.Tabs.grid:setDataSource( "ShieldUnlockFilters" )
-	FETabBar:registerEventHandler( "list_active_changed", function ( element, event )
-		local f4_local0 = nil
-		CoD.LobbyUtility.LobbyLANServerBrowserSetMainModeFilter( self, element, f1_arg1 )
-		RefreshServerList( self, f1_arg1 )
-		return f4_local0
+
+	ShieldSettingsTabs.Tabs.grid:setDataSource( "ShieldOptionsTabs" )
+	ShieldSettingsTabs:registerEventHandler( "grid_item_changed", function ( element, event )
+		local f2_local0 = nil
+		UpdateAllMenuButtonPrompts( f1_arg0, f1_arg1 )
+		CloseContextualMenu( f1_arg0, f1_arg1 )
+		return f2_local0
 	end )
-	self:addElement( FETabBar )
-	self.FETabBar = FETabBar
+	self:addElement( ShieldSettingsTabs )
+	self.ShieldSettingsTabs = ShieldSettingsTabs
 	
 	HeaderStripe = CoD.header_container_frontend.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 0, 42 )
 	self:addElement( HeaderStripe )
 	self.HeaderStripe = HeaderStripe
 	
-	FETabBar.id = "FETabBar"
+	ShieldSettingsTabs.id = "ShieldSettingsTabs"
 	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
 	
 	if PostLoadFunc then
@@ -5316,352 +7088,11 @@ CoD.ShieldUnlockOptionsMenu_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_
 	return self
 end
 
-CoD.Shield_RankEditBox = InheritFrom( LUI.UIElement )
-CoD.Shield_RankEditBox.__defaultWidth = 340
-CoD.Shield_RankEditBox.__defaultHeight = 60
-CoD.Shield_RankEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.Shield_RankEditBox )
-	self.id = "Shield_RankEditBox"
-	self.soundSet = "default"
-	f1_arg0:addElementToPendingUpdateStateList( self )
-	
-	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
-	Backing:setRGB( 0, 0, 0 )
-	Backing:setAlpha( 0.5 )
-	self:addElement( Backing )
-	self.Backing = Backing
-	
-	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	Frame:setRGB( 0.78, 0.74, 0.67 )
-	Frame:setAlpha( 0.04 )
-	self:addElement( Frame )
-	self.Frame = Frame
-	
-	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	self:addElement( Corner )
-	self.Corner = Corner
-	
-	local TextBox = LUI.UIText.new( 0, 0, 20 + 70, 320 + 70, 0.5, 0.5, -10.5, 10.5 )
-	TextBox:setRGB( 0.78, 0.74, 0.67 )
-	TextBox:setTTF( "notosans_regular" )
-	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( TextBox )
-	self.TextBox = TextBox
-
-	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
-	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
-	RankHighlight:setTTF( "notosans_regular" )
-	RankHighlight:setText("^2Set Rank: ")
-	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( RankHighlight )
-	self.RankHighlight = RankHighlight
-	
-	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
-	
-	if PostLoadFunc then
-		PostLoadFunc( self, f1_arg1, f1_arg0 )
-	end
-	
-	local f1_local5 = self
-	self.__editControlMaxChar = 4
-	--self.__editControlNumerical = 1
-	self.__editControlIsInteger = 1
-	self.__editControlMin = 0
-	self.__editControlMax = 1000
-
-	--CoD.PCUtility.SetupEditControlWithControllerModel( self, f1_arg1, f1_arg0, "Shield_Rank" )
-
-	CoD.BaseUtility.SetUseStencil( self )
-	DisableModelStringReplacement( TextBox )
-
-	return self
-end
-
-CoD.Shield_RankEditBox.__resetProperties = function ( f3_arg0 )
-	f3_arg0.Corner:completeAnimation()
-	f3_arg0.Frame:completeAnimation()
-	f3_arg0.Backing:completeAnimation()
-	f3_arg0.TextBox:completeAnimation()
-	f3_arg0.Corner:setScale( 1, 1 )
-	f3_arg0.Frame:setAlpha( 0.04 )
-	f3_arg0.Backing:setAlpha( 0.5 )
-	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
-end
-
-CoD.Shield_RankEditBox.__clipsPerState = {
-	DefaultState = {
-		DefaultClip = function ( f4_arg0, f4_arg1 )
-			f4_arg0:__resetProperties()
-			f4_arg0:setupElementClipCounter( 0 )
-		end,
-		Focus = function ( f5_arg0, f5_arg1 )
-			f5_arg0:__resetProperties()
-			f5_arg0:setupElementClipCounter( 3 )
-			f5_arg0.Backing:completeAnimation()
-			f5_arg0.Backing:setAlpha( 0.8 )
-			f5_arg0.clipFinished( f5_arg0.Backing )
-			f5_arg0.Frame:completeAnimation()
-			f5_arg0.Frame:setAlpha( 0.6 )
-			f5_arg0.clipFinished( f5_arg0.Frame )
-			f5_arg0.Corner:completeAnimation()
-			f5_arg0.Corner:setScale( 0.98, 0.9 )
-			f5_arg0.clipFinished( f5_arg0.Corner )
-		end,
-		GainFocus = function ( f6_arg0, f6_arg1 )
-			f6_arg0:__resetProperties()
-			f6_arg0:setupElementClipCounter( 3 )
-			local f6_local0 = function ( f7_arg0 )
-				f6_arg0.Backing:beginAnimation( 200 )
-				f6_arg0.Backing:setAlpha( 0.8 )
-				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Backing:completeAnimation()
-			f6_arg0.Backing:setAlpha( 0.5 )
-			f6_local0( f6_arg0.Backing )
-			local f6_local1 = function ( f8_arg0 )
-				f6_arg0.Frame:beginAnimation( 200 )
-				f6_arg0.Frame:setAlpha( 0.6 )
-				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Frame:completeAnimation()
-			f6_arg0.Frame:setAlpha( 0.04 )
-			f6_local1( f6_arg0.Frame )
-			local f6_local2 = function ( f9_arg0 )
-				f6_arg0.Corner:beginAnimation( 200 )
-				f6_arg0.Corner:setScale( 0.98, 0.9 )
-				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Corner:completeAnimation()
-			f6_arg0.Corner:setScale( 1, 1 )
-			f6_local2( f6_arg0.Corner )
-		end,
-		LoseFocus = function ( f10_arg0, f10_arg1 )
-			f10_arg0:__resetProperties()
-			f10_arg0:setupElementClipCounter( 3 )
-			local f10_local0 = function ( f11_arg0 )
-				f10_arg0.Backing:beginAnimation( 200 )
-				f10_arg0.Backing:setAlpha( 0.5 )
-				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Backing:completeAnimation()
-			f10_arg0.Backing:setAlpha( 0.8 )
-			f10_local0( f10_arg0.Backing )
-			local f10_local1 = function ( f12_arg0 )
-				f10_arg0.Frame:beginAnimation( 200 )
-				f10_arg0.Frame:setAlpha( 0.04 )
-				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Frame:completeAnimation()
-			f10_arg0.Frame:setAlpha( 0.6 )
-			f10_local1( f10_arg0.Frame )
-			local f10_local2 = function ( f13_arg0 )
-				f10_arg0.Corner:beginAnimation( 200 )
-				f10_arg0.Corner:setScale( 1, 1 )
-				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Corner:completeAnimation()
-			f10_arg0.Corner:setScale( 0.98, 0.9 )
-			f10_local2( f10_arg0.Corner )
-		end,
-		InputFocus = function ( f14_arg0, f14_arg1 )
-			f14_arg0:__resetProperties()
-			f14_arg0:setupElementClipCounter( 1 )
-			f14_arg0.TextBox:completeAnimation()
-			f14_arg0.TextBox:setRGB( 1, 1, 1 )
-			f14_arg0.clipFinished( f14_arg0.TextBox )
-		end
-	}
-}
-
-CoD.Shield_RankEditBox.__onClose = function ( f15_arg0 )
-	f15_arg0.Frame:close()
-	f15_arg0.Corner:close()
-	f15_arg0.TextBox:close()
-end
-
-CoD.Shield_PrestigeEditBox = InheritFrom( LUI.UIElement )
-CoD.Shield_PrestigeEditBox.__defaultWidth = 340
-CoD.Shield_PrestigeEditBox.__defaultHeight = 60
-CoD.Shield_PrestigeEditBox.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.Shield_PrestigeEditBox )
-	self.id = "Shield_PrestigeEditBox"
-	self.soundSet = "default"
-	f1_arg0:addElementToPendingUpdateStateList( self )
-	
-	local Backing = LUI.UIImage.new( 0, 1, 0, 0, 0, 1, 0, 0 )
-	Backing:setRGB( 0, 0, 0 )
-	Backing:setAlpha( 0.5 )
-	self:addElement( Backing )
-	self.Backing = Backing
-	
-	local Frame = CoD.StartMenuOptionsMainFrame.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	Frame:setRGB( 0.78, 0.74, 0.67 )
-	Frame:setAlpha( 0.04 )
-	self:addElement( Frame )
-	self.Frame = Frame
-	
-	local Corner = CoD.StartMenuOptionsMainCorners.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 1, 0, 0 )
-	self:addElement( Corner )
-	self.Corner = Corner
-	
-	local TextBox = LUI.UIText.new( 0, 0, 20 + 95, 320 + 95, 0.5, 0.5, -10.5, 10.5 )
-	TextBox:setRGB( 0.78, 0.74, 0.67 )
-	TextBox:setTTF( "notosans_regular" )
-	TextBox:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( TextBox )
-	self.TextBox = TextBox
-
-	local RankHighlight = LUI.UIText.new( 0, 0, 20, 320, 0.5, 0.5, -10.5, 10.5 )
-	RankHighlight:setRGB( 0.78, 0.74, 0.67 )
-	RankHighlight:setTTF( "notosans_regular" )
-	RankHighlight:setText("^2Set Prestige: ")
-	RankHighlight:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
-	self:addElement( RankHighlight )
-	self.RankHighlight = RankHighlight
-	
-	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
-	
-	if PostLoadFunc then
-		PostLoadFunc( self, f1_arg1, f1_arg0 )
-	end
-	
-	self.__editControlMaxChar = 2
-	self.__editControlIsInteger = 1
-	self.__editControlMin = 0
-	self.__editControlMax = 1000
-
-	CoD.BaseUtility.SetUseStencil( self )
-	DisableModelStringReplacement( TextBox )
-
-	return self
-end
-
-CoD.Shield_PrestigeEditBox.__resetProperties = function ( f3_arg0 )
-	f3_arg0.Corner:completeAnimation()
-	f3_arg0.Frame:completeAnimation()
-	f3_arg0.Backing:completeAnimation()
-	f3_arg0.TextBox:completeAnimation()
-	f3_arg0.Corner:setScale( 1, 1 )
-	f3_arg0.Frame:setAlpha( 0.04 )
-	f3_arg0.Backing:setAlpha( 0.5 )
-	f3_arg0.TextBox:setRGB( 0.78, 0.74, 0.67 )
-end
-
-CoD.Shield_PrestigeEditBox.__clipsPerState = {
-	DefaultState = {
-		DefaultClip = function ( f4_arg0, f4_arg1 )
-			f4_arg0:__resetProperties()
-			f4_arg0:setupElementClipCounter( 0 )
-		end,
-		Focus = function ( f5_arg0, f5_arg1 )
-			f5_arg0:__resetProperties()
-			f5_arg0:setupElementClipCounter( 3 )
-			f5_arg0.Backing:completeAnimation()
-			f5_arg0.Backing:setAlpha( 0.8 )
-			f5_arg0.clipFinished( f5_arg0.Backing )
-			f5_arg0.Frame:completeAnimation()
-			f5_arg0.Frame:setAlpha( 0.6 )
-			f5_arg0.clipFinished( f5_arg0.Frame )
-			f5_arg0.Corner:completeAnimation()
-			f5_arg0.Corner:setScale( 0.98, 0.9 )
-			f5_arg0.clipFinished( f5_arg0.Corner )
-		end,
-		GainFocus = function ( f6_arg0, f6_arg1 )
-			f6_arg0:__resetProperties()
-			f6_arg0:setupElementClipCounter( 3 )
-			local f6_local0 = function ( f7_arg0 )
-				f6_arg0.Backing:beginAnimation( 200 )
-				f6_arg0.Backing:setAlpha( 0.8 )
-				f6_arg0.Backing:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Backing:completeAnimation()
-			f6_arg0.Backing:setAlpha( 0.5 )
-			f6_local0( f6_arg0.Backing )
-			local f6_local1 = function ( f8_arg0 )
-				f6_arg0.Frame:beginAnimation( 200 )
-				f6_arg0.Frame:setAlpha( 0.6 )
-				f6_arg0.Frame:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Frame:completeAnimation()
-			f6_arg0.Frame:setAlpha( 0.04 )
-			f6_local1( f6_arg0.Frame )
-			local f6_local2 = function ( f9_arg0 )
-				f6_arg0.Corner:beginAnimation( 200 )
-				f6_arg0.Corner:setScale( 0.98, 0.9 )
-				f6_arg0.Corner:registerEventHandler( "interrupted_keyframe", f6_arg0.clipInterrupted )
-				f6_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f6_arg0.clipFinished )
-			end
-			
-			f6_arg0.Corner:completeAnimation()
-			f6_arg0.Corner:setScale( 1, 1 )
-			f6_local2( f6_arg0.Corner )
-		end,
-		LoseFocus = function ( f10_arg0, f10_arg1 )
-			f10_arg0:__resetProperties()
-			f10_arg0:setupElementClipCounter( 3 )
-			local f10_local0 = function ( f11_arg0 )
-				f10_arg0.Backing:beginAnimation( 200 )
-				f10_arg0.Backing:setAlpha( 0.5 )
-				f10_arg0.Backing:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Backing:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Backing:completeAnimation()
-			f10_arg0.Backing:setAlpha( 0.8 )
-			f10_local0( f10_arg0.Backing )
-			local f10_local1 = function ( f12_arg0 )
-				f10_arg0.Frame:beginAnimation( 200 )
-				f10_arg0.Frame:setAlpha( 0.04 )
-				f10_arg0.Frame:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Frame:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Frame:completeAnimation()
-			f10_arg0.Frame:setAlpha( 0.6 )
-			f10_local1( f10_arg0.Frame )
-			local f10_local2 = function ( f13_arg0 )
-				f10_arg0.Corner:beginAnimation( 200 )
-				f10_arg0.Corner:setScale( 1, 1 )
-				f10_arg0.Corner:registerEventHandler( "interrupted_keyframe", f10_arg0.clipInterrupted )
-				f10_arg0.Corner:registerEventHandler( "transition_complete_keyframe", f10_arg0.clipFinished )
-			end
-			
-			f10_arg0.Corner:completeAnimation()
-			f10_arg0.Corner:setScale( 0.98, 0.9 )
-			f10_local2( f10_arg0.Corner )
-		end,
-		InputFocus = function ( f14_arg0, f14_arg1 )
-			f14_arg0:__resetProperties()
-			f14_arg0:setupElementClipCounter( 1 )
-			f14_arg0.TextBox:completeAnimation()
-			f14_arg0.TextBox:setRGB( 1, 1, 1 )
-			f14_arg0.clipFinished( f14_arg0.TextBox )
-		end
-	}
-}
-
-CoD.Shield_PrestigeEditBox.__onClose = function ( f15_arg0 )
-	f15_arg0.Frame:close()
-	f15_arg0.Corner:close()
-	f15_arg0.TextBox:close()
+CoD.ShieldOptionsMenu_SafeAreaFront.__onClose = function ( f8_arg0 )
+	f8_arg0.HeaderStripe:close()
+	f8_arg0.ShieldSettingsTabs:close()
+	f8_arg0.CommonHeader:close()
+	f8_arg0.TabBacking:close()
 end
 
 -- Servers SetUp
@@ -5710,9 +7141,13 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	self.FooterContainerFrontendRight2 = FooterContainerFrontendRight2
 	]]
 	
-	local LANServerBrowserDetails = CoD.ShieldServerRowList.new( f1_local1, f1_arg0, 0.5, 0.5, -800, 800, 0.5, 0.5, -310, 300 )
-	self:addElement( LANServerBrowserDetails )
-	self.LANServerBrowserDetails = LANServerBrowserDetails
+	local ShieldDWServerDetails = CoD.ShieldDWServerRowList.new( f1_local1, f1_arg0, 0.5, 0.5, -800, 800, 0.5, 0.5, -310, 300 )
+	self:addElement( ShieldDWServerDetails )
+	self.ShieldDWServerDetails = ShieldDWServerDetails
+
+	local ShieldDWGameServerDetails = CoD.ShieldDWGameServerRowList.new( f1_local1, f1_arg0, 0.5, 0.5, -800, 800, 0.8, 0.8, -310, 300 )
+	self:addElement( ShieldDWGameServerDetails )
+	self.ShieldDWGameServerDetails = ShieldDWGameServerDetails
 	
 	local HeaderBackingL = LUI.UIImage.new( 0, 0, 160, 1229, 0, 0, 176, 216 )
 	HeaderBackingL:setRGB( 0, 0, 0 )
@@ -5727,7 +7162,40 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	self:addElement( HeaderBackingR )
 	self.HeaderBackingR = HeaderBackingR
 	]]
+
+	-- desc for dw
+	local DWHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.02, 0.02, 100, 140 )
+	DWHint:setText("Demonware Servers")
+	DWHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	DWHint:setTTF("notosans_bold")
+	DWHint:setRGB(1, 1, 0)
+	DWHint:setBackingType( 2 )
+	DWHint:setBackingColor( 0.04, 0.81, 1 )
+	DWHint:setBackingAlpha( 0.01 )
+	DWHint:setBackingXPadding( 12 )
+	DWHint:setBackingYPadding( 6 )
+	DWHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	DWHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( DWHint )
+	self.DWHint = DWHint
+
+	-- desc for in-game servers
+	local GameServersHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.32, 0.32, 100, 140 )
+	GameServersHint:setText("Demonware Lobbies (Coming Soon!)")
+	GameServersHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	GameServersHint:setTTF("notosans_bold")
+	GameServersHint:setRGB(1, 1, 0)
+	GameServersHint:setBackingType( 2 )
+	GameServersHint:setBackingColor( 0.04, 0.81, 1 )
+	GameServersHint:setBackingAlpha( 0.01 )
+	GameServersHint:setBackingXPadding( 12 )
+	GameServersHint:setBackingYPadding( 6 )
+	GameServersHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	GameServersHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( GameServersHint )
+	self.GameServersHint = GameServersHint
 	
+	-- descs for dw servers
 	local ServerNameText = LUI.UIText.new( 0.5, 0.5, -783, -583, 0.5, 0.5, -353.5, -334.5 )
 	ServerNameText:setRGB( 0.59, 0.59, 0.59 )
 	ServerNameText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
@@ -5779,6 +7247,74 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	DetailsTextBox:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
 	self:addElement( DetailsTextBox )
 	self.DetailsTextBox = DetailsTextBox
+
+	-- descs for dw game servers
+	local LobbyNameText = LUI.UIText.new( 0.5, 0.5, -783, -583, 0.8, 0.8, -353.5, -334.5 )
+	LobbyNameText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyNameText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyNameText:setText("Lobby Name")
+	LobbyNameText:setTTF( "ttmussels_regular" )
+	LobbyNameText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyNameText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyNameText )
+	self.LobbyNameText = LobbyNameText
+	
+	local LobbyPlayerCountText = LUI.UIText.new( 0.65, 0.65, -359, -188, 0.8, 0.8, -353, -334 )
+	LobbyPlayerCountText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyPlayerCountText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyPlayerCountText:setText("Lobby Players")
+	LobbyPlayerCountText:setTTF( "ttmussels_regular" )
+	LobbyPlayerCountText:setLetterSpacing( 1 )
+	LobbyPlayerCountText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyPlayerCountText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyPlayerCountText )
+	self.LobbyPlayerCountText = LobbyPlayerCountText
+	
+	local LobbyIPText = LUI.UIText.new( 0.5, 0.5, -300, -31, 0.8, 0.8, -353.5, -334.5 )
+	LobbyIPText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyIPText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyIPText:setText("Lobby IP")
+	LobbyIPText:setTTF( "ttmussels_regular" )
+	LobbyIPText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyIPText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyIPText )
+	self.LobbyIPText = LobbyIPText
+	
+	local LobbyHostedByText = LUI.UIText.new( 0.5, 0.5, -550, -1583, 0.8, 0.8, -353.5, -334.5 )
+	LobbyHostedByText:setRGB( 0.59, 0.59, 0.59 )
+	LobbyHostedByText:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyHostedByText:setTTF( "ttmussels_regular" )
+	LobbyHostedByText:setText("Lobby Hosted By")
+	LobbyHostedByText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyHostedByText:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyHostedByText )
+	self.LobbyHostedByText = LobbyHostedByText
+	
+	local LobbyDetailsTextBox = LUI.UIText.new( 0.5, 0.5, 294, 514, 0.8, 0.8, -353.5, -334.5 )
+	LobbyDetailsTextBox:setRGB( 0.59, 0.59, 0.59 )
+	LobbyDetailsTextBox:setScale( LanguageOverrideNumber( "japanese", 0.75, 1, 1 ) )
+	LobbyDetailsTextBox:setText("") -- not needed really..
+	LobbyDetailsTextBox:setTTF( "ttmussels_regular" )
+	LobbyDetailsTextBox:setAlpha(0)
+	LobbyDetailsTextBox:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
+	LobbyDetailsTextBox:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
+	self:addElement( LobbyDetailsTextBox )
+	self.LobbyDetailsTextBox = LobbyDetailsTextBox
+
+	local LobbyHeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 127.5, 1196.5, 0.61, 0.61, -160.5, -120.5 )
+	LobbyHeaderPixelGridTiledBackingL:setAlpha( 0.15 )
+	LobbyHeaderPixelGridTiledBackingL:setImage( RegisterImage( @"hash_1311E811A3183347" ) )
+	LobbyHeaderPixelGridTiledBackingL:setMaterial( LUI.UIImage.GetCachedMaterial( @"hash_16CBE95C250C6D15" ) )
+	LobbyHeaderPixelGridTiledBackingL:setShaderVector( 0, 0, 0, 0, 0 )
+	LobbyHeaderPixelGridTiledBackingL:setupNineSliceShader( 128, 128 )
+	self:addElement( LobbyHeaderPixelGridTiledBackingL )
+	self.LobbyHeaderPixelGridTiledBackingL = LobbyHeaderPixelGridTiledBackingL
+
+	local LobbyHeaderBackingL = LUI.UIImage.new( 0, 0, 160, 1229, 0.3, 0.3, 176, 216 )
+	LobbyHeaderBackingL:setRGB( 0, 0, 0 )
+	LobbyHeaderBackingL:setAlpha( 0.5 )
+	self:addElement( LobbyHeaderBackingL )
+	self.LobbyHeaderBackingL = LobbyHeaderBackingL
 	
 	local HeaderPixelGridTiledBackingL = LUI.UIImage.new( 0.02, 0.02, 127.5, 1196.5, 0.31, 0.31, -160.5, -120.5 )
 	HeaderPixelGridTiledBackingL:setAlpha( 0.15 )
@@ -5887,8 +7423,78 @@ LUI.createMenu.ShieldLobbyServerBrowserOverlay = function ( f1_arg0, f1_arg1 )
 	--if CoD.isPC then
 		--FooterContainerFrontendRight2.id = "FooterContainerFrontendRight2"
 	--end
-	LANServerBrowserDetails.id = "LANServerBrowserDetails"
+
+	-- Custom IPV4 Edit
+	local IPV4EditBox = CoD.Shield_NameEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, -20, 350, 0.625, 0.625, 100, 150 )
+	IPV4EditBox:linkToElementModel( self, nil, false, function ( model )
+		IPV4EditBox:setModel( model, f1_arg1 )
+	end )
+	IPV4EditBox.TextBox:setLeftRight(0, 0, 20 + 160, 320 + 160)
+	IPV4EditBox.RankHighlight:setText("^2Set Custom Server IP: ")
+	self:addElement( IPV4EditBox )
+	self.IPV4EditBox = IPV4EditBox
+
+	local IPV4EditBoxModel = Engine[@"getmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_IPV4" )
+
+	if IPV4EditBoxModel == nil then
+		IPV4EditBoxModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Shield_IPV4" )
+	end
+
+	if IPV4EditBoxModel:get() == nil then
+		IPV4EditBoxModel:set("")
+	end
+
+	IPV4EditBox.__editControlMaxChar = 16
+	IPV4EditBox.__editControlIsInteger = 1
+	IPV4EditBox.__editControlMin = 0
+	IPV4EditBox.__editControlMax = 1000
+
+	CoD.PCUtility.SetupEditControlWithModel( IPV4EditBox, f1_arg0, f1_local1, IPV4EditBoxModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local IPV4Data = f331_arg0:get()
+
+			EnhPrintInfo("IP", IPV4Data)
+			PlaySoundAlias( "uin_paint_image_flip_toggle" )
+			
+			if not IsIPAddress(IPV4Data) then
+				f331_arg0:set("^1Invalid IP!")
+				IPV4EditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+					f331_arg0:set("")
+				end ) )
+			else
+				f331_arg0:set("^3IP Set!")
+				IPV4EditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+					f331_arg0:set("")
+				end ) )
+
+				-- shield api here later..
+				Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. IPV4Data .. " string")
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+	-- desc for ip
+	local IPHint = LUI.UIText.new( 0.10, 0.10, -20, 850, 0.725, 0.725, 100, 125 )
+	IPHint:setText("To Apply IP Change and Reconnect, Restart the Game!")
+	IPHint:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	IPHint:setTTF("notosans_bold")
+	IPHint:setBackingType( 2 )
+	IPHint:setBackingColor( 0.04, 0.81, 1 )
+	IPHint:setBackingAlpha( 0.01 )
+	IPHint:setBackingXPadding( 12 )
+	IPHint:setBackingYPadding( 6 )
+	IPHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	IPHint:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( IPHint )
+	self.IPHint = IPHint
+
+	ShieldDWServerDetails.id = "ShieldDWServerDetails"
+	ShieldDWGameServerDetails.id = "ShieldDWGameServerDetails"
+
 	SafeAreaContainerLobbyServerBrwoserOverlay.id = "SafeAreaContainerLobbyServerBrwoserOverlay"
+	IPV4EditBox.id = "IPV4EditBox"
 
 	self:processEvent( {
 		name = "menu_loaded",
@@ -5914,20 +7520,41 @@ CoD.ShieldLobbyServerBrowserOverlay.__onClose = function ( f8_arg0 )
 	f8_arg0.Background:close()
 	f8_arg0.FooterContainerFrontendRight:close()
 	--f8_arg0.FooterContainerFrontendRight2:close()
-	f8_arg0.LANServerBrowserDetails:close()
+	f8_arg0.ShieldDWServerDetails:close()
+	f8_arg0.ShieldDWGameServerDetails:close()
 	f8_arg0.TabbedScoreboardFuiBox:close()
 	f8_arg0.SafeAreaContainerLobbyServerBrwoserOverlay:close()
 	--f8_arg0.ShieldServerListButtonList:close()
+	f8_arg0.IPHint:close()
+	f8_arg0.IPV4EditBox:close()
+	f8_arg0.CornerPipL:close()
+	f8_arg0.CornerPipR:close()
+	f8_arg0.HeaderPixelGridTiledBackingL:close()
+	f8_arg0.DetailsTextBox:close()
+	f8_arg0.HostedByText:close()
+	f8_arg0.ServerIPText:close()
+	f8_arg0.PlayerCountText:close()
+	f8_arg0.ServerNameText:close()
+	f8_arg0.HeaderBackingL:close()
+	f8_arg0.DWHint:close()
+	f8_arg0.GameServersHint:close()
+	f8_arg0.LobbyNameText:close()
+	f8_arg0.LobbyPlayerCountText:close()
+	f8_arg0.LobbyIPText:close()
+	f8_arg0.LobbyHostedByText:close()
+	f8_arg0.LobbyDetailsTextBox:close()
+	f8_arg0.LobbyHeaderPixelGridTiledBackingL:close()
+	f8_arg0.LobbyHeaderBackingL:close()
 end
 
--- Shield's Server Lists
-CoD.ShieldServerRowList = InheritFrom( LUI.UIElement )
-CoD.ShieldServerRowList.__defaultWidth = 1600
-CoD.ShieldServerRowList.__defaultHeight = 620
-CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+-- Shield's DW Server Lists
+CoD.ShieldDWServerRowList = InheritFrom( LUI.UIElement )
+CoD.ShieldDWServerRowList.__defaultWidth = 1600
+CoD.ShieldDWServerRowList.__defaultHeight = 620
+CoD.ShieldDWServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
 	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
-	self:setClass( CoD.ShieldServerRowList )
-	self.id = "ShieldServerRowList"
+	self:setClass( CoD.ShieldDWServerRowList )
+	self.id = "ShieldDWServerRowList"
 	self.soundSet = "default"
 	self.onlyChildrenFocusable = true
 	self.anyChildUsesUpdateState = true
@@ -5940,7 +7567,7 @@ CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_
 	Servers:setSpacing( 7 )
 	Servers:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
 	Servers:setVerticalCounter( CoD.verticalCounter )
-	Servers:setDataSource( "ShieldListServers" ) -- Data Source
+	Servers:setDataSource( "ShieldDWServers" ) -- Data Source
 	Servers:appendEventHandler( "input_source_changed", function ( f2_arg0, f2_arg1 )
 		f2_arg1.menu = f2_arg1.menu or f1_arg0
 		CoD.Menu.UpdateButtonShownState( f2_arg0, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
@@ -5974,13 +7601,19 @@ CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_
 	f1_arg0:AddButtonCallbackFunction( Servers, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
 		if IsGamepad( controller ) then
 			PlaySoundAlias("uin_toggle_generic")
-			EnhPrintInfo("Server Connect Test", element.CurrentServerIP)
+			EnhPrintInfo("Server Connect", element.CurrentServerIP)
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. element.CurrentServerIP .. " string")
+			
+			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldIPNotice")
 			--JoinSystemLinkServer( self, element, controller )
 			--GoBack( self, controller )
 			return true
 		elseif IsMouseOrKeyboard( controller ) then
 			PlaySoundAlias("uin_toggle_generic")
-			EnhPrintInfo("Server Connect Test", element.CurrentServerIP)
+			EnhPrintInfo("Server Connect", element.CurrentServerIP)
+			Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson demonware ipv4 " .. element.CurrentServerIP .. " string")
+
+			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldIPNotice")
 			--JoinSystemLinkServer( self, element, controller )
 			--GoBack( self, controller )
 			return true
@@ -6023,7 +7656,117 @@ CoD.ShieldServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_
 	return self
 end
 
-CoD.ShieldServerRowList.__onClose = function ( f9_arg0 )
+CoD.ShieldDWServerRowList.__onClose = function ( f9_arg0 )
+	--f9_arg0.LANServerBrowserDetails:close()
+	f9_arg0.Servers:close()
+end
+
+-- Shield's In-game DW Server Lists
+CoD.ShieldDWGameServerRowList = InheritFrom( LUI.UIElement )
+CoD.ShieldDWGameServerRowList.__defaultWidth = 1600
+CoD.ShieldDWGameServerRowList.__defaultHeight = 620
+CoD.ShieldDWGameServerRowList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.ShieldDWGameServerRowList )
+	self.id = "ShieldDWGameServerRowList"
+	self.soundSet = "default"
+	self.onlyChildrenFocusable = true
+	self.anyChildUsesUpdateState = true
+	
+	local Servers = LUI.UIList.new( f1_arg0, f1_arg1, 7, 0, nil, false, false, false, false )
+	Servers:setLeftRight( 0, 0, 0, 1070 )
+	Servers:setTopBottom( 0, 0, 0, 609 )
+	Servers:setWidgetType( CoD.ShieldServerRow )
+	Servers:setVerticalCount( 14 )
+	Servers:setSpacing( 7 )
+	Servers:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	Servers:setVerticalCounter( CoD.verticalCounter )
+	Servers:setDataSource( "ShieldDWGameServers" ) -- Data Source
+	Servers:appendEventHandler( "input_source_changed", function ( f2_arg0, f2_arg1 )
+		f2_arg1.menu = f2_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f2_arg0, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
+	end )
+
+	--local f1_local2 = Servers
+	--local LANServerBrowserDetails = Servers.subscribeToModel
+	--local f1_local4 = Engine[@"getmodelforcontroller"]( f1_arg1 )
+	--LANServerBrowserDetails( f1_local2, f1_local4.LastInput, function ( f3_arg0, f3_arg1 )
+	--	CoD.Menu.UpdateButtonShownState( f3_arg1, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
+	--end, false )
+
+	Servers:registerEventHandler( "list_item_gain_focus", function ( element, event )
+		local f4_local0 = nil
+		LobbyLANServerPlayerListRefresh( self, element, f1_arg1 )
+		return f4_local0
+	end )
+
+	Servers:registerEventHandler( "gain_focus", function ( element, event )
+		local f5_local0 = nil
+		if element.gainFocus then
+			f5_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f5_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"] )
+		return f5_local0
+	end )
+
+	-- element is the current datasource being clicked..
+	f1_arg0:AddButtonCallbackFunction( Servers, f1_arg1, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		if IsGamepad( controller ) then
+			PlaySoundAlias("uin_toggle_generic")
+			EnhPrintInfo("Server Game Connect", element.CurrentServerIP)
+			
+			--JoinSystemLinkServer( self, element, controller )
+			--GoBack( self, controller )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			PlaySoundAlias("uin_toggle_generic")
+			EnhPrintInfo("Server Game Connect", element.CurrentServerIP)
+
+			--JoinSystemLinkServer( self, element, controller )
+			--GoBack( self, controller )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+
+	self:addElement( Servers )
+	self.Servers = Servers
+	
+	--[[
+	LANServerBrowserDetails = CoD.LANServerBrowserDetails.new( f1_arg0, f1_arg1, 0, 0, 1085, 1600, 0, 0, 0, 610 )
+	self:addElement( LANServerBrowserDetails )
+	self.LANServerBrowserDetails = LANServerBrowserDetails
+	
+	LANServerBrowserDetails:linkToElementModel( Servers, nil, false, function ( model )
+		LANServerBrowserDetails:setModel( model, f1_arg1 )
+	end )
+	]]
+	
+	Servers.id = "Servers"
+	--LANServerBrowserDetails.id = "LANServerBrowserDetails"
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	return self
+end
+
+CoD.ShieldDWGameServerRowList.__onClose = function ( f9_arg0 )
 	--f9_arg0.LANServerBrowserDetails:close()
 	f9_arg0.Servers:close()
 end
@@ -6195,6 +7938,7 @@ CoD.ShieldServerRow.__onClose = function ( f10_arg0 )
 	f10_arg0.ServerIP:close()
 	f10_arg0.ClientCount:close()
 	f10_arg0.ServerName:close()
+	f10_arg0.BlackBar:close()
 end
 
 -- Shield's Servers List (unused)
@@ -6424,6 +8168,46 @@ CoD.SafeAreaContainer_LobbyServerBrwoserOverlay.__onClose = function ( f5_arg0 )
 	f5_arg0.HeaderStripe:close()
 end
 
+CoD.ShieldOptions = InheritFrom( LUI.UIElement )
+CoD.ShieldOptions.__defaultWidth = 1740
+CoD.ShieldOptions.__defaultHeight = 780
+CoD.ShieldOptions.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.ShieldOptions )
+	self.id = "ShieldOptions"
+	self.soundSet = "ChooseDecal"
+	self.onlyChildrenFocusable = true
+	self.anyChildUsesUpdateState = true
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	self.__defaultFocus = CategoryList
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	EnhPrintInfo("Test")
+
+	return self
+end
+
+CoD.ShieldOptions.__resetProperties = function ( f8_arg0 )
+
+end
+
+CoD.ShieldOptions.__clipsPerState = {
+	DefaultState = {
+
+	}
+}
+
+CoD.ShieldOptions.__onClose = function ( f16_arg0 )
+	f16_arg0.NearCompletionButton:close()
+	f16_arg0.ChallengesTotalMasterProgress:close()
+	f16_arg0.CategoryList:close()
+end
+
 -- Filters for Server
 DataSources.ShieldServerBrowserFilters = DataSourceHelpers.ListSetup( "ShieldServerBrowserFilters", function ( f3_arg0, f3_arg1 )
 	local f3_local0 = {
@@ -6437,16 +8221,30 @@ DataSources.ShieldServerBrowserFilters = DataSourceHelpers.ListSetup( "ShieldSer
 	return f3_local0
 end, true )
 
--- Filters for Unlock
-DataSources.ShieldUnlockFilters = DataSourceHelpers.ListSetup( "ShieldUnlockFilters", function ( f3_arg0, f3_arg1 )
+-- Shield's Options Tab
+DataSources.ShieldOptionsTabs = DataSourceHelpers.ListSetup( "ShieldOptionsTabs", function ( f3_arg0, f3_arg1 )
 	local f3_local0 = {
 		{
 			models = {
-				name = @"shield/f_unlockall",
-				filter = Enum[@"lobbymainmode"][@"lobby_mainmode_invalid"]
+				name = @"shield/settings_tab",
+				filter = "shield_options"
 			}
 		}
 	}
+
+	--[[
+		table.insert( f3_local0, {
+			models = {
+				name = @"shield/settings_tab",
+				tabWidget = "CoD.ShieldOptions",
+				available = true
+			},
+			properties = {
+				tabId = "shield_options"
+			}
+		} )
+	]]
+
 	return f3_local0
 end, true )
 
@@ -7335,17 +9133,13 @@ CoD.ZMLobbyButtonsContainer.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3,
 		return f6_local0
 	end )
 	f1_arg0:AddButtonCallbackFunction( PrivateMatchButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
-		if not CoD.DirectorUtility.IsNumClientsExceeded( controller ) and CoD.DirectorUtility.AllClientsOwnDLCForPlaylist( controller ) then
+		if not CoD.DirectorUtility.IsNumClientsExceeded( controller ) then
 			PlaySoundAlias( "uin_toggle_generic" )
 			CoD.DirectorUtility.NavigateToPrivateLobbyForCurrentMode( menu, controller )
 			return true
 		elseif CoD.DirectorUtility.IsNumClientsExceeded( controller ) then
 			PlaySoundAlias( "uin_toggle_generic" )
 			CoD.DirectorUtility.OpenTooManyClientsPopup( self, controller )
-			return true
-		elseif not CoD.DirectorUtility.AllClientsOwnDLCForPlaylist( controller ) then
-			PlaySoundAlias( "uin_toggle_generic" )
-			CoD.DirectorUtility.OpenMapsNotEnabledPopup( self, controller )
 			return true
 		else
 			
@@ -10346,7 +12140,7 @@ CoD.directorPublic.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 			condition = function ( menu, element, event )
 				local f8_local0 = CoD.ModelUtility.IsGlobalModelValueEqualToEnum( "lobbyRoot.publicLobby.stage", LuaEnum.PUBLIC_LOBBY.INVALID )
 				if f8_local0 then
-					f8_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] )
+					f8_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"emodes"][@"mode_warzone"] )
 					if f8_local0 then
 						f8_local0 = IsLobbyPrivateHost()
 						if f8_local0 then
@@ -10445,7 +12239,7 @@ CoD.directorPublic.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 			condition = function ( menu, element, event )
 				local f16_local0 = CoD.ModelUtility.IsGlobalModelValueEqualToEnum( "lobbyRoot.publicLobby.stage", LuaEnum.PUBLIC_LOBBY.INVALID )
 				if f16_local0 then
-					f16_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"hash_59C0C2196D8313A0"][@"hash_3BF1DCC8138A9D39"] )
+					f16_local0 = CoD.BaseUtility.IsCurrentSessionModeEqualTo( Enum[@"emodes"][@"mode_warzone"] )
 					if f16_local0 then
 						if not IsLobbyPrivateHost() then
 							f16_local0 = IsWarzone()
@@ -11789,3 +13583,2714 @@ CoD.Shield_CustomGames_BotSettingsPopup.__onClose = function ( f16_arg0 )
 	f16_arg0.BotSettingsList:close()
 	f16_arg0.PCSmallCloseButton:close()
 end
+
+-- Director Pregame, used for offline progression
+CoD.directorPregame = InheritFrom( LUI.UIElement )
+CoD.directorPregame.__defaultWidth = 1920
+CoD.directorPregame.__defaultHeight = 1080
+CoD.directorPregame.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	CoD.DirectorUtility.InitPublicLobbyModels( self, f1_arg1, f1_arg0 )
+	CoD.PlayerRoleUtility.UpdatePositionDraftModels( f1_arg1 )
+	CoD.DirectorUtility.InitQuickPlayModel( f1_arg1 )
+	self:setClass( CoD.directorPregame )
+	self.id = "directorPregame"
+	self.soundSet = "default"
+	self.onlyChildrenFocusable = true
+	self.anyChildUsesUpdateState = true
+	f1_arg0:addElementToPendingUpdateStateList( self )
+	
+	local Header = CoD.DirectorScreenHeader.new( f1_arg0, f1_arg1, 0.5, 0.5, -870, -227, 0, 0, 301, 401 )
+	Header:setAlpha( 0 )
+	Header:setZoom( 75 )
+	Header.Header:setText( LocalizeToUpperString( @"hash_156CB4013028D74E" ) )
+	self:addElement( Header )
+	self.Header = Header
+	
+	local pckeyboardNavigationRedirector2 = nil
+	
+	pckeyboardNavigationRedirector2 = CoD.emptyFocusable.new( f1_arg0, f1_arg1, 0.5, 0.8, 384, 384, 0.27, 0.32, 0, 0 )
+	self:addElement( pckeyboardNavigationRedirector2 )
+	self.pckeyboardNavigationRedirector2 = pckeyboardNavigationRedirector2
+	
+	local pckeyboardNavigationRedirector = nil
+	
+	pckeyboardNavigationRedirector = CoD.emptyFocusable.new( f1_arg0, f1_arg1, 0.5, 0.8, 384, 384, 0.77, 0.82, 0, 0 )
+	self:addElement( pckeyboardNavigationRedirector )
+	self.pckeyboardNavigationRedirector = pckeyboardNavigationRedirector
+	
+	local ZMLobbyButtons = CoD.ZMLobbyButtonsContainer.new( f1_arg0, f1_arg1, 0.5, 0.5, 515, 896, 1, 1, -178, -108 )
+	ZMLobbyButtons:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return not IsLobbyHostOfCurrentMenu()
+			end
+		}
+	} )
+	ZMLobbyButtons:appendEventHandler( "on_session_start", function ( f3_arg0, f3_arg1 )
+		f3_arg1.menu = f3_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( ZMLobbyButtons, f3_arg1 )
+	end )
+	ZMLobbyButtons:appendEventHandler( "on_session_end", function ( f4_arg0, f4_arg1 )
+		f4_arg1.menu = f4_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( ZMLobbyButtons, f4_arg1 )
+	end )
+	local FindMatchMissingDLCErrorTriangle = ZMLobbyButtons
+	local FindMatchButton = ZMLobbyButtons.subscribeToModel
+	local CustomGamesButton = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchButton( FindMatchMissingDLCErrorTriangle, CustomGamesButton["lobbyRoot.lobbyNav"], function ( f5_arg0 )
+		f1_arg0:updateElementState( ZMLobbyButtons, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f5_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	FindMatchMissingDLCErrorTriangle = ZMLobbyButtons
+	FindMatchButton = ZMLobbyButtons.subscribeToModel
+	CustomGamesButton = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchButton( FindMatchMissingDLCErrorTriangle, CustomGamesButton["lobbyRoot.gameClient.update"], function ( f6_arg0 )
+		f1_arg0:updateElementState( ZMLobbyButtons, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f6_arg0:get(),
+			modelName = "lobbyRoot.gameClient.update"
+		} )
+	end, false )
+	FindMatchMissingDLCErrorTriangle = ZMLobbyButtons
+	FindMatchButton = ZMLobbyButtons.subscribeToModel
+	CustomGamesButton = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchButton( FindMatchMissingDLCErrorTriangle, CustomGamesButton["lobbyRoot.privateClient.update"], function ( f7_arg0 )
+		f1_arg0:updateElementState( ZMLobbyButtons, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f7_arg0:get(),
+			modelName = "lobbyRoot.privateClient.update"
+		} )
+	end, false )
+	FindMatchMissingDLCErrorTriangle = ZMLobbyButtons
+	FindMatchButton = ZMLobbyButtons.subscribeToModel
+	CustomGamesButton = DataSources.ZMLobbyExclusions.getModel( f1_arg1 )
+	FindMatchButton( FindMatchMissingDLCErrorTriangle, CustomGamesButton.PublicMatchExcluded, function ( f8_arg0 )
+		f1_arg0:updateElementState( ZMLobbyButtons, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f8_arg0:get(),
+			modelName = "PublicMatchExcluded"
+		} )
+	end, false )
+	FindMatchMissingDLCErrorTriangle = ZMLobbyButtons
+	FindMatchButton = ZMLobbyButtons.subscribeToModel
+	CustomGamesButton = DataSources.ZMLobbyExclusions.getModel( f1_arg1 )
+	FindMatchButton( FindMatchMissingDLCErrorTriangle, CustomGamesButton.PrivateMatchExcluded, function ( f9_arg0 )
+		f1_arg0:updateElementState( ZMLobbyButtons, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f9_arg0:get(),
+			modelName = "PrivateMatchExcluded"
+		} )
+	end, false )
+	ZMLobbyButtons:setAlpha( 0 )
+	ZMLobbyButtons:subscribeToGlobalModel( f1_arg1, "ZMLobbyExclusions", nil, function ( model )
+		ZMLobbyButtons:setModel( model, f1_arg1 )
+	end )
+	self:addElement( ZMLobbyButtons )
+	self.ZMLobbyButtons = ZMLobbyButtons
+
+	FindMatchButton = CoD.DirectorPreGameButtonOption.new( f1_arg0, f1_arg1, 0.5, 0.5, 514, 710, 1, 1, -178, -108 )
+	FindMatchButton:mergeStateConditions( {
+		{
+			stateName = "Unselectable",
+			condition = function ( menu, element, event )
+				return CoD.DirectorUtility.ShouldLockFindMatchButton( f1_arg1 )
+			end
+		},
+		{
+			stateName = "Visible",
+			condition = function ( menu, element, event )
+				return IsLobbyHostOfCurrentMenu()
+			end
+		}
+	} )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	local DirectorLobbyPoseMembers = DataSources.LobbyRoot.getModel( f1_arg1 )
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers.playlistId, function ( f13_arg0 )
+		f1_arg0:updateElementState( FindMatchButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f13_arg0:get(),
+			modelName = "playlistId"
+		} )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = DataSources.LobbyRoot.getModel( f1_arg1 )
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["privateClient.count"], function ( f14_arg0 )
+		f1_arg0:updateElementState( FindMatchButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f14_arg0:get(),
+			modelName = "privateClient.count"
+		} )
+	end, false )
+	FindMatchButton:appendEventHandler( "on_session_start", function ( f15_arg0, f15_arg1 )
+		f15_arg1.menu = f15_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( FindMatchButton, f15_arg1 )
+	end )
+	FindMatchButton:appendEventHandler( "on_session_end", function ( f16_arg0, f16_arg1 )
+		f16_arg1.menu = f16_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( FindMatchButton, f16_arg1 )
+	end )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["lobbyRoot.lobbyNav"], function ( f17_arg0 )
+		f1_arg0:updateElementState( FindMatchButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f17_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["lobbyRoot.gameClient.update"], function ( f18_arg0 )
+		f1_arg0:updateElementState( FindMatchButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f18_arg0:get(),
+			modelName = "lobbyRoot.gameClient.update"
+		} )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["lobbyRoot.privateClient.update"], function ( f19_arg0 )
+		f1_arg0:updateElementState( FindMatchButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f19_arg0:get(),
+			modelName = "lobbyRoot.privateClient.update"
+		} )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers.offlineScreenState, function ( f20_arg0 )
+		f1_arg0:updateElementState( FindMatchButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f20_arg0:get(),
+			modelName = "offlineScreenState"
+		} )
+	end, false )
+	FindMatchButton.DirectorSelectButtonMiniInternal.MiddleText:setText( LocalizeToUpperString( @"hash_7A14B986BB3C650A" ) )
+	FindMatchButton.DirectorSelectButtonMiniInternal.MiddleTextFocus:setText( LocalizeToUpperString( @"hash_7A14B986BB3C650A" ) )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["lobbyRoot.lobbyNav"], function ( f21_arg0, f21_arg1 )
+		CoD.Menu.UpdateButtonShownState( f21_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["lobbyRoot.playlistId"], function ( f22_arg0, f22_arg1 )
+		CoD.Menu.UpdateButtonShownState( f22_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = Engine[@"hash_78DF2E5447F384B9"]()
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["lobbyRoot.lobbyList.playerCount"], function ( f23_arg0, f23_arg1 )
+		CoD.Menu.UpdateButtonShownState( f23_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = DataSources.LobbyRoot.getModel( f1_arg1 )
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers.playlistId, function ( f24_arg0, f24_arg1 )
+		CoD.Menu.UpdateButtonShownState( f24_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	CustomGamesButton = FindMatchButton
+	FindMatchMissingDLCErrorTriangle = FindMatchButton.subscribeToModel
+	DirectorLobbyPoseMembers = DataSources.LobbyRoot.getModel( f1_arg1 )
+	FindMatchMissingDLCErrorTriangle( CustomGamesButton, DirectorLobbyPoseMembers["privateClient.count"], function ( f25_arg0, f25_arg1 )
+		CoD.Menu.UpdateButtonShownState( f25_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	FindMatchButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f26_local0 = nil
+		if element.gainFocus then
+			f26_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f26_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f26_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( FindMatchButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if not IsZombies() and not CoD.DirectorUtility.IsNumClientsExceeded( controller ) and not CoD.DirectorUtility.ShouldLockFindMatchButton( controller ) then
+			CoD.DirectorUtility.NavigateToPublicLobbyForCurrentMenuMode( menu, controller )
+			PlaySoundAlias( "uin_press_generic" )
+			return true
+		elseif not IsZombies() and CoD.DirectorUtility.IsNumClientsExceeded( controller ) then
+			PlaySoundAlias( "uin_toggle_generic" )
+			CoD.DirectorUtility.OpenTooManyClientsPopup( self, controller )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if not IsZombies() and not CoD.DirectorUtility.IsNumClientsExceeded( controller ) and not CoD.DirectorUtility.ShouldLockFindMatchButton( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		elseif not IsZombies() and CoD.DirectorUtility.IsNumClientsExceeded( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( FindMatchButton )
+	self.FindMatchButton = FindMatchButton
+	
+	FindMatchMissingDLCErrorTriangle = CoD.ErrorTriangle.new( f1_arg0, f1_arg1, 0.5, 0.5, 516, 894, 1, 1, -133, -108 )
+	FindMatchMissingDLCErrorTriangle:mergeStateConditions( {
+		{
+			stateName = "Hidden",
+			condition = function ( menu, element, event )
+				return not CoD.DirectorUtility.ShouldShowFindMatchError( f1_arg1 )
+			end
+		}
+	} )
+	DirectorLobbyPoseMembers = FindMatchMissingDLCErrorTriangle
+	CustomGamesButton = FindMatchMissingDLCErrorTriangle.subscribeToModel
+	local CommonHeader = DataSources.LobbyRoot.getModel( f1_arg1 )
+	CustomGamesButton( DirectorLobbyPoseMembers, CommonHeader.playlistId, function ( f30_arg0 )
+		f1_arg0:updateElementState( FindMatchMissingDLCErrorTriangle, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f30_arg0:get(),
+			modelName = "playlistId"
+		} )
+	end, false )
+	DirectorLobbyPoseMembers = FindMatchMissingDLCErrorTriangle
+	CustomGamesButton = FindMatchMissingDLCErrorTriangle.subscribeToModel
+	CommonHeader = DataSources.LobbyRoot.getModel( f1_arg1 )
+	CustomGamesButton( DirectorLobbyPoseMembers, CommonHeader["privateClient.count"], function ( f31_arg0 )
+		f1_arg0:updateElementState( FindMatchMissingDLCErrorTriangle, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f31_arg0:get(),
+			modelName = "privateClient.count"
+		} )
+	end, false )
+	self:addElement( FindMatchMissingDLCErrorTriangle )
+	self.FindMatchMissingDLCErrorTriangle = FindMatchMissingDLCErrorTriangle
+	
+	CustomGamesButton = CoD.DirectorPreGameButtonOption.new( f1_arg0, f1_arg1, 0.5, 0.5, 514, 896, 1, 1, -433, -387 )
+	CustomGamesButton:mergeStateConditions( {
+		{
+			stateName = "Visible",
+			condition = function ( menu, element, event )
+				local f32_local0 = IsLobbyHostOfCurrentMenu()
+				if f32_local0 then
+					if not IsPublicOrLeagueGame( f1_arg1 ) then
+						f32_local0 = CoD.DirectorUtility.ShowCustomGameButtonForCurrentLobby( f1_arg1 )
+					else
+						f32_local0 = false
+					end
+				end
+				return f32_local0
+			end
+		}
+	} )
+	CustomGamesButton:appendEventHandler( "on_session_start", function ( f33_arg0, f33_arg1 )
+		f33_arg1.menu = f33_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( CustomGamesButton, f33_arg1 )
+	end )
+	CustomGamesButton:appendEventHandler( "on_session_end", function ( f34_arg0, f34_arg1 )
+		f34_arg1.menu = f34_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( CustomGamesButton, f34_arg1 )
+	end )
+	CommonHeader = CustomGamesButton
+	DirectorLobbyPoseMembers = CustomGamesButton.subscribeToModel
+	local DirectorLeaderActivitySelect = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorLobbyPoseMembers( CommonHeader, DirectorLeaderActivitySelect["lobbyRoot.lobbyNav"], function ( f35_arg0 )
+		f1_arg0:updateElementState( CustomGamesButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f35_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	CommonHeader = CustomGamesButton
+	DirectorLobbyPoseMembers = CustomGamesButton.subscribeToModel
+	DirectorLeaderActivitySelect = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorLobbyPoseMembers( CommonHeader, DirectorLeaderActivitySelect["lobbyRoot.gameClient.update"], function ( f36_arg0 )
+		f1_arg0:updateElementState( CustomGamesButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f36_arg0:get(),
+			modelName = "lobbyRoot.gameClient.update"
+		} )
+	end, false )
+	CommonHeader = CustomGamesButton
+	DirectorLobbyPoseMembers = CustomGamesButton.subscribeToModel
+	DirectorLeaderActivitySelect = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorLobbyPoseMembers( CommonHeader, DirectorLeaderActivitySelect["lobbyRoot.privateClient.update"], function ( f37_arg0 )
+		f1_arg0:updateElementState( CustomGamesButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f37_arg0:get(),
+			modelName = "lobbyRoot.privateClient.update"
+		} )
+	end, false )
+	CommonHeader = CustomGamesButton
+	DirectorLobbyPoseMembers = CustomGamesButton.subscribeToModel
+	DirectorLeaderActivitySelect = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorLobbyPoseMembers( CommonHeader, DirectorLeaderActivitySelect.offlineScreenState, function ( f38_arg0 )
+		f1_arg0:updateElementState( CustomGamesButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f38_arg0:get(),
+			modelName = "offlineScreenState"
+		} )
+	end, false )
+	CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleText.__MiddleText_StringReference = function ()
+		CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleText:setText( LocalizeToUpperString( CoD.DirectorUtility.GetCustomGamesName( @"hash_685D9C7D7DDC8EE0" ) ) )
+	end
+	
+	CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleText.__MiddleText_StringReference()
+	CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleText:setTTF( "ttmussels_regular" )
+	CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleTextFocus.__MiddleTextFocus_String = function ()
+		CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleTextFocus:setText( LocalizeToUpperString( CoD.DirectorUtility.GetCustomGamesName( @"hash_685D9C7D7DDC8EE0" ) ) )
+	end
+	
+	CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleTextFocus.__MiddleTextFocus_String()
+	CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	CommonHeader = CustomGamesButton
+	DirectorLobbyPoseMembers = CustomGamesButton.subscribeToModel
+	DirectorLeaderActivitySelect = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorLobbyPoseMembers( CommonHeader, DirectorLeaderActivitySelect["lobbyRoot.lobbyNav"], function ( f41_arg0, f41_arg1 )
+		CoD.Menu.UpdateButtonShownState( f41_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	CustomGamesButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f42_local0 = nil
+		if element.gainFocus then
+			f42_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f42_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f42_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( CustomGamesButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsZombies() and IsPC() then
+			PlaySoundAlias( "uin_press_generic" )
+			CoD.DirectorUtility.NavigateToCustomLobbyForCurrentMode( menu, controller )
+			SetLoseFocusToSelf( self, controller )
+			return true
+		elseif IsZombies() then
+			PlaySoundAlias( "uin_press_generic" )
+			OpenSystemOverlay( self, menu, controller, "CustomMutationsNotification" )
+			SetLoseFocusToSelf( self, controller )
+			return true
+		elseif IsPC() and not IsZombies() then
+			PlaySoundAlias( "uin_press_generic" )
+			OpenCustomGamesLobby( menu, controller )
+			return true
+		elseif not IsZombies() then
+			PlaySoundAlias( "uin_press_generic" )
+			OpenSystemOverlay( self, menu, controller, "CustomGamesNotification" )
+			SetLoseFocusToSelf( self, controller )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsZombies() and IsPC() then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		elseif IsZombies() then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		elseif IsPC() and not IsZombies() then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		elseif not IsZombies() then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( CustomGamesButton )
+	self.CustomGamesButton = CustomGamesButton
+	
+	DirectorLobbyPoseMembers = CoD.DirectorLobbyPoseMembers.new( f1_arg0, f1_arg1, 0.5, 1.5, -960, -960, 0, 1, 0, 0 )
+	self:addElement( DirectorLobbyPoseMembers )
+	self.DirectorLobbyPoseMembers = DirectorLobbyPoseMembers
+	
+	CommonHeader = CoD.CommonHeader.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 0, 67 )
+	CommonHeader.subtitle.subtitle:setAlpha( 0 )
+	CommonHeader:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "lobbyMainMode", function ( model )
+		local f45_local0 = model:get()
+		if f45_local0 ~= nil then
+			CommonHeader.subtitle.StageTitle:setText( LocalizeToUpperString( CoD.DirectorUtility.ConvertLobbyMainModeToModeString( f45_local0 ) ) )
+		end
+	end )
+	CommonHeader:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "lobbyTitle", function ( model )
+		local f46_local0 = model:get()
+		if f46_local0 ~= nil then
+			CommonHeader.subtitle.subtitle:setText( Engine[@"hash_4F9F1239CFD921FE"]( f46_local0 ) )
+		end
+	end )
+	self:addElement( CommonHeader )
+	self.CommonHeader = CommonHeader
+	
+	DirectorLeaderActivitySelect = CoD.DirectorLeaderActivitySelect.new( f1_arg0, f1_arg1, 0.5, 0.5, 625, 930, 0, 0, 8, 57 )
+	DirectorLeaderActivitySelect:mergeStateConditions( {
+		{
+			stateName = "Invisible",
+			condition = function ( menu, element, event )
+				return IsLobbyHostOfCurrentMenu()
+			end
+		}
+	} )
+	DirectorLeaderActivitySelect:appendEventHandler( "on_session_start", function ( f48_arg0, f48_arg1 )
+		f48_arg1.menu = f48_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( DirectorLeaderActivitySelect, f48_arg1 )
+	end )
+	DirectorLeaderActivitySelect:appendEventHandler( "on_session_end", function ( f49_arg0, f49_arg1 )
+		f49_arg1.menu = f49_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( DirectorLeaderActivitySelect, f49_arg1 )
+	end )
+	local QuickPlay = DirectorLeaderActivitySelect
+	local DirectorMapGameTypeAndDifficulty = DirectorLeaderActivitySelect.subscribeToModel
+	local MapAndGameType = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorMapGameTypeAndDifficulty( QuickPlay, MapAndGameType["lobbyRoot.lobbyNav"], function ( f50_arg0 )
+		f1_arg0:updateElementState( DirectorLeaderActivitySelect, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f50_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	QuickPlay = DirectorLeaderActivitySelect
+	DirectorMapGameTypeAndDifficulty = DirectorLeaderActivitySelect.subscribeToModel
+	MapAndGameType = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorMapGameTypeAndDifficulty( QuickPlay, MapAndGameType["lobbyRoot.gameClient.update"], function ( f51_arg0 )
+		f1_arg0:updateElementState( DirectorLeaderActivitySelect, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f51_arg0:get(),
+			modelName = "lobbyRoot.gameClient.update"
+		} )
+	end, false )
+	QuickPlay = DirectorLeaderActivitySelect
+	DirectorMapGameTypeAndDifficulty = DirectorLeaderActivitySelect.subscribeToModel
+	MapAndGameType = Engine[@"hash_78DF2E5447F384B9"]()
+	DirectorMapGameTypeAndDifficulty( QuickPlay, MapAndGameType["lobbyRoot.privateClient.update"], function ( f52_arg0 )
+		f1_arg0:updateElementState( DirectorLeaderActivitySelect, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f52_arg0:get(),
+			modelName = "lobbyRoot.privateClient.update"
+		} )
+	end, false )
+	DirectorLeaderActivitySelect:setAlpha( 0 )
+	self:addElement( DirectorLeaderActivitySelect )
+	self.DirectorLeaderActivitySelect = DirectorLeaderActivitySelect
+	
+	DirectorMapGameTypeAndDifficulty = CoD.DirectorMapGameTypeAndDifficulty.new( f1_arg0, f1_arg1, 0.5, 0.5, 514, 896, 1, 1, -368, -188 )
+	DirectorMapGameTypeAndDifficulty:setAlpha( 0 )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.PlaylistHeader.GameModeText:setText( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_2BC441E8EF98063C" ) )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.PlaylistHeader.GameModeText:setTTF( "ttmussels_regular" )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.PlaylistHeaderNonHost.GameModeText:setText( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_1C95DCE378B96DFF" ) )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.PlaylistHeaderNonHost.GameModeText:setTTF( "ttmussels_regular" )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image = function ( f53_arg0 )
+		local f53_local0 = f53_arg0:get()
+		if f53_local0 ~= nil then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.MapImage:setImage( RegisterImage( CoD.DirectorUtility.PlaylistIDToZMPlaylistImage( f53_local0 ) ) )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "playlistId", DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image_FullPath = function ()
+		local f54_local0 = DataSources.LobbyRoot.getModel( f1_arg1 )
+		f54_local0 = f54_local0.playlistId
+		if f54_local0 then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image( f54_local0 )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.GamemodeIcon.__GamemodeIcon_Image = function ( f55_arg0 )
+		local f55_local0 = f55_arg0:get()
+		if f55_local0 ~= nil then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.GamemodeIcon:setImage( RegisterImage( CoD.DirectorUtility.PlaylistIDToZMPlaylistDifficulty( f55_local0 ) ) )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "playlistId", DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.GamemodeIcon.__GamemodeIcon_Image )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.GamemodeIcon.__GamemodeIcon_Image_FullPath = function ()
+		local f56_local0 = DataSources.LobbyRoot.getModel( f1_arg1 )
+		f56_local0 = f56_local0.playlistId
+		if f56_local0 then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.GamemodeIcon.__GamemodeIcon_Image( f56_local0 )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.Label.__Label_Desc = function ( f57_arg0 )
+		local f57_local0 = f57_arg0:get()
+		if f57_local0 ~= nil then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.Label:setText( Engine[@"hash_4F9F1239CFD921FE"]( CoD.DirectorUtility.PlaylistIDToZMPlaylistSubtitle( f57_local0 ) ) )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "playlistId", DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.Label.__Label_Desc )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.Label.__Label_Desc_FullPath = function ()
+		local f58_local0 = DataSources.LobbyRoot.getModel( f1_arg1 )
+		f58_local0 = f58_local0.playlistId
+		if f58_local0 then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.Label.__Label_Desc( f58_local0 )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title = function ( f59_arg0 )
+		local f59_local0 = f59_arg0:get()
+		if f59_local0 ~= nil then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle:setText( Engine[@"hash_4F9F1239CFD921FE"]( CoD.DirectorUtility.PlaylistIDToZMPlaylistName( f59_local0 ) ) )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "playlistId", DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title )
+	DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title_FullPath = function ()
+		local f60_local0 = DataSources.LobbyRoot.getModel( f1_arg1 )
+		f60_local0 = f60_local0.playlistId
+		if f60_local0 then
+			DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title( f60_local0 )
+		end
+	end
+	
+	DirectorMapGameTypeAndDifficulty:appendEventHandler( "on_session_start", function ( f61_arg0, f61_arg1 )
+		f61_arg1.menu = f61_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f61_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	DirectorMapGameTypeAndDifficulty:appendEventHandler( "on_session_end", function ( f62_arg0, f62_arg1 )
+		f62_arg1.menu = f62_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f62_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	MapAndGameType = DirectorMapGameTypeAndDifficulty
+	QuickPlay = DirectorMapGameTypeAndDifficulty.subscribeToModel
+	local f1_local14 = Engine[@"hash_78DF2E5447F384B9"]()
+	QuickPlay( MapAndGameType, f1_local14["lobbyRoot.lobbyNav"], function ( f63_arg0, f63_arg1 )
+		CoD.Menu.UpdateButtonShownState( f63_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	MapAndGameType = DirectorMapGameTypeAndDifficulty
+	QuickPlay = DirectorMapGameTypeAndDifficulty.subscribeToModel
+	f1_local14 = Engine[@"hash_78DF2E5447F384B9"]()
+	QuickPlay( MapAndGameType, f1_local14["lobbyRoot.gameClient.update"], function ( f64_arg0, f64_arg1 )
+		CoD.Menu.UpdateButtonShownState( f64_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	MapAndGameType = DirectorMapGameTypeAndDifficulty
+	QuickPlay = DirectorMapGameTypeAndDifficulty.subscribeToModel
+	f1_local14 = Engine[@"hash_78DF2E5447F384B9"]()
+	QuickPlay( MapAndGameType, f1_local14["lobbyRoot.privateClient.update"], function ( f65_arg0, f65_arg1 )
+		CoD.Menu.UpdateButtonShownState( f65_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	DirectorMapGameTypeAndDifficulty:registerEventHandler( "gain_focus", function ( element, event )
+		local f66_local0 = nil
+		if element.gainFocus then
+			f66_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f66_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f66_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( DirectorMapGameTypeAndDifficulty, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsLobbyHostOfCurrentMenu() and IsZombies() then
+			CoD.LobbyUtility.SetLeaderActivityAndOpenOverlayNoDeps( self, controller, CoD.LobbyUtility.LeaderActivity.CHOOSING_MAP, "DirectorGamemodeSelectionZM" )
+			PlaySoundAlias( "uin_toggle_generic" )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsLobbyHostOfCurrentMenu() and IsZombies() then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( DirectorMapGameTypeAndDifficulty )
+	self.DirectorMapGameTypeAndDifficulty = DirectorMapGameTypeAndDifficulty
+	
+	QuickPlay = CoD.DirectorPreGameButtonOption.new( f1_arg0, f1_arg1, 0.5, 0.5, 514, 896, 1, 1, -512, -443 )
+	QuickPlay:mergeStateConditions( {
+		{
+			stateName = "Visible",
+			condition = function ( menu, element, event )
+				return CoD.ModelUtility.IsGlobalModelValueEqualTo( "lobbyRoot.lobbyList.playerCount", 1 ) and CoD.ModelUtility.IsGlobalModelValueTrue( "ZMLobbyExclusions.ShowTutorialQuickPlay" )
+			end
+		}
+	} )
+	QuickPlay:appendEventHandler( "on_session_start", function ( f70_arg0, f70_arg1 )
+		f70_arg1.menu = f70_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( QuickPlay, f70_arg1 )
+	end )
+	QuickPlay:appendEventHandler( "on_session_end", function ( f71_arg0, f71_arg1 )
+		f71_arg1.menu = f71_arg1.menu or f1_arg0
+		f1_arg0:updateElementState( QuickPlay, f71_arg1 )
+	end )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	local f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15["lobbyRoot.lobbyNav"], function ( f72_arg0 )
+		f1_arg0:updateElementState( QuickPlay, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f72_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15["lobbyRoot.gameClient.update"], function ( f73_arg0 )
+		f1_arg0:updateElementState( QuickPlay, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f73_arg0:get(),
+			modelName = "lobbyRoot.gameClient.update"
+		} )
+	end, false )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15["lobbyRoot.privateClient.update"], function ( f74_arg0 )
+		f1_arg0:updateElementState( QuickPlay, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f74_arg0:get(),
+			modelName = "lobbyRoot.privateClient.update"
+		} )
+	end, false )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15.offlineScreenState, function ( f75_arg0 )
+		f1_arg0:updateElementState( QuickPlay, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f75_arg0:get(),
+			modelName = "offlineScreenState"
+		} )
+	end, false )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15["lobbyRoot.lobbyList.playerCount"], function ( f76_arg0 )
+		f1_arg0:updateElementState( QuickPlay, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f76_arg0:get(),
+			modelName = "lobbyRoot.lobbyList.playerCount"
+		} )
+	end, false )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15["ZMLobbyExclusions.ShowTutorialQuickPlay"], function ( f77_arg0 )
+		f1_arg0:updateElementState( QuickPlay, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f77_arg0:get(),
+			modelName = "ZMLobbyExclusions.ShowTutorialQuickPlay"
+		} )
+	end, false )
+	QuickPlay:setAlpha( 0 )
+	QuickPlay.DirectorSelectButtonMiniInternal.MiddleText:setText( LocalizeToUpperString( @"hash_36A52F3FB63F2F76" ) )
+	QuickPlay.DirectorSelectButtonMiniInternal.MiddleText:setTTF( "ttmussels_regular" )
+	QuickPlay.DirectorSelectButtonMiniInternal.MiddleTextFocus:setText( LocalizeToUpperString( @"hash_36A52F3FB63F2F76" ) )
+	QuickPlay.DirectorSelectButtonMiniInternal.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15["lobbyRoot.lobbyList.playerCount"], function ( f78_arg0, f78_arg1 )
+		CoD.Menu.UpdateButtonShownState( f78_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	f1_local14 = QuickPlay
+	MapAndGameType = QuickPlay.subscribeToModel
+	f1_local15 = Engine[@"hash_78DF2E5447F384B9"]()
+	MapAndGameType( f1_local14, f1_local15["ZMLobbyExclusions.ShowTutorialQuickPlay"], function ( f79_arg0, f79_arg1 )
+		CoD.Menu.UpdateButtonShownState( f79_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	QuickPlay:registerEventHandler( "gain_focus", function ( element, event )
+		local f80_local0 = nil
+		if element.gainFocus then
+			f80_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f80_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f80_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( QuickPlay, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if CoD.ModelUtility.IsGlobalModelValueEqualTo( "lobbyRoot.lobbyList.playerCount", 1 ) and CoD.ModelUtility.IsGlobalModelValueTrue( "ZMLobbyExclusions.ShowTutorialQuickPlay" ) then
+			PlaySoundAlias( "uin_toggle_generic" )
+			CoD.ZombieUtility.QuickPlayPregame( menu, controller )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if CoD.ModelUtility.IsGlobalModelValueEqualTo( "lobbyRoot.lobbyList.playerCount", 1 ) and CoD.ModelUtility.IsGlobalModelValueTrue( "ZMLobbyExclusions.ShowTutorialQuickPlay" ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_3AC3B80C833B60E1", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( QuickPlay )
+	self.QuickPlay = QuickPlay
+	
+	MapAndGameType = CoD.DirectorMapAndGameTypeContainer.new( f1_arg0, f1_arg1, 0.5, 0.5, 514, 896, 1, 1, -368, -188 )
+	MapAndGameType:setAlpha( 0 )
+	MapAndGameType.DirectorMapAndGameInternal.GamemodeIcon:setImage( RegisterImage( @"hash_77615068F50B3D66" ) )
+	MapAndGameType.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.Label:setText( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_2C79EA24AB1A2BA" ) )
+	MapAndGameType.DirectorMapAndGameInternal.PlaylistHeader.GameModeText:setText( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_5890976738B1D859" ) )
+	MapAndGameType.DirectorMapAndGameInternal.PlaylistHeader.GameModeText:setTTF( "ttmussels_regular" )
+	MapAndGameType.DirectorMapAndGameInternal.PlaylistHeaderNonHost.GameModeText:setText( Engine[@"hash_4F9F1239CFD921FE"]( @"hash_5890976738B1D859" ) )
+	MapAndGameType.DirectorMapAndGameInternal.PlaylistHeaderNonHost.GameModeText:setTTF( "ttmussels_regular" )
+	MapAndGameType.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image = function ( f83_arg0 )
+		local f83_local0 = f83_arg0:get()
+		if f83_local0 ~= nil then
+			MapAndGameType.DirectorMapAndGameInternal.MapImage:setImage( RegisterImage( CoD.DirectorUtility.PlaylistIDToPlaylistImageTileSideInfo( f83_local0 ) ) )
+		end
+	end
+	
+	MapAndGameType:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "playlistId", MapAndGameType.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image )
+	MapAndGameType.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image_FullPath = function ()
+		local f84_local0 = DataSources.LobbyRoot.getModel( f1_arg1 )
+		f84_local0 = f84_local0.playlistId
+		if f84_local0 then
+			MapAndGameType.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image( f84_local0 )
+		end
+	end
+	
+	MapAndGameType.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title = function ( f85_arg0 )
+		local f85_local0 = f85_arg0:get()
+		if f85_local0 ~= nil then
+			MapAndGameType.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle:setText( LocalizeToUpperString( CoD.DirectorUtility.PlaylistIDToPlaylistName( f85_local0 ) ) )
+		end
+	end
+	
+	MapAndGameType:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "playlistId", MapAndGameType.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title )
+	MapAndGameType.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title_FullPath = function ()
+		local f86_local0 = DataSources.LobbyRoot.getModel( f1_arg1 )
+		f86_local0 = f86_local0.playlistId
+		if f86_local0 then
+			MapAndGameType.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title( f86_local0 )
+		end
+	end
+	
+	f1_local15 = MapAndGameType
+	f1_local14 = MapAndGameType.subscribeToModel
+	local f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNav"], function ( f87_arg0, f87_arg1 )
+		CoD.Menu.UpdateButtonShownState( f87_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	f1_local15 = MapAndGameType
+	f1_local14 = MapAndGameType.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.privateClient.isHost"], function ( f88_arg0, f88_arg1 )
+		CoD.Menu.UpdateButtonShownState( f88_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	f1_local15 = MapAndGameType
+	f1_local14 = MapAndGameType.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.gameClient.isHost"], function ( f89_arg0, f89_arg1 )
+		CoD.Menu.UpdateButtonShownState( f89_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	MapAndGameType:registerEventHandler( "gain_focus", function ( element, event )
+		local f90_local0 = nil
+		if element.gainFocus then
+			f90_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f90_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f90_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( MapAndGameType, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], nil, function ( element, menu, controller, model )
+		if not IsZombies() and IsPartyLeader( controller ) then
+			CoD.DirectorUtility.DirectorOpenOverlayWithCurrentMenuMode( menu, controller, "DirectorFindGame" )
+			PlaySoundAlias( "uin_press_generic" )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if not IsZombies() and IsPartyLeader( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, nil )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( MapAndGameType )
+	self.MapAndGameType = MapAndGameType
+
+	-- offline button
+	local ShieldOfflineSettings = CoD.DirectorPreGameButtonOption.new( f1_arg0, f1_arg1, 0.5, 0.5, 724, 895, 1, 1, -178, -108 )
+	ShieldOfflineSettings.DirectorSelectButtonMiniInternal.MiddleText:setText("OFFLINE MODE")
+	ShieldOfflineSettings.DirectorSelectButtonMiniInternal.MiddleTextFocus:setText("OFFLINE MODE")
+
+	-- zombies fix
+	ShieldOfflineSettings:mergeStateConditions( {
+		{
+			stateName = "Visible",
+			condition = function ( menu, element, event )
+				return not IsZombies()
+			end
+		}
+	} )
+
+	ShieldOfflineSettings:registerEventHandler( "gain_focus", function ( element, event )
+		local f26_local0 = nil
+		if element.gainFocus then
+			f26_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f26_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f26_local0
+	end )
+	
+	f1_arg0:AddButtonCallbackFunction( ShieldOfflineSettings, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if not IsZombies() then
+			--CoD.DirectorUtility.NavigateToPublicLobbyForCurrentMenuMode( menu, controller )
+			-- open custom settigns menu, with a launch button in it lol
+			CoD.DirectorUtility.DirectorOpenOverlayWithCurrentMenuMode( menu, controller, "DirectorCustomGameSetUp" )
+			PlaySoundAlias( "uin_press_generic" )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if not IsZombies() and not CoD.DirectorUtility.IsNumClientsExceeded( controller ) and not CoD.DirectorUtility.ShouldLockFindMatchButton( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		elseif not IsZombies() and CoD.DirectorUtility.IsNumClientsExceeded( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_6D0BB36CD318F55F", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( ShieldOfflineSettings )
+	self.ShieldOfflineSettings = ShieldOfflineSettings
+
+	ShieldOfflineSettings.id = "ShieldOfflineSettings"
+	
+	f1_local15 = CustomGamesButton
+	f1_local14 = CustomGamesButton.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNav"], CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleText.__MiddleText_StringReference )
+	f1_local15 = CustomGamesButton
+	f1_local14 = CustomGamesButton.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNav"], CustomGamesButton.DirectorSelectButtonMiniInternal.MiddleTextFocus.__MiddleTextFocus_String )
+	f1_local15 = DirectorMapGameTypeAndDifficulty
+	f1_local14 = DirectorMapGameTypeAndDifficulty.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNetworkMode"], DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image_FullPath )
+	f1_local15 = DirectorMapGameTypeAndDifficulty
+	f1_local14 = DirectorMapGameTypeAndDifficulty.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNetworkMode"], DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.GamemodeIcon.__GamemodeIcon_Image_FullPath )
+	f1_local15 = DirectorMapGameTypeAndDifficulty
+	f1_local14 = DirectorMapGameTypeAndDifficulty.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNetworkMode"], DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.Label.__Label_Desc_FullPath )
+	f1_local15 = DirectorMapGameTypeAndDifficulty
+	f1_local14 = DirectorMapGameTypeAndDifficulty.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNetworkMode"], DirectorMapGameTypeAndDifficulty.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title_FullPath )
+	f1_local15 = MapAndGameType
+	f1_local14 = MapAndGameType.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNetworkMode"], MapAndGameType.DirectorMapAndGameInternal.MapImage.__DirectorMapAndGameInternal_MapImage_Image_FullPath )
+	f1_local15 = MapAndGameType
+	f1_local14 = MapAndGameType.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNetworkMode"], MapAndGameType.DirectorMapAndGameInternal.DirectorMapAndGameTypeInternalTitles.SubTitle.__Label_Title_FullPath )
+	self:mergeStateConditions( {
+		{
+			stateName = "ZM_isPC",
+			condition = function ( menu, element, event )
+				return IsZombies() and IsPC()
+			end
+		},
+		{
+			stateName = "ZM",
+			condition = function ( menu, element, event )
+				return IsZombies()
+			end
+		},
+		{
+			stateName = "IsPC",
+			condition = function ( menu, element, event )
+				return IsPC()
+			end
+		}
+	} )
+	f1_local15 = self
+	f1_local14 = self.subscribeToModel
+	f1_local16 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local14( f1_local15, f1_local16["lobbyRoot.lobbyNav"], function ( f96_arg0 )
+		f1_arg0:updateElementState( self, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f96_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	LUI.OverrideFunction_CallOriginalFirst( self, "setState", function ( element, controller, f97_arg2, f97_arg3, f97_arg4 )
+		if IsZombies() and IsLobbyHostOfCurrentMenu() then
+			CoD.BaseUtility.SetDefaultFocusToElement( self, self.ZMLobbyButtons )
+			ForceCheckDefaultPCFocus( element, f1_arg0, controller )
+		elseif IsLobbyHostOfCurrentMenu() then
+			CoD.BaseUtility.SetDefaultFocusToElement( self, self.FindMatchButton )
+			ForceCheckDefaultPCFocus( element, f1_arg0, controller )
+		elseif not IsLobbyHostOfCurrentMenu() then
+			CoD.BaseUtility.SetDefaultFocusToElement( self, self.HomeOrPlayList )
+			ForceCheckDefaultPCFocus( element, f1_arg0, controller )
+		end
+	end )
+	self:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "gameClientDataUpdate", function ( model )
+		local f98_local0 = self
+		if CoD.DirectorUtility.ShowDirectorPregame( f1_arg1 ) then
+			CoD.PlayerRoleUtility.UpdatePositionDraftModels( f1_arg1 )
+		end
+	end )
+	self:subscribeToGlobalModel( f1_arg1, "CharacterSelection", "clientUpdated", function ( model )
+		local f99_local0 = self
+		if CoD.DirectorUtility.ShowDirectorPregame( f1_arg1 ) then
+			CoD.PlayerRoleUtility.UpdatePositionDraftModels( f1_arg1 )
+		end
+	end )
+	self:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "lobbyNav", function ( model )
+		local f100_local0 = self
+		if CoD.DirectorUtility.ShowDirectorPregame( f1_arg1 ) and not IsLobbyHostOfCurrentMenu() then
+			CoD.BaseUtility.SetDefaultFocusToElement( self, self.HomeOrPlayList )
+			SetFocusToElement( self, "HomeOrPlayList", f1_arg1 )
+			CoD.PlayerRoleUtility.UpdatePositionDraftModels( f1_arg1 )
+		elseif CoD.DirectorUtility.ShowDirectorPregame( f1_arg1 ) and CoD.ModelUtility.IsGlobalModelValueEqualTo( "lobbyRoot.lastNavigationAction", LuaEnum.UI.DIRECTOR_ONLINE_MP_PREGAME ) and IsLobbyHostOfCurrentMenu() then
+			CoD.PlayerRoleUtility.UpdatePositionDraftModels( f1_arg1 )
+			CoD.BaseUtility.SetDefaultFocusToElement( self, self.FindMatchButton )
+		elseif CoD.DirectorUtility.ShowDirectorPregame( f1_arg1 ) then
+			CoD.PlayerRoleUtility.UpdatePositionDraftModels( f1_arg1 )
+			CoD.FreeCursorUtility.RetriggerCursorPosition( f1_arg0, f1_arg1 )
+		end
+	end )
+	if CoD.isPC then
+		pckeyboardNavigationRedirector2.id = "pckeyboardNavigationRedirector2"
+	end
+	if CoD.isPC then
+		pckeyboardNavigationRedirector.id = "pckeyboardNavigationRedirector"
+	end
+	ZMLobbyButtons.id = "ZMLobbyButtons"
+	FindMatchButton.id = "FindMatchButton"
+	CustomGamesButton.id = "CustomGamesButton"
+	DirectorMapGameTypeAndDifficulty.id = "DirectorMapGameTypeAndDifficulty"
+	QuickPlay.id = "QuickPlay"
+	MapAndGameType.id = "MapAndGameType"
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	f1_local14 = self
+	f1_local14 = pckeyboardNavigationRedirector2
+	if IsPC() then
+		CoD.PCUtility.SetAsRedirectItem( f1_local14 )
+		CoD.BaseUtility.SetCustomNavDirection( CoD.BaseUtility.NavigationDirection.down, f1_local14, self.Loadouts )
+	end
+	f1_local14 = pckeyboardNavigationRedirector
+	if IsPC() then
+		CoD.PCUtility.SetAsRedirectItem( f1_local14 )
+		CoD.BaseUtility.SetCustomNavDirection( CoD.BaseUtility.NavigationDirection.up, f1_local14, self.Loadouts )
+	end
+	return self
+end
+
+CoD.directorPregame.__resetProperties = function ( f101_arg0 )
+	f101_arg0.MapAndGameType:completeAnimation()
+	f101_arg0.FindMatchButton:completeAnimation()
+	f101_arg0.ZMLobbyButtons:completeAnimation()
+	f101_arg0.DirectorMapGameTypeAndDifficulty:completeAnimation()
+	f101_arg0.DirectorLobbyPoseMembers:completeAnimation()
+	f101_arg0.QuickPlay:completeAnimation()
+	f101_arg0.MapAndGameType:setAlpha( 0 )
+	f101_arg0.FindMatchButton:setAlpha( 1 )
+	f101_arg0.ZMLobbyButtons:setAlpha( 0 )
+	f101_arg0.DirectorMapGameTypeAndDifficulty:setAlpha( 0 )
+	f101_arg0.DirectorLobbyPoseMembers:setAlpha( 1 )
+	f101_arg0.QuickPlay:setAlpha( 0 )
+end
+
+CoD.directorPregame.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f102_arg0, f102_arg1 )
+			f102_arg0:__resetProperties()
+			f102_arg0:setupElementClipCounter( 1 )
+			f102_arg0.MapAndGameType:completeAnimation()
+			f102_arg0.MapAndGameType:setAlpha( 1 )
+			f102_arg0.clipFinished( f102_arg0.MapAndGameType )
+		end
+	},
+	ZM_isPC = {
+		DefaultClip = function ( f103_arg0, f103_arg1 )
+			f103_arg0:__resetProperties()
+			f103_arg0:setupElementClipCounter( 5 )
+			f103_arg0.ZMLobbyButtons:completeAnimation()
+			f103_arg0.ZMLobbyButtons:setAlpha( 1 )
+			f103_arg0.clipFinished( f103_arg0.ZMLobbyButtons )
+			f103_arg0.FindMatchButton:completeAnimation()
+			f103_arg0.FindMatchButton:setAlpha( 0 )
+			f103_arg0.clipFinished( f103_arg0.FindMatchButton )
+			f103_arg0.DirectorLobbyPoseMembers:completeAnimation()
+			f103_arg0.DirectorLobbyPoseMembers:setAlpha( 0 )
+			f103_arg0.clipFinished( f103_arg0.DirectorLobbyPoseMembers )
+			f103_arg0.DirectorMapGameTypeAndDifficulty:completeAnimation()
+			f103_arg0.DirectorMapGameTypeAndDifficulty:setAlpha( 1 )
+			f103_arg0.clipFinished( f103_arg0.DirectorMapGameTypeAndDifficulty )
+			f103_arg0.QuickPlay:completeAnimation()
+			f103_arg0.QuickPlay:setAlpha( 1 )
+			f103_arg0.clipFinished( f103_arg0.QuickPlay )
+		end
+	},
+	ZM = {
+		DefaultClip = function ( f104_arg0, f104_arg1 )
+			f104_arg0:__resetProperties()
+			f104_arg0:setupElementClipCounter( 5 )
+			f104_arg0.ZMLobbyButtons:completeAnimation()
+			f104_arg0.ZMLobbyButtons:setAlpha( 1 )
+			f104_arg0.clipFinished( f104_arg0.ZMLobbyButtons )
+			f104_arg0.FindMatchButton:completeAnimation()
+			f104_arg0.FindMatchButton:setAlpha( 0 )
+			f104_arg0.clipFinished( f104_arg0.FindMatchButton )
+			f104_arg0.DirectorLobbyPoseMembers:completeAnimation()
+			f104_arg0.DirectorLobbyPoseMembers:setAlpha( 0 )
+			f104_arg0.clipFinished( f104_arg0.DirectorLobbyPoseMembers )
+			f104_arg0.DirectorMapGameTypeAndDifficulty:completeAnimation()
+			f104_arg0.DirectorMapGameTypeAndDifficulty:setAlpha( 1 )
+			f104_arg0.clipFinished( f104_arg0.DirectorMapGameTypeAndDifficulty )
+			f104_arg0.QuickPlay:completeAnimation()
+			f104_arg0.QuickPlay:setAlpha( 1 )
+			f104_arg0.clipFinished( f104_arg0.QuickPlay )
+		end
+	},
+	IsPC = {
+		DefaultClip = function ( f105_arg0, f105_arg1 )
+			f105_arg0:__resetProperties()
+			f105_arg0:setupElementClipCounter( 1 )
+			f105_arg0.MapAndGameType:completeAnimation()
+			f105_arg0.MapAndGameType:setAlpha( 1 )
+			f105_arg0.clipFinished( f105_arg0.MapAndGameType )
+		end
+	}
+}
+
+CoD.directorPregame.__onClose = function ( f106_arg0 )
+	f106_arg0.Header:close()
+	f106_arg0.pckeyboardNavigationRedirector2:close()
+	f106_arg0.pckeyboardNavigationRedirector:close()
+	f106_arg0.ZMLobbyButtons:close()
+	f106_arg0.FindMatchButton:close()
+	f106_arg0.FindMatchMissingDLCErrorTriangle:close()
+	f106_arg0.CustomGamesButton:close()
+	f106_arg0.DirectorLobbyPoseMembers:close()
+	f106_arg0.CommonHeader:close()
+	f106_arg0.DirectorLeaderActivitySelect:close()
+	f106_arg0.DirectorMapGameTypeAndDifficulty:close()
+	f106_arg0.QuickPlay:close()
+	f106_arg0.MapAndGameType:close()
+end
+
+-- Custom MP Settings, add a launch button for offline + set 18 clients/bots button..
+CoD.DirectorLobbySettingList = InheritFrom( LUI.UIElement )
+CoD.DirectorLobbySettingList.__defaultWidth = 356
+CoD.DirectorLobbySettingList.__defaultHeight = 200
+CoD.DirectorLobbySettingList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.DirectorLobbySettingList )
+	self.id = "DirectorLobbySettingList"
+	self.soundSet = "none"
+	self.onlyChildrenFocusable = true
+	self.anyChildUsesUpdateState = true
+	f1_arg0:addElementToPendingUpdateStateList( self )
+
+	self:setTopBottom(0, 0, 734, 1300) -- fix launch button
+	
+	local DirectorCustomCodcaster = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 0, 40 )
+	DirectorCustomCodcaster:mergeStateConditions( {
+		{
+			stateName = "invisible",
+			condition = function ( menu, element, event )
+				return not CoD.CodCasterUtility.IsCodCasterEnabled()
+			end
+		}
+	} )
+	DirectorCustomCodcaster.ButtonName:setText( LocalizeToUpperString( @"hash_7700AE5902F5ECF7" ) )
+	DirectorCustomCodcaster:appendEventHandler( "input_source_changed", function ( f3_arg0, f3_arg1 )
+		f3_arg1.menu = f3_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f3_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	local BotSettingsButton = DirectorCustomCodcaster
+	local DirectorCustomLobbySettings = DirectorCustomCodcaster.subscribeToModel
+	local AddBotButton = Engine[@"hash_4DF5CFBC1771947"]( f1_arg1 )
+	DirectorCustomLobbySettings( BotSettingsButton, AddBotButton.LastInput, function ( f4_arg0, f4_arg1 )
+		CoD.Menu.UpdateButtonShownState( f4_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	DirectorCustomCodcaster:registerEventHandler( "gain_focus", function ( element, event )
+		local f5_local0 = nil
+		if element.gainFocus then
+			f5_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f5_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f5_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( DirectorCustomCodcaster, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsMouseOrKeyboard( controller ) then
+			SetCharacterModeToCurrentSessionMode( self, element, controller )
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			CoD.LobbyUtility.OpenDirectorCodcasterSettings( self, controller )
+			PlaySoundAlias( "uin_toggle_generic" )
+			return true
+		else
+			SetCharacterModeToCurrentSessionMode( self, element, controller )
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			CoD.LobbyUtility.OpenDirectorCodcasterSettings( self, controller )
+			PlaySoundAlias( "uin_toggle_generic" )
+			return true
+		end
+	end, function ( element, menu, controller )
+		if IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_761333AE050EC552", nil, "ui_confirm" )
+			return true
+		end
+	end, false )
+	self:addElement( DirectorCustomCodcaster )
+	self.DirectorCustomCodcaster = DirectorCustomCodcaster
+	
+	DirectorCustomLobbySettings = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 48, 88 )
+	DirectorCustomLobbySettings:mergeStateConditions( {
+		{
+			stateName = "invisible",
+			condition = function ( menu, element, event )
+				return CoD.DirectorUtility.IsLobbyMenu( f1_arg1, LuaEnum.UI.DIRECTOR_ONLINE_CP_STORY )
+			end
+		}
+	} )
+	AddBotButton = DirectorCustomLobbySettings
+	BotSettingsButton = DirectorCustomLobbySettings.subscribeToModel
+	local RemoveBotButton = Engine[@"hash_78DF2E5447F384B9"]()
+	BotSettingsButton( AddBotButton, RemoveBotButton["lobbyRoot.lobbyNav"], function ( f9_arg0 )
+		f1_arg0:updateElementState( DirectorCustomLobbySettings, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f9_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	DirectorCustomLobbySettings.ButtonName:setText( LocalizeToUpperString( @"hash_6D4B192986909843" ) )
+	DirectorCustomLobbySettings:appendEventHandler( "on_session_start", function ( f10_arg0, f10_arg1 )
+		f10_arg1.menu = f10_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f10_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	DirectorCustomLobbySettings:appendEventHandler( "on_session_end", function ( f11_arg0, f11_arg1 )
+		f11_arg1.menu = f11_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f11_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	AddBotButton = DirectorCustomLobbySettings
+	BotSettingsButton = DirectorCustomLobbySettings.subscribeToModel
+	RemoveBotButton = Engine[@"hash_78DF2E5447F384B9"]()
+	BotSettingsButton( AddBotButton, RemoveBotButton["lobbyRoot.lobbyNav"], function ( f12_arg0, f12_arg1 )
+		CoD.Menu.UpdateButtonShownState( f12_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	AddBotButton = DirectorCustomLobbySettings
+	BotSettingsButton = DirectorCustomLobbySettings.subscribeToModel
+	RemoveBotButton = Engine[@"hash_78DF2E5447F384B9"]()
+	BotSettingsButton( AddBotButton, RemoveBotButton["lobbyRoot.gameClient.update"], function ( f13_arg0, f13_arg1 )
+		CoD.Menu.UpdateButtonShownState( f13_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	AddBotButton = DirectorCustomLobbySettings
+	BotSettingsButton = DirectorCustomLobbySettings.subscribeToModel
+	RemoveBotButton = Engine[@"hash_78DF2E5447F384B9"]()
+	BotSettingsButton( AddBotButton, RemoveBotButton["lobbyRoot.privateClient.update"], function ( f14_arg0, f14_arg1 )
+		CoD.Menu.UpdateButtonShownState( f14_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	DirectorCustomLobbySettings:appendEventHandler( "input_source_changed", function ( f15_arg0, f15_arg1 )
+		f15_arg1.menu = f15_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f15_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	AddBotButton = DirectorCustomLobbySettings
+	BotSettingsButton = DirectorCustomLobbySettings.subscribeToModel
+	RemoveBotButton = Engine[@"hash_4DF5CFBC1771947"]( f1_arg1 )
+	BotSettingsButton( AddBotButton, RemoveBotButton.LastInput, function ( f16_arg0, f16_arg1 )
+		CoD.Menu.UpdateButtonShownState( f16_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	DirectorCustomLobbySettings:registerEventHandler( "gain_focus", function ( element, event )
+		local f17_local0 = nil
+		if element.gainFocus then
+			f17_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f17_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f17_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( DirectorCustomLobbySettings, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			OpenPopup( self, "CustomGames_LobbySettings", controller )
+			PlaySoundAlias( "uin_toggle_generic" )
+			return true
+		elseif IsLobbyHostOfCurrentMenu() then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			OpenPopup( self, "CustomGames_LobbySettings", controller )
+			PlaySoundAlias( "uin_toggle_generic" )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_0", nil, "ui_confirm" )
+			return false
+		elseif IsLobbyHostOfCurrentMenu() then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_761333AE050EC552", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( DirectorCustomLobbySettings )
+	self.DirectorCustomLobbySettings = DirectorCustomLobbySettings
+	
+	BotSettingsButton = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 96, 136 )
+	BotSettingsButton:mergeStateConditions( {
+		{
+			stateName = "invisible",
+			condition = function ( menu, element, event )
+				return not CoD.DirectorUtility.ShowDirectorCustomMatchBotButtons( f1_arg1 )
+			end
+		}
+	} )
+	RemoveBotButton = BotSettingsButton
+	AddBotButton = BotSettingsButton.subscribeToModel
+	local f1_local6 = Engine[@"hash_78DF2E5447F384B9"]()
+	AddBotButton( RemoveBotButton, f1_local6["lobbyRoot.lobbyNav"], function ( f21_arg0 )
+		f1_arg0:updateElementState( BotSettingsButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f21_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	RemoveBotButton = BotSettingsButton
+	AddBotButton = BotSettingsButton.subscribeToModel
+	f1_local6 = Engine[@"hash_78DF2E5447F384B9"]()
+	AddBotButton( RemoveBotButton, f1_local6["MapVote.mapVoteGameModeNext"], function ( f22_arg0 )
+		f1_arg0:updateElementState( BotSettingsButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f22_arg0:get(),
+			modelName = "MapVote.mapVoteGameModeNext"
+		} )
+	end, false )
+	BotSettingsButton.ButtonName:setText( LocalizeToUpperString( @"hash_65025AFE42DB30DC" ) )
+	BotSettingsButton:appendEventHandler( "on_session_start", function ( f23_arg0, f23_arg1 )
+		f23_arg1.menu = f23_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f23_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	BotSettingsButton:appendEventHandler( "on_session_end", function ( f24_arg0, f24_arg1 )
+		f24_arg1.menu = f24_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f24_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	RemoveBotButton = BotSettingsButton
+	AddBotButton = BotSettingsButton.subscribeToModel
+	f1_local6 = Engine[@"hash_78DF2E5447F384B9"]()
+	AddBotButton( RemoveBotButton, f1_local6["lobbyRoot.lobbyNav"], function ( f25_arg0, f25_arg1 )
+		CoD.Menu.UpdateButtonShownState( f25_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	RemoveBotButton = BotSettingsButton
+	AddBotButton = BotSettingsButton.subscribeToModel
+	f1_local6 = Engine[@"hash_78DF2E5447F384B9"]()
+	AddBotButton( RemoveBotButton, f1_local6["lobbyRoot.gameClient.update"], function ( f26_arg0, f26_arg1 )
+		CoD.Menu.UpdateButtonShownState( f26_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	RemoveBotButton = BotSettingsButton
+	AddBotButton = BotSettingsButton.subscribeToModel
+	f1_local6 = Engine[@"hash_78DF2E5447F384B9"]()
+	AddBotButton( RemoveBotButton, f1_local6["lobbyRoot.privateClient.update"], function ( f27_arg0, f27_arg1 )
+		CoD.Menu.UpdateButtonShownState( f27_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	BotSettingsButton:appendEventHandler( "input_source_changed", function ( f28_arg0, f28_arg1 )
+		f28_arg1.menu = f28_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f28_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	RemoveBotButton = BotSettingsButton
+	AddBotButton = BotSettingsButton.subscribeToModel
+	f1_local6 = Engine[@"hash_4DF5CFBC1771947"]( f1_arg1 )
+	AddBotButton( RemoveBotButton, f1_local6.LastInput, function ( f29_arg0, f29_arg1 )
+		CoD.Menu.UpdateButtonShownState( f29_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	BotSettingsButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f30_local0 = nil
+		if element.gainFocus then
+			f30_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f30_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f30_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( BotSettingsButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			OpenBotSettings( menu, controller )
+			PlaySoundAlias( "uin_toggle_generic" )
+			return true
+		elseif IsLobbyHostOfCurrentMenu() then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			OpenBotSettings( menu, controller )
+			PlaySoundAlias( "uin_toggle_generic" )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_0", nil, "ui_confirm" )
+			return false
+		elseif IsLobbyHostOfCurrentMenu() then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_761333AE050EC552", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( BotSettingsButton )
+	self.BotSettingsButton = BotSettingsButton
+	
+	AddBotButton = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0, 0.48, 0, 0, 0, 0, 144, 184 )
+	AddBotButton:mergeStateConditions( {
+		{
+			stateName = "invisible",
+			condition = function ( menu, element, event )
+				return not CoD.DirectorUtility.ShowDirectorCustomMatchBotButtons( f1_arg1 )
+			end
+		}
+	} )
+	f1_local6 = AddBotButton
+	RemoveBotButton = AddBotButton.subscribeToModel
+	local f1_local7 = Engine[@"hash_78DF2E5447F384B9"]()
+	RemoveBotButton( f1_local6, f1_local7["lobbyRoot.lobbyNav"], function ( f34_arg0 )
+		f1_arg0:updateElementState( AddBotButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f34_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	f1_local6 = AddBotButton
+	RemoveBotButton = AddBotButton.subscribeToModel
+	f1_local7 = Engine[@"hash_78DF2E5447F384B9"]()
+	RemoveBotButton( f1_local6, f1_local7["MapVote.mapVoteGameModeNext"], function ( f35_arg0 )
+		f1_arg0:updateElementState( AddBotButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f35_arg0:get(),
+			modelName = "MapVote.mapVoteGameModeNext"
+		} )
+	end, false )
+	AddBotButton.ButtonName:setText( LocalizeToUpperString( @"hash_141A80D9A928673E" ) )
+	AddBotButton:appendEventHandler( "on_session_start", function ( f36_arg0, f36_arg1 )
+		f36_arg1.menu = f36_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f36_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	AddBotButton:appendEventHandler( "on_session_end", function ( f37_arg0, f37_arg1 )
+		f37_arg1.menu = f37_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f37_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	f1_local6 = AddBotButton
+	RemoveBotButton = AddBotButton.subscribeToModel
+	f1_local7 = Engine[@"hash_78DF2E5447F384B9"]()
+	RemoveBotButton( f1_local6, f1_local7["lobbyRoot.lobbyNav"], function ( f38_arg0, f38_arg1 )
+		CoD.Menu.UpdateButtonShownState( f38_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	f1_local6 = AddBotButton
+	RemoveBotButton = AddBotButton.subscribeToModel
+	f1_local7 = Engine[@"hash_78DF2E5447F384B9"]()
+	RemoveBotButton( f1_local6, f1_local7["lobbyRoot.gameClient.update"], function ( f39_arg0, f39_arg1 )
+		CoD.Menu.UpdateButtonShownState( f39_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	f1_local6 = AddBotButton
+	RemoveBotButton = AddBotButton.subscribeToModel
+	f1_local7 = Engine[@"hash_78DF2E5447F384B9"]()
+	RemoveBotButton( f1_local6, f1_local7["lobbyRoot.privateClient.update"], function ( f40_arg0, f40_arg1 )
+		CoD.Menu.UpdateButtonShownState( f40_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	AddBotButton:appendEventHandler( "input_source_changed", function ( f41_arg0, f41_arg1 )
+		f41_arg1.menu = f41_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f41_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	f1_local6 = AddBotButton
+	RemoveBotButton = AddBotButton.subscribeToModel
+	f1_local7 = Engine[@"hash_4DF5CFBC1771947"]( f1_arg1 )
+	RemoveBotButton( f1_local6, f1_local7.LastInput, function ( f42_arg0, f42_arg1 )
+		CoD.Menu.UpdateButtonShownState( f42_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	AddBotButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f43_local0 = nil
+		if element.gainFocus then
+			f43_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f43_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f43_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( AddBotButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) and IsMouseOrKeyboard( controller ) then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			AddLobbyBots( menu, controller )
+			return true
+		elseif IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			AddLobbyBots( menu, controller )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) and IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_0", nil, "ui_confirm" )
+			return false
+		elseif IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_761333AE050EC552", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( AddBotButton )
+	self.AddBotButton = AddBotButton
+	
+	RemoveBotButton = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0.52, 1, 0, 0, 0, 0, 144, 184 )
+	RemoveBotButton:mergeStateConditions( {
+		{
+			stateName = "invisible",
+			condition = function ( menu, element, event )
+				return not CoD.DirectorUtility.ShowDirectorCustomMatchBotButtons( f1_arg1 )
+			end
+		}
+	} )
+	f1_local7 = RemoveBotButton
+	f1_local6 = RemoveBotButton.subscribeToModel
+	local f1_local8 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local6( f1_local7, f1_local8["lobbyRoot.lobbyNav"], function ( f47_arg0 )
+		f1_arg0:updateElementState( RemoveBotButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f47_arg0:get(),
+			modelName = "lobbyRoot.lobbyNav"
+		} )
+	end, false )
+	f1_local7 = RemoveBotButton
+	f1_local6 = RemoveBotButton.subscribeToModel
+	f1_local8 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local6( f1_local7, f1_local8["MapVote.mapVoteGameModeNext"], function ( f48_arg0 )
+		f1_arg0:updateElementState( RemoveBotButton, {
+			name = "model_validation",
+			menu = f1_arg0,
+			controller = f1_arg1,
+			modelValue = f48_arg0:get(),
+			modelName = "MapVote.mapVoteGameModeNext"
+		} )
+	end, false )
+	RemoveBotButton.ButtonName:setText( LocalizeToUpperString( @"hash_5FD88DBB329D1EC9" ) )
+	RemoveBotButton:appendEventHandler( "on_session_start", function ( f49_arg0, f49_arg1 )
+		f49_arg1.menu = f49_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f49_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	RemoveBotButton:appendEventHandler( "on_session_end", function ( f50_arg0, f50_arg1 )
+		f50_arg1.menu = f50_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f50_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	f1_local7 = RemoveBotButton
+	f1_local6 = RemoveBotButton.subscribeToModel
+	f1_local8 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local6( f1_local7, f1_local8["lobbyRoot.lobbyNav"], function ( f51_arg0, f51_arg1 )
+		CoD.Menu.UpdateButtonShownState( f51_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	f1_local7 = RemoveBotButton
+	f1_local6 = RemoveBotButton.subscribeToModel
+	f1_local8 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local6( f1_local7, f1_local8["lobbyRoot.gameClient.update"], function ( f52_arg0, f52_arg1 )
+		CoD.Menu.UpdateButtonShownState( f52_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	f1_local7 = RemoveBotButton
+	f1_local6 = RemoveBotButton.subscribeToModel
+	f1_local8 = Engine[@"hash_78DF2E5447F384B9"]()
+	f1_local6( f1_local7, f1_local8["lobbyRoot.privateClient.update"], function ( f53_arg0, f53_arg1 )
+		CoD.Menu.UpdateButtonShownState( f53_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	RemoveBotButton:appendEventHandler( "input_source_changed", function ( f54_arg0, f54_arg1 )
+		f54_arg1.menu = f54_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f54_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	f1_local7 = RemoveBotButton
+	f1_local6 = RemoveBotButton.subscribeToModel
+	f1_local8 = Engine[@"hash_4DF5CFBC1771947"]( f1_arg1 )
+	f1_local6( f1_local7, f1_local8.LastInput, function ( f55_arg0, f55_arg1 )
+		CoD.Menu.UpdateButtonShownState( f55_arg1, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end, false )
+	RemoveBotButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f56_local0 = nil
+		if element.gainFocus then
+			f56_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f56_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f56_local0
+	end )
+	f1_arg0:AddButtonCallbackFunction( RemoveBotButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) and IsMouseOrKeyboard( controller ) then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			RemoveLobbyBots( self, element, controller, "", menu )
+			return true
+		elseif IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) then
+			CoD.DirectorUtility.ClearSelectedClient( controller )
+			RemoveLobbyBots( self, element, controller, "", menu )
+			return true
+		else
+			
+		end
+	end, function ( element, menu, controller )
+		if IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) and IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_0", nil, "ui_confirm" )
+			return false
+		elseif IsLobbyHostOfCurrentMenu() and IsBooleanDvarSet( "lobby_hostBots" ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_761333AE050EC552", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( RemoveBotButton )
+	self.RemoveBotButton = RemoveBotButton
+
+	local LaunchGameButton = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 96 + 100, 136 + 100 )
+	LaunchGameButton:mergeStateConditions( {
+		{
+			stateName = "invisible",
+			condition = function ( menu, element, event )
+				return not CoD.DirectorUtility.ShowDirectorCustomMatchBotButtons( f1_arg1 )
+			end
+		}
+	} )
+
+	LaunchGameButton.ButtonName:setText("Launch Game")
+
+	LaunchGameButton:appendEventHandler( "on_session_start", function ( f23_arg0, f23_arg1 )
+		f23_arg1.menu = f23_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f23_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	LaunchGameButton:appendEventHandler( "on_session_end", function ( f24_arg0, f24_arg1 )
+		f24_arg1.menu = f24_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f24_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	LaunchGameButton:appendEventHandler( "input_source_changed", function ( f28_arg0, f28_arg1 )
+		f28_arg1.menu = f28_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f28_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+
+	LaunchGameButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f56_local5 = nil
+		if element.gainFocus then
+			f56_local5 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f56_local5 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f56_local5
+	end )
+	
+	f1_arg0:AddButtonCallbackFunction( LaunchGameButton, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			LaunchGameFunction(controller)
+			return true
+		elseif IsLobbyHostOfCurrentMenu() then
+			LaunchGameFunction(controller)
+			return true
+		else
+			-- no
+		end
+	end, function ( element, menu, controller )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_0", nil, "ui_confirm" )
+			return false
+		elseif IsLobbyHostOfCurrentMenu()then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_761333AE050EC552", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( LaunchGameButton )
+	self.LaunchGameButton = LaunchGameButton
+
+	local SetMaxHighClients = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 96 + 150, 136 + 150 )
+	SetMaxHighClients:mergeStateConditions( {
+		{
+			stateName = "invisible",
+			condition = function ( menu, element, event )
+				return not CoD.DirectorUtility.ShowDirectorCustomMatchBotButtons( f1_arg1 )
+			end
+		}
+	} )
+
+	SetMaxHighClients.ButtonName:setText("Set 18 Max Clients/Bots")
+
+	SetMaxHighClients:appendEventHandler( "on_session_start", function ( f23_arg0, f23_arg1 )
+		f23_arg1.menu = f23_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f23_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	SetMaxHighClients:appendEventHandler( "on_session_end", function ( f24_arg0, f24_arg1 )
+		f24_arg1.menu = f24_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f24_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+	SetMaxHighClients:appendEventHandler( "input_source_changed", function ( f28_arg0, f28_arg1 )
+		f28_arg1.menu = f28_arg1.menu or f1_arg0
+		CoD.Menu.UpdateButtonShownState( f28_arg0, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+	end )
+
+	SetMaxHighClients:registerEventHandler( "gain_focus", function ( element, event )
+		local f56_local6 = nil
+		if element.gainFocus then
+			f56_local6 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f56_local6 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_arg0, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"] )
+		return f56_local6
+	end )
+
+	f1_arg0:AddButtonCallbackFunction( SetMaxHighClients, f1_arg1, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], "ui_confirm", function ( element, menu, controller, model )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			-- set max clients
+			Engine[@"setlobbymaxclients"](Enum[@"lobbytype"][@"lobby_type_game"], 18)
+			Engine[@"setlobbymaxclients"](Enum[@"lobbytype"][@"lobby_type_private"], 18)
+			Engine[@"setlobbymaxclients"](Engine[@"getprimarycontroller"](), 18)
+			Dvar[@"hash_4FF45B41C6046F8"]:set(18)
+			Engine[@"setmodelvalue"](Engine[@"createmodel"]( Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "PartyPrivacy" ), "maxPlayers" ), 18)
+			return true
+		elseif IsLobbyHostOfCurrentMenu() then
+			-- set max clients
+			Engine[@"setlobbymaxclients"](Enum[@"lobbytype"][@"lobby_type_game"], 18)
+			Engine[@"setlobbymaxclients"](Enum[@"lobbytype"][@"lobby_type_private"], 18)
+			Engine[@"setlobbymaxclients"](Engine[@"getprimarycontroller"](), 18)
+			Dvar[@"hash_4FF45B41C6046F8"]:set(18)
+			Engine[@"setmodelvalue"](Engine[@"createmodel"]( Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "PartyPrivacy" ), "maxPlayers" ), 18)
+			return true
+		else
+			-- no
+		end
+	end, function ( element, menu, controller )
+		if IsLobbyHostOfCurrentMenu() and IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_0", nil, "ui_confirm" )
+			return false
+		elseif IsLobbyHostOfCurrentMenu()then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_3755DA1E2E7C263F"], @"hash_761333AE050EC552", nil, "ui_confirm" )
+			return true
+		else
+			return false
+		end
+	end, false )
+	self:addElement( SetMaxHighClients )
+	self.SetMaxHighClients = SetMaxHighClients
+	
+	self:mergeStateConditions( {
+		{
+			stateName = "NoCodCaster",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	DirectorCustomCodcaster.id = "DirectorCustomCodcaster"
+	DirectorCustomLobbySettings.id = "DirectorCustomLobbySettings"
+	BotSettingsButton.id = "BotSettingsButton"
+	AddBotButton.id = "AddBotButton"
+	RemoveBotButton.id = "RemoveBotButton"
+	LaunchGameButton.id = "LaunchGameButton"
+	SetMaxHighClients.id = "SetMaxHighClients"
+
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	return self
+end
+
+CoD.DirectorLobbySettingList.__resetProperties = function ( f60_arg0 )
+	f60_arg0.DirectorCustomCodcaster:completeAnimation()
+	f60_arg0.RemoveBotButton:completeAnimation()
+	f60_arg0.AddBotButton:completeAnimation()
+	f60_arg0.DirectorCustomLobbySettings:completeAnimation()
+	f60_arg0.BotSettingsButton:completeAnimation()
+	f60_arg0.DirectorCustomCodcaster:setAlpha( 1 )
+	f60_arg0.RemoveBotButton:setTopBottom( 0, 0, 144, 184 )
+	f60_arg0.AddBotButton:setTopBottom( 0, 0, 144, 184 )
+	f60_arg0.DirectorCustomLobbySettings:setTopBottom( 0, 0, 48, 88 )
+	f60_arg0.BotSettingsButton:setTopBottom( 0, 0, 96, 136 )
+end
+
+CoD.DirectorLobbySettingList.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f61_arg0, f61_arg1 )
+			f61_arg0:__resetProperties()
+			f61_arg0:setupElementClipCounter( 0 )
+		end
+	},
+	NoCodCaster = {
+		DefaultClip = function ( f62_arg0, f62_arg1 )
+			f62_arg0:__resetProperties()
+			f62_arg0:setupElementClipCounter( 5 )
+			f62_arg0.DirectorCustomCodcaster:completeAnimation()
+			f62_arg0.DirectorCustomCodcaster:setAlpha( 0 )
+			f62_arg0.clipFinished( f62_arg0.DirectorCustomCodcaster )
+			f62_arg0.DirectorCustomLobbySettings:completeAnimation()
+			f62_arg0.DirectorCustomLobbySettings:setTopBottom( 0, 0, 1, 41 )
+			f62_arg0.clipFinished( f62_arg0.DirectorCustomLobbySettings )
+			f62_arg0.BotSettingsButton:completeAnimation()
+			f62_arg0.BotSettingsButton:setTopBottom( 0, 0, 48, 88 )
+			f62_arg0.clipFinished( f62_arg0.BotSettingsButton )
+			f62_arg0.AddBotButton:completeAnimation()
+			f62_arg0.AddBotButton:setTopBottom( 0, 0, 96, 136 )
+			f62_arg0.clipFinished( f62_arg0.AddBotButton )
+			f62_arg0.RemoveBotButton:completeAnimation()
+			f62_arg0.RemoveBotButton:setTopBottom( 0, 0, 96, 136 )
+			f62_arg0.clipFinished( f62_arg0.RemoveBotButton )
+		end
+	}
+}
+
+CoD.DirectorLobbySettingList.__onClose = function ( f63_arg0 )
+	f63_arg0.DirectorCustomCodcaster:close()
+	f63_arg0.DirectorCustomLobbySettings:close()
+	f63_arg0.BotSettingsButton:close()
+	f63_arg0.AddBotButton:close()
+	f63_arg0.RemoveBotButton:close()
+end
+
+--[[
+	local MainUnlockAll = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
+	MainUnlockAll.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockAll then
+		MainUnlockAll.MiddleText:setText("^3Unlock All: ^2Enabled")
+		MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^2Enabled")
+	else
+		MainUnlockAll.MiddleText:setText("^3Unlock All: ^1Disabled")
+		MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^1Disabled")
+	end
+
+	MainUnlockAll.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockAll:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockAll:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockAll )
+	self.MainUnlockAll = MainUnlockAll
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockAll, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockAll_Toggle()
+
+		if UnlockAll then
+			MainUnlockAll.MiddleText:setText("^3Unlock All: ^2Enabled")
+			MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^2Enabled")
+			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllEnabledMessage")
+		else
+			MainUnlockAll.MiddleText:setText("^3Unlock All: ^1Disabled")
+			MainUnlockAll.MiddleTextFocus:setText("^3Unlock All: ^1Disabled")
+			CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllDisabledMessage")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockAll = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 0, 50 )
+	sizeMainUnlockAll:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockAll:setAlpha( 0 )
+	sizeMainUnlockAll.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockAll.Tint:setAlpha( 0.25 )
+	sizeMainUnlockAll:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockAll:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockAll.ButtonName.GameModeText:setText("Unlock All") -- doesn't really do anything lol
+	self:addElement( sizeMainUnlockAll )
+	self.sizeMainUnlockAll = sizeMainUnlockAll
+
+	MainUnlockAll.id = "MainUnlockAll"
+	sizeMainUnlockAll.id = "sizeMainUnlockAll"
+	--self.__defaultFocus = baseButton
+
+	-- attachments
+	local MainUnlockAttach = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 0, 50 )
+	MainUnlockAttach.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockAttachments then
+		MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^2Enabled")
+		MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^2Enabled")
+	else
+		MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^1Disabled")
+		MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^1Disabled")
+	end
+
+	MainUnlockAttach.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockAttach:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockAttach:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockAttach )
+	self.MainUnlockAttach = MainUnlockAttach
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockAttach, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockAttachments_Toggle()
+
+		if UnlockAttachments then
+			MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^2Enabled")
+			MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^2Enabled")
+			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllEnabledMessage")
+		else
+			MainUnlockAttach.MiddleText:setText("^3Unlock Attachments: ^1Disabled")
+			MainUnlockAttach.MiddleTextFocus:setText("^3Unlock Attachments: ^1Disabled")
+			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllDisabledMessage")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockAttach = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 0, 50 )
+	sizeMainUnlockAttach:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockAttach:setAlpha( 0 )
+	sizeMainUnlockAttach.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockAttach.Tint:setAlpha( 0.25 )
+	sizeMainUnlockAttach:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockAttach:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockAttach.ButtonName.GameModeText:setText("Unlock Attachments")
+	self:addElement( sizeMainUnlockAttach )
+	self.sizeMainUnlockAttach = sizeMainUnlockAttach
+
+	MainUnlockAttach.id = "MainUnlockAttach"
+	sizeMainUnlockAttach.id = "sizeMainUnlockAttach"
+
+	-- loot
+	local MainUnlockLoot = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 0, 50 )
+	MainUnlockLoot.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockLoot then
+		MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^2Enabled")
+		MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^2Enabled")
+	else
+		MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^1Disabled")
+		MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^1Disabled")
+	end
+
+	MainUnlockLoot.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockLoot:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockLoot:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockLoot )
+	self.MainUnlockLoot = MainUnlockLoot
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockLoot, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockLoot_Toggle()
+
+		if UnlockLoot then
+			MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^2Enabled")
+			MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^2Enabled")
+			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllEnabledMessage")
+		else
+			MainUnlockLoot.MiddleText:setText("^3Unlock Loot: ^1Disabled")
+			MainUnlockLoot.MiddleTextFocus:setText("^3Unlock Loot: ^1Disabled")
+			--CoD.OverlayUtility.CreateOverlay(controller, menu, "ShieldUnlockAllDisabledMessage")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockLoot = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 0, 50 )
+	sizeMainUnlockLoot:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockLoot:setAlpha( 0 )
+	sizeMainUnlockLoot.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockLoot.Tint:setAlpha( 0.25 )
+	sizeMainUnlockLoot:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockLoot:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockLoot.ButtonName.GameModeText:setText("Unlock Loot")
+	self:addElement( sizeMainUnlockLoot )
+	self.sizeMainUnlockLoot = sizeMainUnlockLoot
+
+	MainUnlockLoot.id = "MainUnlockLoot"
+	sizeMainUnlockLoot.id = "sizeMainUnlockLoot"
+
+	local MainUnlockCamos = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 70, 120 )
+	MainUnlockCamos.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockCamos then
+		MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^2Enabled")
+		MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^2Enabled")
+	else
+		MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^1Disabled")
+		MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^1Disabled")
+	end
+
+	MainUnlockCamos.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockCamos:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockCamos:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockCamos )
+	self.MainUnlockCamos = MainUnlockCamos
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockCamos, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockCamosCards_Toggle()
+
+		if UnlockCamos then
+			MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^2Enabled")
+			MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^2Enabled")
+		else
+			MainUnlockCamos.MiddleText:setText("^3Unlock Camos: ^1Disabled")
+			MainUnlockCamos.MiddleTextFocus:setText("^3Unlock Camos: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockCamos = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 70, 120 )
+	sizeMainUnlockCamos:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockCamos:setAlpha( 0 )
+	sizeMainUnlockCamos.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockCamos.Tint:setAlpha( 0.25 )
+	sizeMainUnlockCamos:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockCamos:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockCamos.ButtonName.GameModeText:setText("Unlock Camos")
+	self:addElement( sizeMainUnlockCamos )
+	self.sizeMainUnlockCamos = sizeMainUnlockCamos
+
+	MainUnlockCamos.id = "MainUnlockCamos"
+	sizeMainUnlockCamos.id = "sizeMainUnlockCamos"
+
+	local MainUnlockCards = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 70, 120 )
+	MainUnlockCards.MiddleText:setTTF( "ttmussels_regular" )
+
+	MainUnlockCards:mergeStateConditions( {
+		{
+			stateName = "Locked",
+			condition = function ( menu, element, event )
+				return true
+			end
+		}
+	} )
+
+	if UnlockCards then
+		MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^2Enabled")
+		MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^2Enabled")
+	else
+		MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^1Disabled")
+		MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^1Disabled")
+	end
+
+	MainUnlockCards.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockCards:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockCards:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockCards )
+	self.MainUnlockCards = MainUnlockCards
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockCards, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockCards_Toggle()
+
+		if UnlockCards then
+			MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^2Enabled")
+			MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^2Enabled")
+		else
+			MainUnlockCards.MiddleText:setText("^3Unlock Calling Cards: ^1Disabled")
+			MainUnlockCards.MiddleTextFocus:setText("^3Unlock Calling Cards: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockCards = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 850, 0.23, 0.23, 70, 120 )
+	sizeMainUnlockCards:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockCards:setAlpha( 0 )
+	sizeMainUnlockCards.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockCards.Tint:setAlpha( 0.25 )
+	sizeMainUnlockCards:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockCards:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockCards.ButtonName.GameModeText:setText("Unlock Calling Cards")
+	self:addElement( sizeMainUnlockCards )
+	self.sizeMainUnlockCards = sizeMainUnlockCards
+
+	MainUnlockCards.id = "MainUnlockCards"
+	sizeMainUnlockCards.id = "sizeMainUnlockCards"
+
+	local MainUnlockItems = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 70, 120 )
+	MainUnlockItems.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockItems then
+		MainUnlockItems.MiddleText:setText("^3Unlock Items: ^2Enabled")
+		MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^2Enabled")
+	else
+		MainUnlockItems.MiddleText:setText("^3Unlock Items: ^1Disabled")
+		MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^1Disabled")
+	end
+
+	MainUnlockItems.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockItems:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockItems:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockItems )
+	self.MainUnlockItems = MainUnlockItems
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockItems, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldItems_Toggle()
+
+		if UnlockItems then
+			MainUnlockItems.MiddleText:setText("^3Unlock Items: ^2Enabled")
+			MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^2Enabled")
+		else
+			MainUnlockItems.MiddleText:setText("^3Unlock Items: ^1Disabled")
+			MainUnlockItems.MiddleTextFocus:setText("^3Unlock Items: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockItems = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 900, 1300, 0.23, 0.23, 70, 120 )
+	sizeMainUnlockItems:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockItems:setAlpha( 0 )
+	sizeMainUnlockItems.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockItems.Tint:setAlpha( 0.25 )
+	sizeMainUnlockItems:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockItems:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockItems.ButtonName.GameModeText:setText("Unlock Items")
+	self:addElement( sizeMainUnlockItems )
+	self.sizeMainUnlockItems = sizeMainUnlockItems
+
+	MainUnlockItems.id = "MainUnlockItems"
+	sizeMainUnlockItems.id = "sizeMainUnlockItems"
+
+	local MainUnlockClassSlots = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 140, 190 )
+	MainUnlockClassSlots.MiddleText:setTTF( "ttmussels_regular" )
+
+	if UnlockClassSlots then
+		MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^2Enabled")
+		MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^2Enabled")
+	else
+		MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^1Disabled")
+		MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^1Disabled")
+	end
+
+	MainUnlockClassSlots.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockClassSlots:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockClassSlots:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockClassSlots )
+	self.MainUnlockClassSlots = MainUnlockClassSlots
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockClassSlots, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockClassSlots_Toggle()
+
+		if UnlockClassSlots then
+			MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^2Enabled")
+			MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^2Enabled")
+		else
+			MainUnlockClassSlots.MiddleText:setText("^3Unlock Class Slots: ^1Disabled")
+			MainUnlockClassSlots.MiddleTextFocus:setText("^3Unlock Class Slots: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockClassSlots = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 400, 0.23, 0.23, 140, 190 )
+	sizeMainUnlockClassSlots:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockClassSlots:setAlpha( 0 )
+	sizeMainUnlockClassSlots.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockClassSlots.Tint:setAlpha( 0.25 )
+	sizeMainUnlockClassSlots:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockClassSlots:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockClassSlots.ButtonName.GameModeText:setText("Unlock Class Slots")
+	self:addElement( sizeMainUnlockClassSlots )
+	self.sizeMainUnlockClassSlots = sizeMainUnlockClassSlots
+
+	MainUnlockClassSlots.id = "MainUnlockClassSlots"
+	sizeMainUnlockClassSlots.id = "sizeMainUnlockClassSlots"
+
+	local MainUnlockBlackMarket = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 950, 0.23, 0.23, 140, 190 )
+	MainUnlockBlackMarket.MiddleText:setTTF( "ttmussels_regular" )
+
+	MainUnlockBlackMarket:mergeStateConditions( {
+		{
+			stateName = "Locked",
+			condition = function ( menu, element, event )
+				return true
+			end
+		}
+	} )
+
+	if UnlockBlackMarket then
+		MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^2Enabled")
+		MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^2Enabled")
+	else
+		MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^1Disabled")
+		MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^1Disabled")
+	end
+
+	MainUnlockBlackMarket.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	MainUnlockBlackMarket:linkToElementModel( self, nil, false, function ( model )
+		MainUnlockBlackMarket:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MainUnlockBlackMarket )
+	self.MainUnlockBlackMarket = MainUnlockBlackMarket
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MainUnlockBlackMarket, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		ShieldUnlockBlackMarket_Toggle()
+
+		if UnlockBlackMarket then
+			MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^2Enabled")
+			MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^2Enabled")
+		else
+			MainUnlockBlackMarket.MiddleText:setText("^3Unlock Black Market Items: ^1Disabled")
+			MainUnlockBlackMarket.MiddleTextFocus:setText("^3Unlock Black Market Items: ^1Disabled")
+		end
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMainUnlockBlackMarket = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 450, 950, 0.23, 0.23, 140, 190 )
+	sizeMainUnlockBlackMarket:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMainUnlockBlackMarket:setAlpha( 0 )
+	sizeMainUnlockBlackMarket.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMainUnlockBlackMarket.Tint:setAlpha( 0.25 )
+	sizeMainUnlockBlackMarket:linkToElementModel( self, nil, false, function ( model )
+		sizeMainUnlockBlackMarket:setModel( model, f1_arg1 )
+	end )
+	sizeMainUnlockBlackMarket.ButtonName.GameModeText:setText("Unlock Black Market Items")
+	self:addElement( sizeMainUnlockBlackMarket )
+	self.sizeMainUnlockBlackMarket = sizeMainUnlockBlackMarket
+
+	MainUnlockBlackMarket.id = "MainUnlockBlackMarket"
+	sizeMainUnlockBlackMarket.id = "sizeMainUnlockBlackMarket"
+
+	]]
+
+	--[[
+
+	-- Multiplayer
+	local Multiplayer_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400 + 100, 450 + 100 )
+	Multiplayer_RankEditBox:linkToElementModel( self, nil, false, function ( model )
+		Multiplayer_RankEditBox:setModel( model, f1_arg1 )
+	end )
+	Multiplayer_RankEditBox.TextBox:setLeftRight(0, 0, 20 + 155, 320 + 155)
+	Multiplayer_RankEditBox.RankHighlight:setText("^2Set Multiplayer Rank: ")
+	self:addElement( Multiplayer_RankEditBox )
+	self.Multiplayer_RankEditBox = Multiplayer_RankEditBox
+
+	local MultiplayerRankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Multiplayer_Shield_Rank" )
+	if MultiplayerRankModel:get() == nil then
+		MultiplayerRankModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Multiplayer_RankEditBox, f1_arg0, f1_local1, MultiplayerRankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local RankData = f331_arg0:get()
+			if RankData ~= nil and RankData ~= "" then
+				EnhPrintInfo("Multiplayer RankData", RankData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(RankData) or tonumber(RankData) > 1000 or tonumber(RankData) < 1 then
+					f331_arg0:set("^1Invalid Rank!")
+					Multiplayer_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Rank Set!")
+					Multiplayer_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+					Engine[@"exec"](Engine[@"getprimarycontroller"](), "statsetbyname rank " .. RankData)
+					Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp rank " .. RankData)
+
+					-- save
+					Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats")
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+
+	local Multiplayer_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400 + 100, 450 + 100 )
+	Multiplayer_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
+		Multiplayer_PrestigeEditBox:setModel( model, f1_arg1 )
+	end )
+	Multiplayer_PrestigeEditBox.TextBox:setLeftRight(0, 0, 20 + 175, 320 + 175)
+	Multiplayer_PrestigeEditBox.RankHighlight:setText("^2Set Multiplayer Prestige: ")
+	self:addElement( Multiplayer_PrestigeEditBox )
+	self.Multiplayer_PrestigeEditBox = Multiplayer_PrestigeEditBox
+
+	local MultiplayerPrestigeModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Multiplayer_Shield_Prestige" )
+	if MultiplayerPrestigeModel:get() == nil then
+		MultiplayerPrestigeModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Multiplayer_PrestigeEditBox, f1_arg0, f1_local1, MultiplayerPrestigeModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local PrestigeData = f331_arg0:get()
+			if PrestigeData ~= nil and PrestigeData ~= "" then
+				EnhPrintInfo("Multiplayer PrestigeData", PrestigeData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(PrestigeData) or tonumber(PrestigeData) > 10 or tonumber(PrestigeData) < 1 then
+					f331_arg0:set("^1Invalid Prestige!")
+					Multiplayer_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Prestige Set!")
+					Multiplayer_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+					Engine[@"exec"](Engine[@"getprimarycontroller"](), "statsetbyname PLEVEL " .. PrestigeData)
+					Engine[@"exec"](Engine[@"getprimarycontroller"](), "setplayerstat mp prestige " .. PrestigeData)
+
+					-- save
+					Engine[@"exec"](Engine[@"getprimarycontroller"](), "uploadstats")
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+	local MultiplayePrestigeMaster = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 100, 450 + 100 )
+	
+	MultiplayePrestigeMaster.MiddleText:setTTF( "ttmussels_regular" )
+	MultiplayePrestigeMaster.MiddleText:setText("^2Prestige Master")
+
+	MultiplayePrestigeMaster.MiddleTextFocus:setText("^2Prestige Master")
+	MultiplayePrestigeMaster.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	MultiplayePrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		MultiplayePrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	self:addElement( MultiplayePrestigeMaster )
+	self.MultiplayePrestigeMaster = MultiplayePrestigeMaster
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( MultiplayePrestigeMaster, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("MultiplayePrestigeMaster")
+		-- shield api later
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeMultiplayePrestigeMaster = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 100, 450 + 100 )
+	sizeMultiplayePrestigeMaster:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeMultiplayePrestigeMaster:setAlpha( 0 )
+	sizeMultiplayePrestigeMaster.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeMultiplayePrestigeMaster.Tint:setAlpha( 0.25 )
+	sizeMultiplayePrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		sizeMultiplayePrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	sizeMultiplayePrestigeMaster.ButtonName.GameModeText:setText("^2Prestige Master")
+	self:addElement( sizeMultiplayePrestigeMaster )
+	self.sizeMultiplayePrestigeMaster = sizeMultiplayePrestigeMaster
+
+	MultiplayePrestigeMaster.id = "MultiplayePrestigeMaster"
+	sizeMultiplayePrestigeMaster.id = "sizeMultiplayePrestigeMaster"
+	
+	Multiplayer_RankEditBox.id = "Multiplayer_RankEditBox"
+	Multiplayer_PrestigeEditBox.id = "Multiplayer_PrestigeEditBox"
+
+	-- Zombies
+	local Zombies_RankEditBox = CoD.Shield_RankEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 350, 0.23, 0.23, 400 + 200, 450 + 200 )
+	Zombies_RankEditBox:linkToElementModel( self, nil, false, function ( model )
+		Zombies_RankEditBox:setModel( model, f1_arg1 )
+	end )
+	Zombies_RankEditBox.TextBox:setLeftRight(0, 0, 20 + 130, 320 + 130)
+	Zombies_RankEditBox.RankHighlight:setText("^2Set Zombies Rank: ")
+	self:addElement( Zombies_RankEditBox )
+	self.Zombies_RankEditBox = Zombies_RankEditBox
+
+	local ZombiesRankModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Zombies_Shield_Rank" )
+	if ZombiesRankModel:get() == nil then
+		ZombiesRankModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Zombies_RankEditBox, f1_arg0, f1_local1, ZombiesRankModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local RankData = f331_arg0:get()
+			if RankData ~= nil and RankData ~= "" then
+				EnhPrintInfo("Zombies RankData", RankData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(RankData) or tonumber(RankData) > 1000 or tonumber(RankData) < 1 then
+					f331_arg0:set("^1Invalid Rank!")
+					Zombies_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Rank Set!")
+					Zombies_RankEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+
+	local Zombies_PrestigeEditBox = CoD.Shield_PrestigeEditBox.new( f1_local1, f1_arg0, 0.10, 0.10, 380, 730, 0.23, 0.23, 400 + 200, 450 + 200 )
+	Zombies_PrestigeEditBox:linkToElementModel( self, nil, false, function ( model )
+		Zombies_PrestigeEditBox:setModel( model, f1_arg1 )
+	end )
+	Zombies_PrestigeEditBox.TextBox:setLeftRight(0, 0, 20 + 155, 320 + 155)
+	Zombies_PrestigeEditBox.RankHighlight:setText("^2Set Zombies Prestige: ")
+	self:addElement( Zombies_PrestigeEditBox )
+	self.Zombies_PrestigeEditBox = Zombies_PrestigeEditBox
+
+	local ZombiesPrestigeModel = Engine[@"createmodel"]( Engine[@"getmodelforcontroller"]( f1_arg1 ), "Zombies_Shield_Prestige" )
+	if ZombiesPrestigeModel:get() == nil then
+		ZombiesPrestigeModel:set( "" )
+	end
+
+	CoD.PCUtility.SetupEditControlWithModel( Zombies_PrestigeEditBox, f1_arg0, f1_local1, ZombiesPrestigeModel, function ( f331_arg0, f331_arg1, f331_arg2 )
+		if not f331_arg2.canceled and f331_arg2.name == "textbox_editdone" then
+			local PrestigeData = f331_arg0:get()
+			if PrestigeData ~= nil and PrestigeData ~= "" then
+				EnhPrintInfo("Zombies PrestigeData", PrestigeData)
+				PlaySoundAlias( "uin_paint_image_flip_toggle" )
+
+				if not isInteger(PrestigeData) or tonumber(PrestigeData) > 10 or tonumber(PrestigeData) < 1 then
+					f331_arg0:set("^1Invalid Prestige!")
+					Zombies_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+				else
+					f331_arg0:set("^3Prestige Set!")
+					Zombies_PrestigeEditBox:addElement( LUI.UITimer.newElementTimer( 300, true, function ()
+						f331_arg0:set("")
+					end ) )
+
+					-- shield api here later..
+				end
+			end
+		else
+			f331_arg0:set("") -- reset it
+		end
+	end )
+
+	local ZombiesPrestigeMaster = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 200, 450 + 200 )
+	
+	ZombiesPrestigeMaster.MiddleText:setTTF( "ttmussels_regular" )
+	ZombiesPrestigeMaster.MiddleText:setText("^2Prestige Master")
+
+	ZombiesPrestigeMaster.MiddleTextFocus:setText("^2Prestige Master")
+	ZombiesPrestigeMaster.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	ZombiesPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		ZombiesPrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	self:addElement( ZombiesPrestigeMaster )
+	self.ZombiesPrestigeMaster = ZombiesPrestigeMaster
+
+	-- add callback click
+	f1_local1:AddButtonCallbackFunction( ZombiesPrestigeMaster, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("ZombiesPrestigeMaster")
+		-- shield api later
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeZombiesPrestigeMaster = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.23, 0.23, 400 + 200, 450 + 200 )
+	sizeZombiesPrestigeMaster:mergeStateConditions( {
+		{
+			stateName = "Disabled",
+			condition = function ( menu, element, event )
+				return AlwaysFalse()
+			end
+		}
+	} )
+
+	sizeZombiesPrestigeMaster:setAlpha( 0 )
+	sizeZombiesPrestigeMaster.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeZombiesPrestigeMaster.Tint:setAlpha( 0.25 )
+	sizeZombiesPrestigeMaster:linkToElementModel( self, nil, false, function ( model )
+		sizeZombiesPrestigeMaster:setModel( model, f1_arg1 )
+	end )
+	sizeZombiesPrestigeMaster.ButtonName.GameModeText:setText("^2Prestige Master")
+	self:addElement( sizeZombiesPrestigeMaster )
+	self.sizeZombiesPrestigeMaster = sizeZombiesPrestigeMaster
+
+	ZombiesPrestigeMaster.id = "ZombiesPrestigeMaster"
+	sizeZombiesPrestigeMaster.id = "sizeZombiesPrestigeMaster"
+	
+	Zombies_RankEditBox.id = "Zombies_RankEditBox"
+	Zombies_PrestigeEditBox.id = "Zombies_PrestigeEditBox"
+
+	]]

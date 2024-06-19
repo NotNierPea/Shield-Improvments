@@ -18,6 +18,18 @@
         },
 
         {
+            "type": "stringtable",
+            "name": "gamedata/shield/randomutils/mp_randombots.csv",
+            "path": "Data/mp_randombots.csv"
+        },
+        {
+            "type": "stringtable",
+            "name": "gamedata/shield/randomutils/mp_randombots_camos.csv",
+            "path": "Data/mp_randombots_camos.csv"
+        },
+
+
+        {
             "type": "scriptparsetree",
             "name": "scripts/core_common/SupportGSC.gsc",
             "path": "SupportGSC.gsic",
@@ -72,11 +84,37 @@
             "format": "string",
             "ignore_error": true
         },
+        {
+            "type": "hashes",
+            "path": "SupportUtils\\SupportHashes.txt",
+            "format": "serious_compiler",
+            "ignore_error": true
+        },
 
         {
             "type": "localizeentry",
             "name": "hash_65ac0bdfc731aeda",
-            "value": "Welcome to Shield Client, Connecting..."
+            "value": "Welcome to Shield Client, Connected!"
+        },
+        {
+            "type": "localizeentry",
+            "name": "hash_6959976d30a883cb",
+            "value": "Connecting to Server IP..."
+        },
+        {
+            "type": "localizeentry",
+            "name": "hash_b6154c132fda6ee",
+            "value": "Could not connect to the Server!. Make sure Demonware IP is correct in Shield's JSON!"
+        },
+        {
+            "type": "localizeentry",
+            "name": "hash_17dbbb9c5e6880ac",
+            "value": "&&1 has been banned from playing on this Shield Server!"
+        },
+        {
+            "type": "localizeentry",
+            "name": "hash_5aa949e6b34e89ea",
+            "value": "You have been disconnected from the Shield Server! (Restart the Game to Reconnect...)"
         },
         
         {
@@ -89,6 +127,76 @@
             "name": "shield/launchgame",
             "value": "Launch Game"
         },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/lobbypubs",
+            "value": "Shield Public Lobbies"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/lobbyone",
+            "value": "Lobby One"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/prestige_master",
+            "value": "Prestige Master Activated!"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts",
+            "value": "Blackout Map"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts_desc",
+            "value": "Changes Blackout Maps (Must be Host)"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_def",
+            "value": "Default Map"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts_other",
+            "value": "Alcatraz Map"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/use_wz_alts_other_night",
+            "value": "Alcatraz Map (Night)"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/ui_colors_setting",
+            "value": "UI Colors"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Green",
+            "value": "^2Color Green"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Blue",
+            "value": "^5Color Blue"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Red",
+            "value": "^1Color Red"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/Default_Color",
+            "value": "Default Color"
+        },
+
         {
             "type": "localizeentry",
             "name": "shield/unlock_all",
@@ -122,12 +230,12 @@
         {
             "type": "localizeentry",
             "name": "shield/unlock_camos",
-            "value": "Unlock Camos"
+            "value": "Unlock Camos/Cards"
         },
         {
             "type": "localizeentry",
             "name": "shield/unlock_camos_desc",
-            "value": "Unlocks All Weapon's Camos"
+            "value": "Unlocks All Weapon's Camos and All Calling Cards"
         },
         {
             "type": "localizeentry",
@@ -172,7 +280,7 @@
         {
             "type": "localizeentry",
             "name": "shield/servers",
-            "value": "^4Servers"
+            "value": "^1Servers"
         },
 
         {
@@ -191,6 +299,11 @@
             "name": "shield/prestige",
             "value": "Prestige Activated!"
         },
+        {
+            "type": "localizeentry",
+            "name": "shield/fresh_start",
+            "value": "Fresh Start Activated!"
+        },
 
         {
             "type": "localizeentry",
@@ -201,181 +314,23 @@
             "type": "localizeentry",
             "name": "shield/bothard_desc",
             "value": "Adds an Extra Bots (18 in Total if with All Bots), and Sets the Extra Bots to a Very Hard Mode"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/settings_tab",
+            "value": "Shield Settings"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/ip_notice",
+            "value": "IP has been Set! (Make sure to Restart the Game to Reconnect!)"
         }
     ],
 
 
     "cache": [
-        {
-            "type": "string",
-            "name": "shield/custombutton",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/launchgame",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_all",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_all_desc",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_attch",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_attch_desc",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_loot",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_loot_desc",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_camos",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_camos_desc",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_items",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlock_items_desc",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlockclassslots",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/unlockclassslots_desc",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/f_unlockall",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/e_unlockall",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/d_unlockall",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/serverbrowser",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/servers",
-            "mode": [
-                "all"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/server1",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/server2",
-            "mode": [
-                "all"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/prestige",
-            "mode": [
-                "all"
-            ]
-        },
-
-        {
-            "type": "string",
-            "name": "shield/bothard",
-            "mode": [
-                "all"
-            ]
-        },
-        {
-            "type": "string",
-            "name": "shield/bothard_desc",
-            "mode": [
-                "all"
-            ]
-        }
+        
     ]
 }

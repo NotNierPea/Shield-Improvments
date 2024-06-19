@@ -10,6 +10,13 @@ autoexec InitSystem()
     if(util::is_frontend_map())
      return;
 
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        ShieldLog("^1HQ Mode, Returned.... (CSC)");
+        return;
+    }
+
     compiler::detour();
     
     system::register("SupportCSC", &Init, &PostInit, undefined);
@@ -27,6 +34,13 @@ PostInit()
 
 detour util<scripts\core_common\util_shared.csc>::function_8570168d()
 {
+    // fix specialists hq mode
+    if(IsSubStr(GetDvarString("ls_gametype", "none"), "COMBAT") || function_bea73b01() == 4)
+    {
+        //ShieldLog("^1HQ Mode, Returned.... (CSC)");
+        return [[ @util<scripts\core_common\util_shared.csc>::function_8570168d ]]();
+    }
+
     //ShieldLog("^2Gamemode Check -> Called (CSC)");
 
     /*
