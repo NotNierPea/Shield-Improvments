@@ -1136,11 +1136,11 @@ local function ShieldUnlockAll_Toggle(Controller)
 	if UnlockAll == 1 then
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all true")
-		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all false")
-		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
@@ -1178,11 +1178,11 @@ local function ShieldUnlockCamosCards_Toggle(Controller)
 	if UnlockCamos == 1 then
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions true")
-		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions false")
-		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
@@ -1240,6 +1240,11 @@ local function ShieldShouldUnlockItem_Dvar()
 end
 
 local function RefreshShieldShit()
+
+	if Engine[@"getdvarint"]("shield_unlock_all") == 1 or Engine[@"getdvarint"]("shield_unlock_itemoptions") == 1 then
+		EnhPrintInfo("Setting allItemsUnlocked...")
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
+	end
 
 	-- Dvars for Matchmaking..
 	Dvar[@"party_minplayers"]:set(1)
@@ -3747,6 +3752,8 @@ CoD.DirectorQuitButtonContainer.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_a
 
 		ServerBrowserButton.id = "ServerBrowserButton"
 
+		-- refresh in main init
+		RefreshShieldShit()
 	end
 
 	return self
