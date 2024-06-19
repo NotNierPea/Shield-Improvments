@@ -97,7 +97,7 @@ SetRandomAttachments()
     if (!isdefined(weapon) || !isdefined(weapon.supportedattachments) && isDefined(self.no_randomattch) && self.no_randomattch)
     {
         self notify(#"WeaponRandomChanged");
-        ShieldLog("^1No Attch");
+        //ShieldLog("^1No Attch");
         return;
     }
 
@@ -112,7 +112,7 @@ SetRandomAttachments()
         self takeweapon(weapon);
         self giveweapon(new_weapon, weapon_options);
 
-        ShieldLog("^3Attch Reuse");
+        //ShieldLog("^3Attch Reuse");
 
         self notify(#"WeaponRandomChanged");
         return;
@@ -158,6 +158,6 @@ SetRandomAttachments()
     self takeweapon(weapon);
     self giveweapon(new_weapon, weapon_options);
 
-    ShieldLog("^4Attch New");
+    //ShieldLog("^4Attch New");
     self notify(#"WeaponRandomChanged");
 }
