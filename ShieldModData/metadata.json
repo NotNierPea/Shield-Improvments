@@ -326,6 +326,47 @@
             "type": "localizeentry",
             "name": "shield/ip_notice",
             "value": "IP has been Set! (Make sure to Restart the Game to Reconnect!)"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist",
+            "value": "Aim Assist"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist_desc",
+            "value": "Enables Aim Assist with Controllers"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist_lock",
+            "value": "Aim Assist: Lock-on"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist_lock_desc",
+            "value": "Enables Aim Assist Lock-on, (Note: Only for Zombies Mode)"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist_slow",
+            "value": "Aim Assist: Slowdown"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist_slow_desc",
+            "value": "Enables Aim Assist Slowdown when Aiming"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist_closetarget",
+            "value": "Aim Assist: Aim Closest Target"
+        },
+        {
+            "type": "localizeentry",
+            "name": "shield/aimassist_closetarget_desc",
+            "value": "Target the closest AI based on 3d distance, (Note: Only for Zombies Mode)"
         }
     ],
 

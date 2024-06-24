@@ -19,9 +19,7 @@ autoexec InitSystem()
         return;
     }
 
-
     compiler::detour();
-
     system::register("SupportGSC", &Init, &PostInit, undefined);
 }
 
@@ -29,10 +27,11 @@ Init()
 {
     ShieldLog("^1Support GSC Loaded!");
 
-    if(sessionmodeismultiplayergame())
+    if(SessionModeIsMultiplayerGame())
      thread MPChanges();
 
-    // later other modes
+    if(SessionModeIsZombiesGame())
+     thread ZMChanges();
 }
 
 PostInit() 
@@ -43,6 +42,16 @@ PostInit()
 MPChanges()
 {
     callback::on_spawned(&MpBotOnSpawned);
+}
+
+ZMChanges()
+{
+    
+}
+
+ZMOnSpawned()
+{
+    
 }
 
 MpBotOnSpawned()

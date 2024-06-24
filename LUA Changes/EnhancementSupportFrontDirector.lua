@@ -386,6 +386,10 @@ local function IsValidName(str)
 	return string.find(str, "^[%-%.%w_]+$") ~= nil
 end
 
+local function IsEmpty(s)
+	return s == nil or s == ''
+  end
+
 local function ShieldCreateOutfits(f40_arg0, f40_arg1, f40_arg2, f40_arg3, f40_arg4, f40_arg5)
 	local f40_local0 = "ThemeOutfit" .. f40_arg3
 	DataSources[f40_local0] = DataSourceHelpers.ListSetup( f40_local0, function ( f41_arg0, f41_arg1 )
@@ -1136,11 +1140,11 @@ local function ShieldUnlockAll_Toggle(Controller)
 	if UnlockAll == 1 then
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all true")
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockAll, "Unlock All")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock all false")
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
@@ -1178,11 +1182,11 @@ local function ShieldUnlockCamosCards_Toggle(Controller)
 	if UnlockCamos == 1 then
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions true")
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	else
 		EnhPrintInfo(UnlockCamos, "Unlock Camos")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "unlock itemoptions false")
-		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
+		--Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 0")
 	end
 end
 
@@ -1241,10 +1245,12 @@ end
 
 local function RefreshShieldShit()
 
+	--[[
 	if Engine[@"getdvarint"]("shield_unlock_all") == 1 or Engine[@"getdvarint"]("shield_unlock_itemoptions") == 1 then
 		EnhPrintInfo("Setting allItemsUnlocked...")
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set allItemsUnlocked 1")
 	end
+	]]
 
 	-- Dvars for Matchmaking..
 	Dvar[@"party_minplayers"]:set(1)
@@ -1498,6 +1504,29 @@ local function OnUnlockDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, 
 		ShieldItems_Toggle()
 	elseif dvar_name == "shield_unlock_classes" then
 		ShieldUnlockClassSlots_Toggle()
+	end
+end
+
+local function OnAimAssistChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
+	local dvar_name = f137_arg3
+	local dvar_val = Engine[@"getdvarint"]( dvar_name )
+	local current_val = f137_arg1.value
+	CoD.OptionsUtility.UpdateInfoModels( f137_arg1 )
+
+	if current_val == dvar_val then
+		return 
+	else
+		Engine[@"setdvar"]( dvar_name, current_val )
+	end
+	
+	if dvar_name == "shield_aim_autoaim_enabled" then
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "aimassist aim_autoaim_enabled " .. current_val)
+	elseif dvar_name == "shield_aim_lockon_enabled" then
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "aimassist aim_lockon_enabled " .. current_val)
+	elseif dvar_name == "shield_aim_slowdown_enabled" then
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "aimassist aim_slowdown_enabled " .. current_val)
+	elseif dvar_name == "shield_aim_target_closest_first" then
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "aimassist aim_target_closest_first " .. current_val)
 	end
 end
 
@@ -3363,6 +3392,70 @@ end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
 	end, false )
 end )
 
+-- Aim Assist Settings
+DataSources.ShieldAimSettings = DataSourceHelpers.ListSetup( "ShieldAimSettings", function ( f138_arg0 )
+	local data = {}
+
+
+	table.insert( data, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/aimassist", @"shield/aimassist_desc", "shield_aim_autoaim_enabled", "shield_aim_autoaim_enabled", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, OnAimAssistChange ) )
+
+	table.insert( data, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/aimassist_lock", @"shield/aimassist_lock_desc", "shield_aim_lockon_enabled", "shield_aim_lockon_enabled", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, OnAimAssistChange ) )
+
+	table.insert( data, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/aimassist_slow", @"shield/aimassist_slow_desc", "shield_aim_slowdown_enabled", "shield_aim_slowdown_enabled", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, OnAimAssistChange ) )
+
+	table.insert( data, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/aimassist_closetarget", @"shield/aimassist_closetarget_desc", "shield_aim_target_closest_first", "shield_aim_target_closest_first", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_94EB0E3329EDF5F" ),
+			value = 0,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/enabled" ),
+			value = 1
+		}
+	}, nil, OnAimAssistChange ) )
+
+	return data
+end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
+	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
+	if f139_arg1.updateSubscription then
+		f139_arg1:removeSubscription( f139_arg1.updateSubscription )
+	end
+	f139_arg1.updateSubscription = f139_arg1:subscribeToModel( f139_local0, function ()
+		f139_arg1:updateDataSource()
+	end, false )
+end )
+
 -- Optional Settings (Other)
 DataSources.OptionalSettingsData = DataSourceHelpers.ListSetup( "OptionalSettingsData", function ( f138_arg0 )
 	local Settings = {}
@@ -4643,6 +4736,53 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	self:addElement( selectionDescription )
 	self.selectionDescription = selectionDescription
 
+	local PathNotesButton = CoD.DirectorSelectButtonMiniInternal.new( f1_arg0, f1_arg1, 0.90, 0.90, -110, 160, 0.88, 0.88, 15, 55 )
+	
+	PathNotesButton.MiddleText:setTTF( "ttmussels_regular" )
+	PathNotesButton.MiddleText:setText("^3Patch Notes")
+
+	PathNotesButton.MiddleTextFocus:setText("^3Patch Notes")
+	PathNotesButton.MiddleTextFocus:setTTF( "ttmussels_regular" )
+
+	PathNotesButton:linkToElementModel( self, nil, false, function ( model )
+		PathNotesButton:setModel( model, f1_arg1 )
+	end )
+	self:addElement( PathNotesButton )
+	self.PathNotesButton = PathNotesButton
+
+	f1_arg0:AddButtonCallbackFunction( PathNotesButton, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("PathNotesButton")
+		
+		OpenOverlay( self, "ShieldPatchNotes", controller )
+
+	end, function ( element, menu, controller )
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizePathNotesButton = CoD.DirectorSelectButtonImageInternal.new( f1_arg0, f1_arg1, 0.90, 0.90, -70, 200, 0.88, 0.88, 0, 30 )
+
+	sizePathNotesButton:setAlpha( 0 )
+	sizePathNotesButton.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizePathNotesButton.Tint:setAlpha( 0.25 )
+	sizePathNotesButton:linkToElementModel( self, nil, false, function ( model )
+		sizePathNotesButton:setModel( model, f1_arg1 )
+	end )
+	sizePathNotesButton.ButtonName.GameModeText:setText("^3Patch Notes")
+	self:addElement( sizePathNotesButton )
+	self.sizePathNotesButton = sizePathNotesButton
+
+	PathNotesButton.id = "PathNotesButton"
+	sizePathNotesButton.id = "sizePathNotesButton"
+
 	local Shield_Nat = LUI.UIText.new( 0.05, 0.05, -70, 200, 0.9, 0.9, 10, 30 )
 	Shield_Nat:setText("NAT TYPE: Unknown")
 	Shield_Nat:setTTF( "ttmussels_regular" )
@@ -5083,14 +5223,14 @@ CoD.directorSelect.__onClose = function ( f76_arg0 )
 	f76_arg0.IGRPerksDirectorButton:close()
 	f76_arg0.selectionDescription:close()
 	f76_arg0.PurchaseButton2:close()
+	f76_arg0.PathNotesButton:close()
+	f76_arg0.sizePathNotesButton:close()
 	f76_arg0.Shield_Nat:close()
 	f76_arg0.DirectorTierSkipNotification:close()
 	f76_arg0.DirectorTierSkipNotification2:close()
 	f76_arg0.IGREventButton:close()
 	f76_arg0.pckeyboardNavigationRedirector:close()
 end
-
-
 
 -- CurrentMainRank -> CoD.PlayerStatsUtility.GetRank
 CoD.ButtonFrame_Progress = InheritFrom( LUI.UIElement )
@@ -6597,11 +6737,11 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 
 	local ReloadModsButton = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0, 310, 0.35, 0.35, 0, 50 )
 	
-	ReloadModsButton.MiddleText:setTTF( "ttmussels_regular" )
+	ReloadModsButton.MiddleText:setTTF( "notosans_bold" )
 	ReloadModsButton.MiddleText:setText("^3Reload Shield Mods")
 
 	ReloadModsButton.MiddleTextFocus:setText("^3Reload Shield Mods")
-	ReloadModsButton.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	ReloadModsButton.MiddleTextFocus:setTTF( "notosans_bold" )
 
 	ReloadModsButton:mergeStateConditions( {
 		{
@@ -6700,6 +6840,53 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 	self.OptionalSettingsList = OptionalSettingsList
 
 	OptionalSettingsList.id = "OptionalSettingsList"
+
+	local AimAssistSettings = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0 + 480, 310 + 480, 0.35, 0.35, 0, 50 )
+	
+	AimAssistSettings.MiddleText:setTTF( "notosans_bold" )
+	AimAssistSettings.MiddleText:setText("^2Aim Assist Settings")
+
+	AimAssistSettings.MiddleTextFocus:setText("^2Aim Assist Settings")
+	AimAssistSettings.MiddleTextFocus:setTTF( "notosans_bold" )
+	
+	AimAssistSettings:linkToElementModel( self, nil, false, function ( model )
+		AimAssistSettings:setModel( model, f1_arg1 )
+	end )
+	self:addElement( AimAssistSettings )
+	self.AimAssistSettings = AimAssistSettings
+
+	f1_local1:AddButtonCallbackFunction( AimAssistSettings, f1_arg0, Enum[@"luibutton"][@"lui_key_xba_pscross"], "ui_confirm", function ( element, menu, controller, model )
+		PlaySoundAlias( "uin_paint_image_flip_toggle" )
+		EnhPrintInfo("AimAssistSettings")
+		
+		OpenOverlay( self, "Shield_AimAssist_SettingsPopup", controller )
+
+	end, function ( element, menu, controller ) -- idk if the keyboard checks important or not
+		if IsGamepad( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"menu/join", nil, "ui_confirm" )
+			return true
+		elseif IsMouseOrKeyboard( controller ) then
+			CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xba_pscross"], @"hash_0", nil, "ui_confirm" )
+			return false
+		else
+			return false
+		end
+	end, false )
+	
+	local sizeAimAssistSettings = CoD.DirectorSelectButtonImageInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 0 + 480, 310 + 480, 0.35, 0.35, 0, 50 )
+
+	sizeAimAssistSettings:setAlpha( 0 )
+	sizeAimAssistSettings.Tint:setRGB( 0.05, 0.08, 0.11 )
+	sizeAimAssistSettings.Tint:setAlpha( 0.25 )
+	sizeAimAssistSettings:linkToElementModel( self, nil, false, function ( model )
+		sizeAimAssistSettings:setModel( model, f1_arg1 )
+	end )
+	sizeAimAssistSettings.ButtonName.GameModeText:setText("^2Aim Assist Settings")
+	self:addElement( sizeAimAssistSettings )
+	self.sizeAimAssistSettings = sizeAimAssistSettings
+
+	AimAssistSettings.id = "AimAssistSettings"
+	sizeAimAssistSettings.id = "sizeAimAssistSettings"
 
 	local MapHint = LUI.UIText.new( 0.35, 0.35, 0, 550, 0.20, 0.20, 100, 120 )
 	MapHint:setText("Changes Blackout Maps (Must be Host!)")
@@ -6898,11 +7085,11 @@ LUI.createMenu.ShieldOptionsMenu = function ( f1_arg0, f1_arg1 )
 
 	local PrestigeMasterButton = CoD.DirectorSelectButtonMiniInternal.new( f1_local1, f1_arg0, 0.10, 0.10, 770, 1070, 0.35, 0.35, 400, 450 )
 	
-	PrestigeMasterButton.MiddleText:setTTF( "ttmussels_regular" )
+	PrestigeMasterButton.MiddleText:setTTF( "notosans_bold" )
 	PrestigeMasterButton.MiddleText:setText("^2Prestige Master")
 
 	PrestigeMasterButton.MiddleTextFocus:setText("^2Prestige Master")
-	PrestigeMasterButton.MiddleTextFocus:setTTF( "ttmussels_regular" )
+	PrestigeMasterButton.MiddleTextFocus:setTTF( "notosans_bold" )
 
 	PrestigeMasterButton:mergeStateConditions( {
 		{
@@ -7017,6 +7204,8 @@ CoD.ShieldOptionsMenu.__onClose = function ( f8_arg0 )
 	f8_arg0.ShieldOptionsMenu_SafeAreaFront:close()
 	f8_arg0.sizePrestigeMasterButton:close()
 	f8_arg0.PrestigeMasterButton:close()
+	f8_arg0.sizeAimAssistSettings:close()
+	f8_arg0.AimAssistSettings:close()
 	f8_arg0.PrestigeEditBox:close()
 	f8_arg0.RankEditBox:close()
 	f8_arg0.UnlockSettingDescription:close()
@@ -8213,6 +8402,203 @@ CoD.ShieldOptions.__onClose = function ( f16_arg0 )
 	f16_arg0.NearCompletionButton:close()
 	f16_arg0.ChallengesTotalMasterProgress:close()
 	f16_arg0.CategoryList:close()
+end
+
+-- Patch Notes Menu
+CoD.ShieldPatchNotes = InheritFrom( CoD.Menu )
+LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
+	local self = CoD.Menu.NewForUIEditor( "ShieldPatchNotes", f1_arg0 )
+	local f1_local1 = self
+	self:setClass( CoD.ShieldPatchNotes )
+	self.soundSet = "default"
+	self:setOwner( f1_arg0 )
+	self:setLeftRight( 0, 1, 0, 0 )
+	self:setTopBottom( 0, 1, 0, 0 )
+	self:playSound( "menu_open", f1_arg0 )
+	self.anyChildUsesUpdateState = true
+	
+	local Background = CoD.StartMenuOptionsBackground.new( f1_local1, f1_arg0, 0, 1, 0, 0, 0, 1, 0, 0 )
+	self:addElement( Background )
+	self.Background = Background
+	
+	local FooterContainerFrontendRight = nil
+	
+	FooterContainerFrontendRight = CoD.FooterContainer_Frontend_Right.new( f1_local1, f1_arg0, 0.5, 0.5, -960, 960, 1, 1, -48, 0 )
+	self:addElement( FooterContainerFrontendRight )
+	self.FooterContainerFrontendRight = FooterContainerFrontendRight
+	
+	-- removed, breaks glowing on pc
+	--[[
+	local FooterContainerFrontendRight2 = CoD.Fo..., -48, 0 )
+	]]
+	
+	local TabbedScoreboardFuiBox = CoD.TabbedScoreboardFuiBox.new( f1_local1, f1_arg0, 0, 0, 1645.5, 1757.5, 0, 0, 954, 970 )
+	self:addElement( TabbedScoreboardFuiBox )
+	self.TabbedScoreboardFuiBox = TabbedScoreboardFuiBox
+
+	local ShieldPatchNotes_SafeAreaFront = CoD.ShieldPatchNotes_SafeAreaFront.new( f1_local1, f1_arg0, 0, 0, 0, 1920, 0, 0, 0, 1080 )
+	ShieldPatchNotes_SafeAreaFront:registerEventHandler( "menu_loaded", function ( element, event )
+		local f3_local0 = nil
+		if element.menuLoaded then
+			f3_local0 = element:menuLoaded( event )
+		elseif element.super.menuLoaded then
+			f3_local0 = element.super:menuLoaded( event )
+		end
+		if not IsPC() then
+			SizeToSafeArea( element, f1_arg0 )
+		end
+		if not f3_local0 then
+			f3_local0 = element:dispatchEventToChildren( event )
+		end
+		return f3_local0
+	end )
+	self:addElement( ShieldPatchNotes_SafeAreaFront )
+	self.ShieldPatchNotes_SafeAreaFront = ShieldPatchNotes_SafeAreaFront
+
+	local PatchNotesText = LUI.UIText.new( 0.125, 0.125, -100, 500, 0.09, 0.09, 0, 35 )
+	PatchNotesText:setText("Last Patch Notes: 1.0.17.4:")
+	PatchNotesText:setTTF("notosans_bold")
+	PatchNotesText:setBackingType( 2 )
+	PatchNotesText:setBackingColor( 0.04, 0.81, 1 )
+	PatchNotesText:setBackingAlpha( 0.01 )
+	PatchNotesText:setBackingXPadding( 12 )
+	PatchNotesText:setBackingYPadding( 6 )
+	PatchNotesText:setLetterSpacing(0.5)
+	self:addElement(PatchNotesText)
+	self.PatchNotesText = PatchNotesText
+
+	local str_notes = {
+		"General Features:",
+		"Added Aimassist with Settings in Shield's Menu",
+		"Fixes:",
+		"Fixed Reactives not working on first Boot",
+		"Fixed XUID 2 issues (Multiple Instances)",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		""
+	}
+
+	self.PatchNotesAll = {}
+
+	-- stupid way since lua does not allow \n in texts for some reason...
+	for i = 1, 25 do 
+		local PatchNotesTextSmall = LUI.UIText.new(0.125, 0.125, -100, 500, 0.105, 0.105, 0 + (i * 35), 20 + (i * 35))
+
+		if IsEmpty(str_notes[i]) then
+			--PatchNotesTextSmall:setText()
+		else
+			PatchNotesTextSmall:setText("- " .. str_notes[i])
+		end
+
+		PatchNotesTextSmall:setTTF("notosans_bold")
+		PatchNotesTextSmall:setBackingType( 2 )
+		PatchNotesTextSmall:setBackingColor( 0.04, 0.81, 1 )
+		PatchNotesTextSmall:setBackingAlpha( 0.01 )
+		PatchNotesTextSmall:setBackingXPadding( 12 )
+		PatchNotesTextSmall:setBackingYPadding( 6 )
+		PatchNotesTextSmall:setLetterSpacing(0.5)
+		self:addElement(PatchNotesTextSmall)
+		self.PatchNotesAll[i] = PatchNotesTextSmall
+	end
+
+	f1_local1:AddButtonCallbackFunction( self, f1_arg0, Enum[@"hash_3DD78803F918E9D"][@"hash_1805EFA15E9E7E5A"], nil, function ( element, menu, controller, model )
+		GoBack( self, controller )
+		return true
+	end, function ( element, menu, controller )
+		CoD.Menu.SetButtonLabel( menu, Enum[@"hash_3DD78803F918E9D"][@"hash_1805EFA15E9E7E5A"], @"hash_6A4032FB2AAB69F2", nil, nil )
+		return true
+	end, false )
+
+	FooterContainerFrontendRight:setModel( self.buttonModel, f1_arg0 )
+	FooterContainerFrontendRight.id = "FooterContainerFrontendRight"
+
+	self:processEvent( {
+		name = "menu_loaded",
+		controller = f1_arg0
+	} )
+
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg0 )
+	end
+	
+	MenuHidesFreeCursor( f1_local1, f1_arg0 )
+	EnhPrintInfo("Called", "Shield's Patch Notes")
+
+	return self
+end
+
+CoD.ShieldPatchNotes.__onClose = function ( f8_arg0 )
+	f8_arg0.Background:close()
+	f8_arg0.PatchNotesText:close()
+	f8_arg0.FooterContainerFrontendRight:close()
+	f8_arg0.TabbedScoreboardFuiBox:close()
+	f8_arg0.ShieldPatchNotes_SafeAreaFront:close()
+
+	-- close them
+	for i = 1, 25 do
+		f8_arg0.PatchNotesAll[i]:close()
+	end
+
+end
+
+CoD.ShieldPatchNotes_SafeAreaFront = InheritFrom( LUI.UIElement )
+CoD.ShieldPatchNotes_SafeAreaFront.__defaultWidth = 1920
+CoD.ShieldPatchNotes_SafeAreaFront.__defaultHeight = 1080
+CoD.ShieldPatchNotes_SafeAreaFront.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	local self = LUI.UIElement.new( f1_arg2, f1_arg3, f1_arg4, f1_arg5, f1_arg6, f1_arg7, f1_arg8, f1_arg9 )
+	self:setClass( CoD.ShieldPatchNotes_SafeAreaFront )
+	self.id = "ShieldPatchNotes_SafeAreaFront"
+	self.soundSet = "none"
+	self.onlyChildrenFocusable = true
+	self.anyChildUsesUpdateState = true
+	
+	local TabBacking = CoD.CommonTabBarBacking.new( f1_arg0, f1_arg1, -0.1, 1.1, 0, 0, 0, 0, 52, 89 )
+	TabBacking.TabBackingBlur:setAlpha( 0 )
+	self:addElement( TabBacking )
+	self.TabBacking = TabBacking
+	
+	local CommonHeader = CoD.CommonHeader.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 0, 67 )
+	CommonHeader.subtitle.StageTitle:setText("^2Shield Patch Notes")
+	CommonHeader.subtitle.subtitle:setText("^1Shield's Last Patch Notes")
+	self:addElement( CommonHeader )
+	self.CommonHeader = CommonHeader
+	
+	local HeaderStripe = CoD.header_container_frontend.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 0, 42 )
+	self:addElement( HeaderStripe )
+	self.HeaderStripe = HeaderStripe
+	
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg1, f1_arg0 )
+	end
+	
+	return self
+end
+
+CoD.ShieldPatchNotes_SafeAreaFront.__onClose = function ( f8_arg0 )
+	f8_arg0.HeaderStripe:close()
+	f8_arg0.CommonHeader:close()
+	f8_arg0.TabBacking:close()
 end
 
 -- Filters for Server
@@ -13588,6 +13974,182 @@ CoD.Shield_CustomGames_BotSettingsPopup.__onClose = function ( f16_arg0 )
 	f16_arg0.SettingDescription:close()
 	f16_arg0.CommomCenteredPopup:close()
 	f16_arg0.BotSettingsList:close()
+	f16_arg0.PCSmallCloseButton:close()
+end
+
+-- Aim Assist Settings
+-- Custom Bots Settings..
+CoD.Shield_AimAssist_SettingsPopup = InheritFrom( CoD.Menu )
+LUI.createMenu.Shield_AimAssist_SettingsPopup = function ( f1_arg0, f1_arg1 )
+	local self = CoD.Menu.NewForUIEditor( "Shield_AimAssist_SettingsPopup", f1_arg0 )
+	local f1_local1 = self
+	self:setClass( CoD.Shield_AimAssist_SettingsPopup )
+	self.soundSet = "none"
+	self:setOwner( f1_arg0 )
+	self:setLeftRight( 0, 1, 0, 0 )
+	self:setTopBottom( 0, 1, 0, 0 )
+	self:playSound( "menu_open", f1_arg0 )
+	self.anyChildUsesUpdateState = true
+	f1_local1:addElementToPendingUpdateStateList( self )
+	
+	local CommomCenteredPopup = CoD.CommonCenteredPopup.new( f1_local1, f1_arg0, 0, 1, 0, 0, 0, 1, 0, 0 )
+	CommomCenteredPopup.TitleText:setText("Aim Assist Settings")
+	CommomCenteredPopup.HeaderBackground:setAlpha( 0 )
+	CommomCenteredPopup.HeaderTopBar:setAlpha( 0 )
+	CommomCenteredPopup.HeaderBottomBar:setAlpha( 0 )
+	self:addElement( CommomCenteredPopup )
+	self.CommomCenteredPopup = CommomCenteredPopup
+	
+	local AimSettingsList = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+	AimSettingsList:setLeftRight( 0.5, 0.5, -250, 250 )
+	AimSettingsList:setTopBottom( 0.55, 0.55, -380 + 30, -320 + 30 )
+	AimSettingsList:setAutoScaleContent( true )
+	AimSettingsList:setVerticalCount(4) -- fix
+	AimSettingsList:setHorizontalCount(1)
+	AimSettingsList:setWidgetType( CoD.CustomGames_SettingSliderNoCustom )
+	AimSettingsList:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	AimSettingsList:setDataSource( "ShieldAimSettings" )
+	self:addElement( AimSettingsList )
+	self.AimSettingsList = AimSettingsList
+	
+	local SettingDescription = LUI.UIText.new( 0.5, 0.5, -250, 250, 0.60, 0.60, -284 + 75, -263 + 75 )
+	SettingDescription:setRGB( ColorSet.T8__OFF__WHITE.r, ColorSet.T8__OFF__WHITE.g, ColorSet.T8__OFF__WHITE.b )
+	SettingDescription:setTTF( "notosans_regular" )
+	SettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	SettingDescription:setAlignment( Enum[@"luialignment"][@"lui_alignment_top"] )
+	self:addElement( SettingDescription )
+	self.SettingDescription = SettingDescription
+	
+	local PCSmallCloseButton = nil
+	
+	PCSmallCloseButton = CoD.PC_SmallCloseButton.new( f1_local1, f1_arg0, 0.5, 0.5, 308, 342, 0.5, 0.5, -438.5, -404.5 )
+	PCSmallCloseButton:registerEventHandler( "gain_focus", function ( element, event )
+		local f2_local0 = nil
+		if element.gainFocus then
+			f2_local0 = element:gainFocus( event )
+		elseif element.super.gainFocus then
+			f2_local0 = element.super:gainFocus( event )
+		end
+		CoD.Menu.UpdateButtonShownState( element, f1_local1, f1_arg0, Enum[@"luibutton"][@"lui_key_none"] )
+		return f2_local0
+	end )
+	f1_local1:AddButtonCallbackFunction( PCSmallCloseButton, f1_arg0, Enum[@"luibutton"][@"lui_key_none"], "MOUSE1", function ( element, menu, controller, model )
+		GoBack( self, controller )
+		return true
+	end, function ( element, menu, controller )
+		CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_none"], @"hash_0", nil, "MOUSE1" )
+		return false
+	end, false )
+	f1_local1:AddButtonCallbackFunction( PCSmallCloseButton, f1_arg0, Enum[@"luibutton"][@"lui_key_none"], "ui_confirm", function ( element, menu, controller, model )
+		GoBack( self, controller )
+		return true
+	end, function ( element, menu, controller )
+		CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_none"], @"hash_0", nil, "ui_confirm" )
+		return false
+	end, false )
+	self:addElement( PCSmallCloseButton )
+	self.PCSmallCloseButton = PCSmallCloseButton
+	
+	SettingDescription:linkToElementModel( AimSettingsList, "desc", true, function ( model )
+		local f7_local0 = model:get()
+		if f7_local0 ~= nil then
+			SettingDescription:setText( Engine[@"hash_4F9F1239CFD921FE"]( f7_local0 ) )
+		end
+	end )
+	self:mergeStateConditions( {
+		{
+			stateName = "KBM",
+			condition = function ( menu, element, event )
+				return IsMouseOrKeyboard( f1_arg0 )
+			end
+		}
+	} )
+	self:appendEventHandler( "input_source_changed", function ( f9_arg0, f9_arg1 )
+		f9_arg1.menu = f9_arg1.menu or f1_local1
+		f1_local1:updateElementState( self, f9_arg1 )
+	end )
+	local f1_local6 = self
+	local f1_local7 = self.subscribeToModel
+	local f1_local8 = Engine[@"getmodelforcontroller"]( f1_arg0 )
+	f1_local7( f1_local6, f1_local8.LastInput, function ( f10_arg0 )
+		f1_local1:updateElementState( self, {
+			name = "model_validation",
+			menu = f1_local1,
+			controller = f1_arg0,
+			modelValue = f10_arg0:get(),
+			modelName = "LastInput"
+		} )
+	end, false )
+	f1_local1:AddButtonCallbackFunction( self, f1_arg0, Enum[@"luibutton"][@"lui_key_xbb_pscircle"], nil, function ( element, menu, controller, model )
+		GoBack( self, controller )
+		ClearMenuSavedState( menu )
+		ForceNotifyGlobalModel( controller, "GametypeSettings.Update" )
+		return true
+	end, function ( element, menu, controller )
+		CoD.Menu.SetButtonLabel( menu, Enum[@"luibutton"][@"lui_key_xbb_pscircle"], @"menu/back", nil, nil )
+		return true
+	end, false )
+	CommomCenteredPopup.buttons:setModel( self.buttonModel, f1_arg0 )
+	if CoD.isPC then
+		CommomCenteredPopup.id = "CommomCenteredPopup"
+	end
+	AimSettingsList.id = "AimSettingsList"
+	if CoD.isPC then
+		PCSmallCloseButton.id = "PCSmallCloseButton"
+	end
+	self:processEvent( {
+		name = "menu_loaded",
+		controller = f1_arg0
+	} )
+	self.__defaultFocus = AimSettingsList
+	if CoD.isPC and (IsKeyboard( f1_arg0 ) or self.ignoreCursor) then
+		self:restoreState( f1_arg0 )
+	end
+	LUI.OverrideFunction_CallOriginalSecond( self, "close", self.__onClose )
+	if PostLoadFunc then
+		PostLoadFunc( self, f1_arg0 )
+	end
+	
+	f1_local7 = self
+	MenuHidesFreeCursor( f1_local1, f1_arg0 )
+
+	EnhPrintInfo("Called", "Shield's Aim Settings Menu")
+
+	return self
+end
+
+CoD.Shield_AimAssist_SettingsPopup.__resetProperties = function ( f13_arg0 )
+	f13_arg0.AimSettingsList:completeAnimation()
+	f13_arg0.SettingDescription:completeAnimation()
+	f13_arg0.AimSettingsList:setLeftRight( 0.5, 0.5, -250, 250 )
+	f13_arg0.SettingDescription:setLeftRight( 0.5, 0.5, -250, 250 )
+end
+
+CoD.Shield_AimAssist_SettingsPopup.__clipsPerState = {
+	DefaultState = {
+		DefaultClip = function ( f14_arg0, f14_arg1 )
+			f14_arg0:__resetProperties()
+			f14_arg0:setupElementClipCounter( 0 )
+		end
+	},
+	KBM = {
+		DefaultClip = function ( f15_arg0, f15_arg1 )
+			f15_arg0:__resetProperties()
+			f15_arg0:setupElementClipCounter( 2 )
+			f15_arg0.AimSettingsList:completeAnimation()
+			f15_arg0.AimSettingsList:setLeftRight( 0.5, 0.5, -290, 290 )
+			f15_arg0.clipFinished( f15_arg0.AimSettingsList )
+			f15_arg0.SettingDescription:completeAnimation()
+			f15_arg0.SettingDescription:setLeftRight( 0.5, 0.5, -290, 290 )
+			f15_arg0.clipFinished( f15_arg0.SettingDescription )
+		end
+	}
+}
+
+CoD.Shield_AimAssist_SettingsPopup.__onClose = function ( f16_arg0 )
+	f16_arg0.SettingDescription:close()
+	f16_arg0.CommomCenteredPopup:close()
+	f16_arg0.AimSettingsList:close()
 	f16_arg0.PCSmallCloseButton:close()
 end
 
