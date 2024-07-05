@@ -1,10 +1,20 @@
 GetBotSkinRandom() 
 {
-    random_roll = randomIntRange(1, 134); // 1 - 134 row lists (random skin data)
-    randomskin_data = tablelookuprow(#"gamedata/shield/randomutils/mp_randombots.csv", random_roll);
+    // temp fix 
     
-    // returns an array of the current row..
-    return randomskin_data;
+    while(true)
+    {
+        random_roll = randomIntRange(1, 134); // 1 - 134 row lists (random skin data)
+        randomskin_data = tablelookuprow(#"gamedata/shield/randomutils/mp_randombots.csv", random_roll);
+
+        if(!isDefined(randomskin_data))
+         continue;
+
+        ShieldLog("^6Bot Random Data Enter... -> " + int(randomskin_data[0]) + " " + int(randomskin_data[1]) + " " + int(randomskin_data[2]));
+
+        // returns an array of the current row..
+        return randomskin_data;
+    }
 }
 
 GetBotCamoRandom() 
@@ -19,10 +29,8 @@ SetRandomSkin()
 {
     self endon(#"disconnect", #"spawned_player");
     level endon(#"end_game", #"game_ended");
-
-    //ShieldLog("^6Bot Random Data Enter... -> " + self.random_data[0] + " " + self.random_data[1] + " " + self.random_data[2]);
     
-    wait 0.2; // delay a little
+    wait 0.35; // delay a little
 
     /* <- BROKEN!
 

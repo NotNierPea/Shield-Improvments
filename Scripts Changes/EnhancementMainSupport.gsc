@@ -68,6 +68,16 @@ MpBotOnSpawned()
     self thread SetRandomAttachments();
 }
 
+detour serversettings<scripts\mp_common\gametypes\serversettings.gsc>::init()
+{
+    ShieldLog("^2Server Settings Init...");
+
+    [[ @serversettings<scripts\mp_common\gametypes\serversettings.gsc>::init ]]();
+
+    // force it with gamesetting in lua
+    level.allow_teamchange = getgametypesetting(#"allowingameteamchange");
+}
+
 detour bot<scripts\mp_common\bots\mp_bot.gsc>::init()
 {
     // fix specialists hq mode

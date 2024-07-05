@@ -296,6 +296,9 @@ local function InitDvars()
 	-- username
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_username identity name string")
 
+	-- server ip (dw)
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_dw_ip demonware ipv4 string")
+
 	-- other shit
 	if Engine[@"getdvarint"]("shield_wz_map") > 0 then
 		-- don't reset it
@@ -4783,16 +4786,16 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	PathNotesButton.id = "PathNotesButton"
 	sizePathNotesButton.id = "sizePathNotesButton"
 
-	local Shield_Nat = LUI.UIText.new( 0.05, 0.05, -70, 200, 0.9, 0.9, 10, 30 )
-	Shield_Nat:setText("NAT TYPE: Unknown")
+	local Shield_Nat = LUI.UIText.new( 0.05, 0.05, -70, 1500, 0.9, 0.9, 10, 30 )
+	Shield_Nat:setText("Unknown Info")
 	Shield_Nat:setTTF( "ttmussels_regular" )
 	Shield_Nat:setLetterSpacing( 6 )
 	Shield_Nat:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_558C8A85F2048829"] )
 	Shield_Nat:setAlignment( Enum[@"hash_67A5123B654282D2"][@"hash_3F41D595A2B0EDF3"] )
 	Shield_Nat:subscribeToGlobalModel( f1_arg1, "LobbyRoot", "lobbyNatType", function ( model )
-		local f2_local0 = model:get()
-		if f2_local0 ~= nil then
-			Shield_Nat:setText( ConvertToUpperString( LocalizeWithNatType( f2_local0 ) ) )
+		local nattype = model:get()
+		if nattype ~= nil then
+			Shield_Nat:setText(ConvertToUpperString(LocalizeWithNatType(nattype)) .. " | Server IP: " .. Engine[@"getdvarstring"]("shield_dw_ip"))
 		end
 	end )
 	self:addElement( Shield_Nat )
@@ -8456,7 +8459,7 @@ LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
 	self.ShieldPatchNotes_SafeAreaFront = ShieldPatchNotes_SafeAreaFront
 
 	local PatchNotesText = LUI.UIText.new( 0.125, 0.125, -100, 500, 0.09, 0.09, 0, 35 )
-	PatchNotesText:setText("Last Patch Notes: 1.0.17.4:")
+	PatchNotesText:setText("Last Patch Notes: 1.0.17.5:")
 	PatchNotesText:setTTF("notosans_bold")
 	PatchNotesText:setBackingType( 2 )
 	PatchNotesText:setBackingColor( 0.04, 0.81, 1 )
@@ -8470,12 +8473,12 @@ LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
 	local str_notes = {
 		"General Features:",
 		"Added Aimassist with Settings in Shield's Menu",
+		"Added Team Switch in MP Public Lobbies",
+		"Added Server IP Displaying in Main Menu",
 		"Fixes:",
-		"Fixed Reactives not working on first Boot",
-		"Fixed XUID 2 issues (Multiple Instances)",
-		"",
-		"",
-		"",
+		"Fixed an Unlock Option not saving",
+		"Fixed a Crash in Offline Mode when Starting a Game Sometimes",
+		"Fixed some issues with Bots Random Skins/Camos",
 		"",
 		"",
 		"",
@@ -15055,6 +15058,18 @@ CoD.directorPregame.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4
 		}
 	} )
 
+	local players = CoD.SocialUtility.GetPartyPlayersList()
+	if #players > 6 then
+		EnhPrintInfo("Setting to 18..")
+		Engine[@"setlobbymaxclients"](Enum[@"lobbytype"][@"lobby_type_game"], 18)
+		Engine[@"setlobbymaxclients"](Enum[@"lobbytype"][@"lobby_type_private"], 18)
+		Engine[@"setlobbymaxclients"](Engine[@"getprimarycontroller"](), 18)
+		Dvar[@"hash_4FF45B41C6046F8"]:set(18)
+		Engine[@"setmodelvalue"](Engine[@"createmodel"]( Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "PartyPrivacy" ), "maxPlayers" ), 18)
+	else
+		EnhPrintInfo("Not Setting to 18..")
+	end
+
 	ShieldOfflineSettings:registerEventHandler( "gain_focus", function ( element, event )
 		local f26_local0 = nil
 		if element.gainFocus then
@@ -15804,6 +15819,8 @@ CoD.DirectorLobbySettingList.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3
 	end, false )
 	self:addElement( RemoveBotButton )
 	self.RemoveBotButton = RemoveBotButton
+
+
 
 	local LaunchGameButton = CoD.DirectorConfigButton.new( f1_arg0, f1_arg1, 0, 1, 0, 0, 0, 0, 96 + 100, 136 + 100 )
 	LaunchGameButton:mergeStateConditions( {
