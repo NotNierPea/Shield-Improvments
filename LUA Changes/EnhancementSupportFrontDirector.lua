@@ -9486,7 +9486,7 @@ LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
 	self.ShieldPatchNotes_SafeAreaFront = ShieldPatchNotes_SafeAreaFront
 
 	local PatchNotesText = LUI.UIText.new( 0.125, 0.125, -100, 500, 0.09, 0.09, 0, 35 )
-	PatchNotesText:setText("Last Patch Notes: 1.0.17.5:")
+	PatchNotesText:setText("Last Patch Notes: 1.0.17.6:")
 	PatchNotesText:setTTF("notosans_bold")
 	PatchNotesText:setBackingType( 2 )
 	PatchNotesText:setBackingColor( 0.04, 0.81, 1 )
@@ -9499,15 +9499,15 @@ LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
 
 	local str_notes = {
 		"General Features:",
-		"Added Aimassist with Settings in Shield's Menu",
-		"Added Team Switch in MP Public Lobbies",
-		"Added Server IP Displaying in Main Menu",
-		"Added local arena mode with bots",
-		"New local mp lobby for combat training",
+		"Added Local Arena mode with Bots",
+		"New Local MP Lobby for Combat Training",
 		"Fixes:",
-		"Fixed an Unlock Option not saving",
-		"Fixed a Crash in Offline Mode when Starting a Game Sometimes",
-		"Fixed some issues with Bots Random Skins/Camos",
+		"Fixed Some Bots Difficulty Issues",
+		"",
+		"",
+		"",
+		"",
+		"",
 		"",
 		"",
 		"",
