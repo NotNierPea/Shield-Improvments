@@ -367,6 +367,12 @@
             "type": "localizeentry",
             "name": "shield/aimassist_closetarget_desc",
             "value": "Target the closest AI based on 3d distance, (Note: Only for Zombies Mode)"
+        },
+
+        {
+            "type": "localizeentry",
+            "name": "shield/zombies_difficulty",
+            "value": "Zombie Diffuculty"
         }
     ],
 

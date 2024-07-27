@@ -406,7 +406,7 @@ end
 
 local function IsEmpty(s)
 	return s == nil or s == ''
-  end
+end
 
 local function ShieldCreateOutfits(f40_arg0, f40_arg1, f40_arg2, f40_arg3, f40_arg4, f40_arg5)
 	local f40_local0 = "ThemeOutfit" .. f40_arg3
@@ -1440,6 +1440,92 @@ CoD.CustomizePrestigeIconUtility.IsIconUnlockedByLevel = function ( f4_arg0, f4_
 	return f4_local1
 end
 
+CoD.ZombieUtility.SelectDifficulty = function ( f164_arg0, f164_arg1 )
+	local f164_local0 = f164_arg0:getModel( f164_arg1, "difficultyID" )
+	f164_local0 = f164_local0:get()
+	local f164_local1 = Engine[@"getglobalmodel"]()
+	f164_local1 = f164_local1:create( "ZMLobbyExclusions" )
+	f164_local1 = f164_local1:create( "ZMPrivateDifficulty" )
+	f164_local1:set( f164_local0 )
+
+	
+	-- zombies for diff fix
+	local Diff = f164_local0
+
+	if Diff ~= nil then
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set shield_zombies_difficulty " .. Diff)
+	else
+		Engine[@"exec"](Engine[@"getprimarycontroller"](), "set shield_zombies_difficulty " .. 1)
+	end
+
+	if IsLobbyNetworkModeLAN() then
+		Engine[@"setgametypesetting"]("zmDifficulty", f164_local0 )
+		CoD.ZombieUtility.SetLocalZMDifficultyModel( f164_local0 )
+		local f164_local2 = Engine[@"lobbygetcontrollinglobbysession"]( Enum[@"lobbymodule"][@"lobby_module_host"] )
+		Engine[@"lobbyevent"]( "OnGametypeSettingsChange", {
+			lobbyModule = Enum[@"lobbymodule"][@"lobby_module_host"],
+			lobbyType = f164_local2,
+			fromUI = true
+		} )
+		Engine[@"lobbyhostsessionsetdirty"]( f164_local2, Enum[@"sessiondirty"][@"session_dirty_state"] )
+	end
+end
+
+CoD.ZombieUtility.SetDefaultGameTypeZMDifficulty = function ( f94_arg0 )
+	if f94_arg0 then
+		local f94_local0 = Engine[@"getdvarint"]( "shield_zombies_difficulty" )
+
+		--==if f94_arg0 == "ztutorial" then
+		--	f94_local0 = 0
+		--end
+
+		Engine[@"setgametypesetting"]( "zmDifficulty", f94_local0 )
+		CoD.ZombieUtility.SetLocalZMDifficultyModel( f94_local0 )
+		local f94_local1 = Engine[@"lobbygetcontrollinglobbysession"]( Enum[@"lobbymodule"][@"lobby_module_host"] )
+		Engine[@"lobbyevent"]( "OnGametypeSettingsChange", {
+			lobbyModule = Enum[@"lobbymodule"][@"lobby_module_host"],
+			lobbyType = f94_local1,
+			fromUI = true
+		} )
+		Engine[@"lobbyhostsessionsetdirty"]( f94_local1, Enum[@"sessiondirty"][@"session_dirty_state"] )
+	end
+end
+
+CoD.ZombieUtility.SelectTutorialMapDifficulty = function ( f167_arg0, f167_arg1 )
+	local f167_local0 = Engine[@"getglobalmodel"]()
+	f167_local0 = f167_local0:create( "lobbyRoot.selectedGameType" )
+	if f167_local0 and f167_local0:get() == @"ztutorial" then
+		local f167_local1 = Engine[@"getdvarint"]( "shield_zombies_difficulty" )
+		if f167_local1 and f167_local1:get() then
+			f167_local1 = f167_local1:get()
+			if IsLobbyNetworkModeLAN() then
+				Engine[@"setgametypesetting"]( "zmDifficulty", f167_local1 )
+				CoD.ZombieUtility.SetLocalZMDifficultyModel( f167_local1 )
+				local f167_local2 = Engine[@"lobbygetcontrollinglobbysession"]( Enum[@"lobbymodule"][@"lobby_module_host"] )
+				Engine[@"lobbyevent"]( "OnGametypeSettingsChange", {
+					lobbyModule = Enum[@"lobbymodule"][@"lobby_module_host"],
+					lobbyType = f167_local2,
+					fromUI = true
+				} )
+				Engine[@"lobbyhostsessionsetdirty"]( f167_local2, Enum[@"sessiondirty"][@"session_dirty_state"] )
+			end
+		end
+	elseif f167_local0 and f167_local0:get() == @"ztrials" then
+		local f167_local1 = CoD.SafeGetModelValue( f167_arg0:getModel(), "trialVariant" )
+		if f167_local1 and IsLobbyNetworkModeLAN() then
+			Engine[@"setgametypesetting"]( "zmTrialsVariant", f167_local1 )
+			CoD.ZombieUtility.SetLocalZMTrialVariantModel( f167_local1 )
+			local f167_local2 = Engine[@"lobbygetcontrollinglobbysession"]( Enum[@"lobbymodule"][@"lobby_module_host"] )
+			Engine[@"lobbyevent"]( "OnGametypeSettingsChange", {
+				lobbyModule = Enum[@"lobbymodule"][@"lobby_module_host"],
+				lobbyType = f167_local2,
+				fromUI = true
+			} )
+			Engine[@"lobbyhostsessionsetdirty"]( f167_local2, Enum[@"sessiondirty"][@"session_dirty_state"] )
+		end
+	end
+end
+
 local function OnBotHardModeChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f137_arg4 )
 	local dvar_name = f137_arg3
 	local f137_local1 = Engine[@"getdvarint"]( dvar_name )
@@ -1497,6 +1583,10 @@ local function OnExtraDataChange ( f137_arg0, f137_arg1, f137_arg2, f137_arg3, f
 
 	if dvar_name == "shield_ui_color" then	
 		Engine[@"exec"](Engine[@"getprimarycontroller"](), "writejson lua ui_color " .. dvar_val_new .. " uint64_t")
+	end
+
+	if dvar_name == "shield_zombies_difficulty" then
+		Engine[@"setgametypesetting"]("zmDifficulty", dvar_val_new)
 	end
 end
 
@@ -3126,17 +3216,21 @@ DataSources.ShieldDWServers = DataSourceHelpers.ListSetup( "ShieldDWServers", fu
 				-- none yet
 			}
 		},
-		{
-			models = {
-				ServerName = "^3Public Server 2",
-				HostedBy = "Synx",
-				ClientCount = "?",
-				ConnectionIP = "85.215.193.238"
-			},
-			properties = {
-				-- none yet
+
+		--[[
+			rip synx server lol
+			{
+				models = {
+					ServerName = "^3Public Server 2",
+					HostedBy = "Synx",
+					ClientCount = "?",
+					ConnectionIP = "85.215.193.238"
+				},
+				properties = {
+					-- none yet
+				}
 			}
-		}
+		]]
 	}
 	return InfoServers
 end, true )
@@ -3466,6 +3560,44 @@ DataSources.ShieldAimSettings = DataSourceHelpers.ListSetup( "ShieldAimSettings"
 	}, nil, OnAimAssistChange ) )
 
 	return data
+end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
+	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
+	if f139_arg1.updateSubscription then
+		f139_arg1:removeSubscription( f139_arg1.updateSubscription )
+	end
+	f139_arg1.updateSubscription = f139_arg1:subscribeToModel( f139_local0, function ()
+		f139_arg1:updateDataSource()
+	end, false )
+end )
+
+-- Shield Zombies Difficulty in ZM Settings
+DataSources.ShieldZombiesDifficulty = DataSourceHelpers.ListSetup( "ShieldZombiesDifficulty", function ( f138_arg0 )
+	local Settings = {}
+
+	-- !! decs is not needed here too
+
+	table.insert( Settings, CoD.OptionsUtility.CreateDvarSettings( f138_arg0, @"shield/zombies_difficulty", @"menu/ok", "shield_zombies_difficulty", "shield_zombies_difficulty", {
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_2b3910644531dfe7" ),
+			value = 0
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/normal" ),
+			value = 1,
+			default = true
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"hash_62fcea51454f0bdd" ),
+			value = 2
+		},
+		{
+			option = Engine[@"hash_4F9F1239CFD921FE"]( @"menu/heroic" ),
+			value = 3
+		}
+	}, nil, OnExtraDataChange ) )
+
+	return Settings
+
 end, nil, nil, function ( f139_arg0, f139_arg1, f139_arg2 )
 	local f139_local0 = Engine[@"createmodel"]( Engine[@"getglobalmodel"](), "GametypeSettings.Update" )
 	if f139_arg1.updateSubscription then
@@ -9499,10 +9631,10 @@ LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
 
 	local str_notes = {
 		"General Features:",
-		"Added Local Arena mode with Bots",
-		"New Local MP Lobby for Combat Training",
-		"Fixes:",
-		"Fixed Some Bots Difficulty Issues",
+		"Added Zombie Difficulty in Rules Options (Can work in Gauntlets, other gamemodes..)",
+		"Removed Synx Public Server (RIP)",
+		"",
+		"",
 		"",
 		"",
 		"",
@@ -13220,6 +13352,31 @@ LUI.createMenu.DirectorCustomGameSetUpWZ = function ( f1_arg0, f1_arg1 )
 	Team4.id = "Team4"
 	Team5.id = "Team5"
 	Team6.id = "Team6"
+
+	-- for zombies
+	local Zombies_Difficulty = LUI.UIList.new( f1_local1, f1_arg0, 3, 3, nil, false, false, false, false )
+
+	if Engine[@"getdvarint"]("shield_ui_color") == 0 then
+		Zombies_Difficulty:setRGB(0, 1, 1)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 1 then
+		Zombies_Difficulty:setRGB(1, 0, 0)
+	elseif Engine[@"getdvarint"]("shield_ui_color") == 2 then
+		Zombies_Difficulty:setRGB(0, 1, 0)
+	end
+
+	Zombies_Difficulty:setLeftRight( 0.75, 0.75, 0, 350 )
+	Zombies_Difficulty:setTopBottom( 0.75, 0.75, 0, 150 )
+	Zombies_Difficulty:setWidgetType( CoD.CustomGames_SettingSliderNoCustom )
+	Zombies_Difficulty:setAlignment( Enum[@"luialignment"][@"lui_alignment_left"] )
+	Zombies_Difficulty:setDataSource( "ShieldZombiesDifficulty" )
+	self:addElement( Zombies_Difficulty )
+	self.Zombies_Difficulty = Zombies_Difficulty
+
+	Zombies_Difficulty.id = "Zombies_Difficulty"
+
+	-- set
+	Engine[@"setgametypesetting"]("zmDifficulty", Engine[@"getdvarint"]( "shield_zombies_difficulty" ))
+
 	self:processEvent( {
 		name = "menu_loaded",
 		controller = f1_arg0
@@ -13304,6 +13461,7 @@ CoD.DirectorCustomGameSetUpWZ.__resetProperties = function ( f149_arg0 )
 	f149_arg0.BackingFree:setAlpha( 0 )
 	f149_arg0.FreeTeam:setAlpha( 0 )
 	f149_arg0.HeaderFreeTeam:setAlpha( 0 )
+	f149_arg0.Zombies_Difficulty:setAlpha( 0 )
 end
 
 CoD.DirectorCustomGameSetUpWZ.__clipsPerState = {
@@ -13455,6 +13613,7 @@ CoD.DirectorCustomGameSetUpWZ.__clipsPerState = {
 			f152_arg0.HeaderTeam3:completeAnimation()
 			f152_arg0.HeaderTeam3:setAlpha( 0 )
 			f152_arg0.clipFinished( f152_arg0.HeaderTeam3 )
+			f152_arg0.Zombies_Difficulty:setAlpha( 1 )
 		end
 	}
 }
