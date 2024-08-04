@@ -322,6 +322,9 @@ local function InitDvars()
 	end
 
 	Engine[@"exec"](Engine[@"getprimarycontroller"](), "readjson shield_ui_color lua ui_color uint64_t 0")
+
+	-- diff
+	Engine[@"exec"](Engine[@"getprimarycontroller"](), "set shield_zombies_difficulty " .. 1)
 end
 
 ---------------------------
