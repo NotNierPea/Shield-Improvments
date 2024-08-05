@@ -1728,6 +1728,12 @@ CoD.ChallengesUtility.AddDarkOpsChallengeCardsToList = function ( f68_arg0, f68_
 	local f68_local3 = nil
 	for f68_local7, f68_local8 in ipairs( f68_local0 ) do
 		local f68_local9 = f68_local8.models
+
+		-- fix "Zombie Dark Ops Master" card bug
+		if f68_local9.iconId == 325 then
+			return
+		end
+
 		if f68_local8.properties.isMastery then
 			f68_local3 = f68_local8
 		end
@@ -5901,12 +5907,12 @@ CoD.directorSelect.new = function ( f1_arg0, f1_arg1, f1_arg2, f1_arg3, f1_arg4,
 	self:addElement( selectionDescription )
 	self.selectionDescription = selectionDescription
 
-	local PathNotesButton = CoD.DirectorSelectButtonMiniInternal.new( f1_arg0, f1_arg1, 0.90, 0.90, -110, 160, 0.88, 0.88, 15, 55 )
+	local PathNotesButton = CoD.DirectorSelectButtonMiniInternal.new( f1_arg0, f1_arg1, 0.90, 0.90, -140, 160, 0.88, 0.88, 15, 55 )
 	
 	PathNotesButton.MiddleText:setTTF( "ttmussels_regular" )
-	PathNotesButton.MiddleText:setText("PATCH NOTES")
+	PathNotesButton.MiddleText:setText("INFO & PATCH NOTES")
 
-	PathNotesButton.MiddleTextFocus:setText("PATCH NOTES")
+	PathNotesButton.MiddleTextFocus:setText("INFO & PATCH NOTES")
 	PathNotesButton.MiddleTextFocus:setTTF( "ttmussels_regular" )
 
 	PathNotesButton:linkToElementModel( self, nil, false, function ( model )
@@ -9621,7 +9627,7 @@ LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
 	self.ShieldPatchNotes_SafeAreaFront = ShieldPatchNotes_SafeAreaFront
 
 	local PatchNotesText = LUI.UIText.new( 0.125, 0.125, -100, 500, 0.09, 0.09, 0, 35 )
-	PatchNotesText:setText("Last Patch Notes: 1.0.17.6:")
+	PatchNotesText:setText("Last Patch Notes: 1.0.17.7:")
 	PatchNotesText:setTTF("notosans_bold")
 	PatchNotesText:setBackingType( 2 )
 	PatchNotesText:setBackingColor( 0.04, 0.81, 1 )
@@ -9681,6 +9687,68 @@ LUI.createMenu.ShieldPatchNotes = function ( f1_arg0, f1_arg1 )
 		PatchNotesTextSmall:setLetterSpacing(0.5)
 		self:addElement(PatchNotesTextSmall)
 		self.PatchNotesAll[i] = PatchNotesTextSmall
+	end
+
+	local InfoNotesText = LUI.UIText.new( 0.125, 0.125, -100, 500, 0.49, 0.49, 0, 35 )
+	InfoNotesText:setText("Shield Info:")
+	InfoNotesText:setTTF("notosans_bold")
+	InfoNotesText:setBackingType( 2 )
+	InfoNotesText:setBackingColor( 0.04, 0.81, 1 )
+	InfoNotesText:setBackingAlpha( 0.01 )
+	InfoNotesText:setBackingXPadding( 12 )
+	InfoNotesText:setBackingYPadding( 6 )
+	InfoNotesText:setLetterSpacing(0.5)
+	self:addElement(InfoNotesText)
+	self.InfoNotesText = InfoNotesText
+
+	local str_infos = {
+		"Shield Documentation: https://shield-bo4.gitbook.io/",
+		"Shield Discord Server: https://discord.gg/AXECAzJJGU",
+		"You can find Mods in the Discord Server",
+		"Chatting & Voice Chat is not supported yet",
+		"Server Browser is not yet supported for joining lobbies",
+		"Having NAT Type: Open, will fix some errors when joining lobbies",
+		"To open Console, Press '~'",
+		"To Unlock All, Press Shield Options on the far left",
+		"To View Client's Logs, you can find it in BO4's Files called 'project-bo4.log'",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		""
+	}
+
+	self.InfoNotesAll = {}
+
+	for i = 1, 25 do 
+		local InfoNotesTextSmall = LUI.UIText.new(0.125, 0.125, -100, 500, 0.505, 0.505, 0 + (i * 35), 20 + (i * 35))
+
+		if IsEmpty(str_infos[i]) then
+			--InfoNotesTextSmall:setText()
+		else
+			InfoNotesTextSmall:setText("- " .. str_infos[i])
+		end
+
+		InfoNotesTextSmall:setTTF("notosans_bold")
+		InfoNotesTextSmall:setBackingType( 2 )
+		InfoNotesTextSmall:setBackingColor( 0.04, 0.81, 1 )
+		InfoNotesTextSmall:setBackingAlpha( 0.01 )
+		InfoNotesTextSmall:setBackingXPadding( 12 )
+		InfoNotesTextSmall:setBackingYPadding( 6 )
+		InfoNotesTextSmall:setLetterSpacing(0.5)
+		self:addElement(InfoNotesTextSmall)
+		self.InfoNotesAll[i] = InfoNotesTextSmall
 	end
 
 	f1_local1:AddButtonCallbackFunction( self, f1_arg0, Enum[@"hash_3DD78803F918E9D"][@"hash_1805EFA15E9E7E5A"], nil, function ( element, menu, controller, model )
