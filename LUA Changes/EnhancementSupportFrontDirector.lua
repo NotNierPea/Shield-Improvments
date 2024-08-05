@@ -9782,6 +9782,7 @@ end
 CoD.ShieldPatchNotes.__onClose = function ( f8_arg0 )
 	f8_arg0.Background:close()
 	f8_arg0.PatchNotesText:close()
+	f8_arg0.InfoNotesText:close()
 	f8_arg0.FooterContainerFrontendRight:close()
 	f8_arg0.TabbedScoreboardFuiBox:close()
 	f8_arg0.ShieldPatchNotes_SafeAreaFront:close()
@@ -9791,6 +9792,9 @@ CoD.ShieldPatchNotes.__onClose = function ( f8_arg0 )
 		f8_arg0.PatchNotesAll[i]:close()
 	end
 
+	for i = 1, 25 do
+		f8_arg0.InfoNotesAll[i]:close()
+	end
 end
 
 CoD.ShieldPatchNotes_SafeAreaFront = InheritFrom( LUI.UIElement )
